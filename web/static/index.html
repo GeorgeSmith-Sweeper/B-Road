@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curvature - Find Twisty Roads</title>
+
+    <!-- CSS Styling -->
+    <link rel="stylesheet" href="/static/style.css">
+
+    <!-- Google Maps JavaScript API is loaded dynamically via app.js -->
+    <!-- This ensures the API key is never hardcoded in the HTML -->
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="container">
+
+        <!-- Sidebar with controls -->
+        <div class="sidebar">
+            <h1>🏍️ Curvature</h1>
+            <p class="subtitle">Find the most twisty roads</p>
+
+            <!-- Mode Toggle Section -->
+            <div class="section">
+                <div class="mode-toggle">
+                    <button id="browse-mode-btn" class="btn btn-mode active" onclick="switchMode('browse')">
+                        Browse Roads
+                    </button>
+                    <button id="stitch-mode-btn" class="btn btn-mode" onclick="switchMode('stitch')">
+                        Build Route
+                    </button>
+                </div>
+            </div>
+
+            <!-- Data Loading Section -->
+            <div class="section">
+                <h3>1. Load Data</h3>
+                <p class="help-text">First, load a curvature .msgpack file</p>
+                <input type="text"
+                       id="filepath"
+                       placeholder="/tmp/vermont.msgpack"
+                       value="/tmp/vermont.msgpack">
+                <button onclick="loadData()" class="btn btn-primary">Load Data</button>
+                <div id="load-status" class="status"></div>
+            </div>
+
+            <!-- Search Filters Section -->
+            <div class="section" id="search-filters">
+                <h3>2. Filter Roads</h3>
+
+                <label for="min-curvature">Minimum Curvature:</label>
+                <input type="range"
+                       id="min-curvature"
+                       min="0"
+                       max="5000"
+                       value="300"
+                       step="100"
+                       oninput="updateCurvatureLabel()">
+                <span id="curvature-value">300</span>
+
+                <label for="surface">Surface Type:</label>
+                <select id="surface">
+                    <option value="">All Surfaces</option>
+                    <option value="paved" selected>Paved Only</option>
+                    <option value="unpaved">Unpaved Only</option>
+                    <option value="unknown">Unknown Surface</option>
+                </select>
+
+                <label for="limit">Max Results:</label>
+                <select id="limit">
+                    <option value="25">25 roads</option>
+                    <option value="50">50 roads</option>
+                    <option value="100" selected>100 roads</option>
+                    <option value="200">200 roads</option>
+                </select>
+
+                <button onclick="searchRoads()" class="btn btn-primary">Search Roads</button>
+                <div id="search-status" class="status"></div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="section" id="results-section">
+                <h3>Results</h3>
+                <div id="results-count" class="results-info"></div>
+                <div id="results-list" class="results-list"></div>
+            </div>
+
+            <!-- Route Builder Section (Hidden by default) -->
+            <div class="section" id="route-builder" style="display: none;">
+                <h3>Route Builder</h3>
+                <p class="help-text">Click connected road segments on the map to build your route</p>
+
+                <div class="route-info">
+                    <p><strong>Segments:</strong> <span id="route-segment-count">0</span></p>
+                    <p><strong>Distance:</strong> <span id="route-distance">0.0</span> mi</p>
+                    <p><strong>Curvature:</strong> <span id="route-curvature">0</span></p>
+                </div>
+
+                <input type="text" id="route-name" placeholder="Route name" />
+                <textarea id="route-description" placeholder="Description (optional)"></textarea>
+
+                <button onclick="saveRoute()" class="btn btn-primary">Save Route</button>
+                <button onclick="undoLastSegment()" class="btn btn-secondary">Undo Last</button>
+                <button onclick="clearRoute()" class="btn btn-secondary">Clear</button>
+
+                <div id="route-status" class="status"></div>
+            </div>
+
+            <!-- Saved Routes Section -->
+            <div class="section" id="saved-routes">
+                <h3>Saved Routes</h3>
+                <div id="saved-routes-list" class="results-list">
+                    <p class="help-text">No saved routes yet</p>
+                </div>
+            </div>
+
+            <!-- Info Section -->
+            <div class="section info">
+                <h4>About Curvature</h4>
+                <p>Curvature scores represent the "twistiness" of a road based on turn radius and frequency.</p>
+                <ul>
+                    <li><strong>300-600:</strong> Pleasant, flowing roads</li>
+                    <li><strong>600-1000:</strong> Fun, moderately twisty</li>
+                    <li><strong>1000+:</strong> Very curvy, technical roads</li>
+                    <li><strong>2000+:</strong> Extremely twisty!</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div id="map"></div>
+
+    </div>
+
+    <!-- JavaScript -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
