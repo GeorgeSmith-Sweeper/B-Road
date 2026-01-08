@@ -1,0 +1,371 @@
+/* Global Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: #333;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Main Container - Split Layout */
+.container {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 400px;
+    background: #f8f9fa;
+    padding: 20px;
+    overflow-y: auto;
+    border-right: 1px solid #dee2e6;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+.sidebar h1 {
+    font-size: 28px;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.subtitle {
+    color: #6c757d;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+/* Sections in Sidebar */
+.section {
+    background: white;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.section h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    color: #2c3e50;
+}
+
+.help-text {
+    font-size: 12px;
+    color: #6c757d;
+    margin-bottom: 10px;
+}
+
+/* Form Elements */
+label {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #495057;
+}
+
+input[type="text"],
+select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+input[type="range"] {
+    width: calc(100% - 60px);
+    margin-right: 10px;
+}
+
+#curvature-value {
+    display: inline-block;
+    width: 50px;
+    text-align: right;
+    font-weight: 600;
+    color: #007bff;
+}
+
+/* Buttons */
+.btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 10px;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+/* Status Messages */
+.status {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    display: none;
+}
+
+.status.success {
+    display: block;
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status.error {
+    display: block;
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.status.loading {
+    display: block;
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* Results */
+.results-info {
+    font-size: 14px;
+    color: #495057;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.results-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.road-item {
+    padding: 10px;
+    margin-bottom: 8px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border-left: 4px solid #007bff;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.road-item:hover {
+    background: #e9ecef;
+    transform: translateX(2px);
+}
+
+.road-name {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 4px;
+}
+
+.road-stats {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.curvature-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-weight: 600;
+    margin-right: 5px;
+}
+
+.curvature-low {
+    background: #ffc107;
+    color: #000;
+}
+
+.curvature-medium {
+    background: #ff9800;
+    color: #fff;
+}
+
+.curvature-high {
+    background: #f44336;
+    color: #fff;
+}
+
+/* Mode Toggle Buttons */
+.mode-toggle {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 0;
+}
+
+.btn-mode {
+    flex: 1;
+    background: #e9ecef;
+    color: #495057;
+    padding: 10px;
+    margin-top: 0;
+}
+
+.btn-mode:hover {
+    background: #dee2e6;
+}
+
+.btn-mode.active {
+    background: #007bff;
+    color: white;
+}
+
+.btn-mode.active:hover {
+    background: #0056b3;
+}
+
+/* Secondary Buttons */
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+/* Textarea */
+textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-bottom: 10px;
+    min-height: 60px;
+    font-family: inherit;
+    resize: vertical;
+}
+
+textarea:focus,
+input[type="text"]:focus,
+select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+/* Route Builder */
+.route-info {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    border-left: 3px solid #28a745;
+}
+
+.route-info p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #495057;
+}
+
+.route-info span {
+    font-weight: 700;
+    color: #28a745;
+}
+
+/* Saved Routes Actions */
+.route-actions {
+    margin-top: 8px;
+    display: flex;
+    gap: 5px;
+}
+
+.btn-small {
+    padding: 4px 8px;
+    font-size: 11px;
+    border: none;
+    border-radius: 3px;
+    background: #007bff;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-small:hover {
+    background: #0056b3;
+}
+
+.btn-danger {
+    background: #dc3545;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+
+/* Info Section */
+.info {
+    background: #e7f3ff;
+    border-left: 4px solid #007bff;
+}
+
+.info h4 {
+    color: #0056b3;
+    margin-bottom: 10px;
+}
+
+.info p {
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+
+.info ul {
+    font-size: 13px;
+    line-height: 1.6;
+    margin-left: 20px;
+}
+
+/* Map Container */
+#map {
+    flex: 1;
+    height: 100%;
+    background: #e0e0e0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: 40vh;
+        border-right: none;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    #map {
+        height: 60vh;
+    }
+}

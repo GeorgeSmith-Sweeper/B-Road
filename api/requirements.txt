@@ -1,0 +1,24 @@
+# FastAPI and server dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Data handling
+msgpack==1.0.7
+
+# Database dependencies (PostgreSQL/PostGIS for saved routes)
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.23
+asyncpg==0.29.0
+pydantic==2.5.0
+geoalchemy2==0.14.3
+shapely==2.0.2
+
+# Export formats
+gpxpy==1.6.2
+
+# Optional: Claude AI integration (for future LLM features)
+# anthropic==0.7.0
+
+# Existing curvature dependencies (already in parent project)
+# osmium - already installed
