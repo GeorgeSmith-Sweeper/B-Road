@@ -49,6 +49,7 @@ except ImportError:
 try:
     from api.database import get_db
     from api.models import RouteSession, SavedRoute, RouteSegment
+    from api.export_service import generate_gpx_for_route, generate_kml_for_route
     DATABASE_AVAILABLE = True
 except ImportError as e:
     DATABASE_AVAILABLE = False
@@ -813,52 +814,21 @@ async def export_route_kml(route_identifier: str):
         route_identifier: Route ID or URL slug
 
     Returns:
-        KML file download
+        KML file download with enhanced styling and metadata
     """
     if not DATABASE_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
 
     with get_db() as db:
-        route = db.query(SavedRoute).filter_by(url_slug=route_identifier).first()
+        kml = generate_kml_for_route(db, route_identifier)
 
-        if not route:
+        if not kml:
             raise HTTPException(status_code=404, detail="Route not found")
 
-        # Build KML
-        kml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2">
-  <Document>
-    <name>{route.route_name}</name>
-    <description>{route.description or ''}</description>
-    <Style id="route-style">
-      <LineStyle>
-        <color>ff0000ff</color>
-        <width>4</width>
-      </LineStyle>
-    </Style>
-    <Placemark>
-      <name>{route.route_name}</name>
-      <description>
-Curvature: {route.total_curvature:.0f}
-Distance: {route.total_length / 1609.34:.1f} mi ({route.total_length / 1000:.1f} km)
-Segments: {route.segment_count}
-      </description>
-      <styleUrl>#route-style</styleUrl>
-      <LineString>
-        <coordinates>
-"""
-
-        # Add coordinates
-        for seg in sorted(route.segments, key=lambda s: s.position):
-            if seg.position == 1:
-                kml += f"{seg.start_lon},{seg.start_lat},0\n"
-            kml += f"{seg.end_lon},{seg.end_lat},0\n"
-
-        kml += """        </coordinates>
-      </LineString>
-    </Placemark>
-  </Document>
-</kml>"""
+        # Get route for filename
+        from api.export_service import ExportService
+        service = ExportService(db)
+        route = service.get_route(route_identifier)
 
         return Response(
             content=kml,
@@ -872,45 +842,31 @@ async def export_route_gpx(route_identifier: str):
     """
     Export route as GPX file for GPS devices.
 
+    Enhanced version with:
+    - Dense track points (~30 per mile) for accurate navigation
+    - Elevation data from Open-Elevation API
+    - Proper GPX 1.1 metadata
+    - Optimized coordinate precision (6 decimal places)
+
     Args:
         route_identifier: Route ID or URL slug
 
     Returns:
-        GPX file download
+        GPX 1.1 file download
     """
     if not DATABASE_AVAILABLE:
         raise HTTPException(status_code=503, detail="Database not available")
 
     with get_db() as db:
-        route = db.query(SavedRoute).filter_by(url_slug=route_identifier).first()
+        gpx_xml = await generate_gpx_for_route(db, route_identifier)
 
-        if not route:
+        if not gpx_xml:
             raise HTTPException(status_code=404, detail="Route not found")
 
-        # Create GPX
-        gpx = gpxpy.gpx.GPX()
-
-        # Create track
-        gpx_track = gpxpy.gpx.GPXTrack()
-        gpx_track.name = route.route_name
-        gpx_track.description = route.description
-        gpx.tracks.append(gpx_track)
-
-        # Create segment
-        gpx_segment = gpxpy.gpx.GPXTrackSegment()
-        gpx_track.segments.append(gpx_segment)
-
-        # Add points
-        for seg in sorted(route.segments, key=lambda s: s.position):
-            if seg.position == 1:
-                gpx_segment.points.append(
-                    gpxpy.gpx.GPXTrackPoint(seg.start_lat, seg.start_lon)
-                )
-            gpx_segment.points.append(
-                gpxpy.gpx.GPXTrackPoint(seg.end_lat, seg.end_lon)
-            )
-
-        gpx_xml = gpx.to_xml()
+        # Get route for filename
+        from api.export_service import ExportService
+        service = ExportService(db)
+        route = service.get_route(route_identifier)
 
         return Response(
             content=gpx_xml,
