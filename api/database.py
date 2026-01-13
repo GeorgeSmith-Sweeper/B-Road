@@ -4,7 +4,7 @@ Database connection and session management for saved routes feature.
 Handles PostgreSQL/PostGIS connection using SQLAlchemy.
 """
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
 import os
@@ -13,6 +13,9 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Database availability flag
+DATABASE_AVAILABLE = True
 
 # Database configuration
 # Can be overridden by environment variable
@@ -68,6 +71,10 @@ def get_db_session():
     db = SessionLocal()
     try:
         yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 
@@ -79,7 +86,7 @@ def init_db():
     Creates all tables defined in models.py if they don't exist.
     This is a convenience function - for production, use Alembic migrations.
     """
-    from api.models import Base
+    from api.models.orm import Base
 
     try:
         logger.info("Creating database tables...")
@@ -99,7 +106,7 @@ def check_db_connection():
     """
     try:
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
         logger.info("Database connection successful")
         return True
     except Exception as e:
@@ -116,7 +123,7 @@ def test_postgis():
     """
     try:
         with engine.connect() as conn:
-            result = conn.execute("SELECT PostGIS_Version();")
+            result = conn.execute(text("SELECT PostGIS_Version();"))
             version = result.fetchone()[0]
             logger.info(f"PostGIS version: {version}")
             return True
