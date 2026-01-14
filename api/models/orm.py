@@ -4,7 +4,7 @@ SQLAlchemy ORM models for database tables.
 These models correspond to the schema in api/schema/saved_routes.sql
 """
 
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -92,6 +92,9 @@ class RouteSegment(Base):
     Complete segment data is also preserved in SavedRoute.route_data JSONB field.
     """
     __tablename__ = 'route_segments'
+    __table_args__ = (
+        UniqueConstraint('route_id', 'position', name='uq_route_segment_position'),
+    )
 
     id = Column(Integer, primary_key=True)
     route_id = Column(Integer, ForeignKey('saved_routes.route_id', ondelete='CASCADE'))
