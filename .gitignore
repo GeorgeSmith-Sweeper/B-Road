@@ -8,3 +8,4 @@ images/*
 kml/*
 *.msgpack
 .cache
+.claude/
