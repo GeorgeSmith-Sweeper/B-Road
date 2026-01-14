@@ -161,36 +161,43 @@ class TestCoordinateValidation:
 class TestSegmentOrdering:
     """Tests for segment position ordering."""
 
-    def test_segments_ordered_by_position(self, test_db_session, sample_route):
+    def test_segments_ordered_by_position(self, test_engine, sample_route):
         """Test that segments are returned in position order."""
-        # Create segments out of order
-        segments_data = [
-            (3, 44.030, -72.030, 44.035, -72.035),
-            (1, 44.010, -72.010, 44.015, -72.015),
-            (2, 44.020, -72.020, 44.025, -72.025),
-        ]
+        from sqlalchemy.orm import sessionmaker
 
-        for pos, start_lat, start_lon, end_lat, end_lon in segments_data:
-            seg = RouteSegment(
-                route_id=sample_route.route_id,
-                position=pos,
-                start_lat=start_lat,
-                start_lon=start_lon,
-                end_lat=end_lat,
-                end_lon=end_lon,
-                length=100.0,
-                radius=50.0,
-                curvature=5.0,
-                curvature_level=1
-            )
-            test_db_session.add(seg)
+        TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+        db = TestSessionLocal()
+        try:
+            # Create segments out of order
+            segments_data = [
+                (3, 44.030, -72.030, 44.035, -72.035),
+                (1, 44.010, -72.010, 44.015, -72.015),
+                (2, 44.020, -72.020, 44.025, -72.025),
+            ]
 
-        test_db_session.commit()
-        test_db_session.refresh(sample_route)
+            for pos, start_lat, start_lon, end_lat, end_lon in segments_data:
+                seg = RouteSegment(
+                    route_id=sample_route.route_id,
+                    position=pos,
+                    start_lat=start_lat,
+                    start_lon=start_lon,
+                    end_lat=end_lat,
+                    end_lon=end_lon,
+                    length=100.0,
+                    radius=50.0,
+                    curvature=5.0,
+                    curvature_level=1
+                )
+                db.add(seg)
 
-        # Segments should be returned in position order
-        positions = [seg.position for seg in sample_route.segments]
-        assert positions == [1, 2, 3]
+            db.commit()
+            db.refresh(sample_route)
+
+            # Segments should be returned in position order
+            positions = [seg.position for seg in sample_route.segments]
+            assert positions == [1, 2, 3]
+        finally:
+            db.close()
 
     def test_position_starts_at_one(self, test_db_session, sample_segments):
         """Test that segment positions start at 1 (not 0)."""

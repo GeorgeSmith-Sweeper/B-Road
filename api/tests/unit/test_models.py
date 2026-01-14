@@ -267,66 +267,80 @@ class TestRouteSegment:
 class TestModelRelationships:
     """Tests for model relationships."""
 
-    def test_session_to_routes_relationship(self, test_db_session, sample_session):
+    def test_session_to_routes_relationship(self, test_engine, sample_session):
         """Test one-to-many relationship from RouteSession to SavedRoute."""
-        # Create multiple routes for same session
-        route1 = SavedRoute(
-            session_id=sample_session.session_id,
-            route_name="Route 1",
-            total_curvature=50.0,
-            total_length=1000.0,
-            segment_count=2,
-            url_slug="route-1"
-        )
-        route2 = SavedRoute(
-            session_id=sample_session.session_id,
-            route_name="Route 2",
-            total_curvature=60.0,
-            total_length=1200.0,
-            segment_count=3,
-            url_slug="route-2"
-        )
+        from sqlalchemy.orm import sessionmaker
 
-        test_db_session.add_all([route1, route2])
-        test_db_session.commit()
-
-        # Access routes through session relationship
-        test_db_session.refresh(sample_session)
-        assert len(sample_session.routes) == 2
-        route_names = {r.route_name for r in sample_session.routes}
-        assert route_names == {"Route 1", "Route 2"}
-
-    def test_route_to_segments_relationship(self, test_db_session, sample_route):
-        """Test one-to-many relationship from SavedRoute to RouteSegment."""
-        # Create segments for route
-        segments = []
-        for i in range(3):
-            seg = RouteSegment(
-                route_id=sample_route.route_id,
-                position=i + 1,
-                start_lat=44.0 + (i * 0.01),
-                start_lon=-72.0 + (i * 0.01),
-                end_lat=44.0 + ((i + 1) * 0.01),
-                end_lon=-72.0 + ((i + 1) * 0.01),
-                length=100.0,
-                radius=50.0,
-                curvature=5.0,
-                curvature_level=1
+        TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+        db = TestSessionLocal()
+        try:
+            # Create multiple routes for same session
+            route1 = SavedRoute(
+                session_id=sample_session.session_id,
+                route_name="Route 1",
+                total_curvature=50.0,
+                total_length=1000.0,
+                segment_count=2,
+                url_slug="route-1-rel"
             )
-            segments.append(seg)
-            test_db_session.add(seg)
+            route2 = SavedRoute(
+                session_id=sample_session.session_id,
+                route_name="Route 2",
+                total_curvature=60.0,
+                total_length=1200.0,
+                segment_count=3,
+                url_slug="route-2-rel"
+            )
 
-        test_db_session.commit()
+            db.add_all([route1, route2])
+            db.commit()
 
-        # Access segments through route relationship
-        test_db_session.refresh(sample_route)
-        assert len(sample_route.segments) == 3
+            # Access routes through session relationship
+            db.refresh(sample_session)
+            assert len(sample_session.routes) == 2
+            route_names = {r.route_name for r in sample_session.routes}
+            assert route_names == {"Route 1", "Route 2"}
+        finally:
+            db.close()
 
-        # Verify segments are ordered by position
-        positions = [seg.position for seg in sample_route.segments]
-        assert positions == [1, 2, 3]
+    def test_route_to_segments_relationship(self, test_engine, sample_route):
+        """Test one-to-many relationship from SavedRoute to RouteSegment."""
+        from sqlalchemy.orm import sessionmaker
 
-    def test_segment_back_reference_to_route(self, test_db_session, sample_route, sample_segments):
+        TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+        db = TestSessionLocal()
+        try:
+            # Create segments for route
+            segments = []
+            for i in range(3):
+                seg = RouteSegment(
+                    route_id=sample_route.route_id,
+                    position=i + 1,
+                    start_lat=44.0 + (i * 0.01),
+                    start_lon=-72.0 + (i * 0.01),
+                    end_lat=44.0 + ((i + 1) * 0.01),
+                    end_lon=-72.0 + ((i + 1) * 0.01),
+                    length=100.0,
+                    radius=50.0,
+                    curvature=5.0,
+                    curvature_level=1
+                )
+                segments.append(seg)
+                db.add(seg)
+
+            db.commit()
+
+            # Access segments through route relationship
+            db.refresh(sample_route)
+            assert len(sample_route.segments) == 3
+
+            # Verify segments are ordered by position
+            positions = [seg.position for seg in sample_route.segments]
+            assert positions == [1, 2, 3]
+        finally:
+            db.close()
+
+    def test_segment_back_reference_to_route(self, sample_route, sample_segments):
         """Test back reference from RouteSegment to SavedRoute."""
         segment = sample_segments[0]
 

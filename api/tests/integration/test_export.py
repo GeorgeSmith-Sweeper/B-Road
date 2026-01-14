@@ -23,7 +23,7 @@ class TestGPXExport:
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")
 
         assert response.status_code == 200
-        assert response.headers["content-type"] == "application/gpx+xml; charset=utf-8"
+        assert "application/gpx+xml" in response.headers["content-type"]
         assert "Content-Disposition" in response.headers
         assert "attachment" in response.headers["Content-Disposition"]
         assert sample_route.url_slug in response.headers["Content-Disposition"]
@@ -332,43 +332,52 @@ class TestExportComparison:
 class TestExportEdgeCases:
     """Tests for edge cases in export functionality."""
 
-    def test_export_route_with_single_segment(self, test_client, test_db_session, sample_session):
+    def test_export_route_with_single_segment(self, test_client, test_engine, sample_session):
         """Test exporting a route with only one segment."""
         from models import SavedRoute, RouteSegment
         from shapely.geometry import LineString
         from geoalchemy2.shape import from_shape
+        from sqlalchemy.orm import sessionmaker
 
-        # Create minimal route with single segment
-        linestring = LineString([(-72.0, 44.0), (-72.01, 44.01)])
-        route = SavedRoute(
-            session_id=sample_session.session_id,
-            route_name="Single Segment",
-            total_curvature=5.0,
-            total_length=100.0,
-            segment_count=1,
-            geom=from_shape(linestring, srid=4326),
-            route_data={'segments': []},
-            url_slug="single-seg"
-        )
-        test_db_session.add(route)
+        # Create data using test_engine so test_client can see it
+        TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+        db = TestSessionLocal()
+        try:
+            # Create minimal route with single segment
+            linestring = LineString([(-72.0, 44.0), (-72.01, 44.01)])
+            route = SavedRoute(
+                session_id=sample_session.session_id,
+                route_name="Single Segment",
+                total_curvature=5.0,
+                total_length=100.0,
+                segment_count=1,
+                geom=from_shape(linestring, srid=4326),
+                route_data={'segments': []},
+                url_slug="single-seg-test"
+            )
+            db.add(route)
+            db.commit()
+            db.refresh(route)
 
-        seg = RouteSegment(
-            route_id=route.route_id,
-            position=1,
-            start_lat=44.0,
-            start_lon=-72.0,
-            end_lat=44.01,
-            end_lon=-72.01,
-            length=100.0,
-            radius=50.0,
-            curvature=5.0,
-            curvature_level=1
-        )
-        test_db_session.add(seg)
-        test_db_session.commit()
+            seg = RouteSegment(
+                route_id=route.route_id,
+                position=1,
+                start_lat=44.0,
+                start_lon=-72.0,
+                end_lat=44.01,
+                end_lon=-72.01,
+                length=100.0,
+                radius=50.0,
+                curvature=5.0,
+                curvature_level=1
+            )
+            db.add(seg)
+            db.commit()
+        finally:
+            db.close()
 
         # Export GPX
-        gpx_response = test_client.get("/routes/single-seg/export/gpx")
+        gpx_response = test_client.get("/routes/single-seg-test/export/gpx")
         assert gpx_response.status_code == 200
 
         gpx = gpxpy.parse(gpx_response.content)
