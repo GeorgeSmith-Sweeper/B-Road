@@ -166,8 +166,8 @@ class TestRouteCRUDOperations:
 
         response = test_client.put(
             f"/routes/{sample_route.route_id}",
-            params={
-                "session_id": str(sample_session.session_id),
+            params={"session_id": str(sample_session.session_id)},
+            json={
                 "route_name": new_name,
                 "description": new_description,
                 "is_public": True
@@ -191,10 +191,8 @@ class TestRouteCRUDOperations:
 
         response = test_client.put(
             f"/routes/{sample_route.route_id}",
-            params={
-                "session_id": wrong_session_id,
-                "route_name": "Hacked Name"
-            }
+            params={"session_id": wrong_session_id},
+            json={"route_name": "Hacked Name"}
         )
 
         assert response.status_code == 404
@@ -410,10 +408,8 @@ class TestPublicRoutes:
         # Update to public
         response = test_client.put(
             f"/routes/{sample_route.route_id}",
-            params={
-                "session_id": str(sample_session.session_id),
-                "is_public": True
-            }
+            params={"session_id": str(sample_session.session_id)},
+            json={"is_public": True}
         )
 
         assert response.status_code == 200

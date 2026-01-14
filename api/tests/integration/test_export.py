@@ -18,7 +18,7 @@ from tests.fixtures.sample_segments import CONNECTED_SEGMENTS
 class TestGPXExport:
     """Tests for GPX export functionality."""
 
-    def test_export_gpx(self, test_client, sample_route):
+    def test_export_gpx(self, test_client, sample_route, sample_segments):
         """Test GET /routes/{slug}/export/gpx returns GPX file."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")
 
@@ -28,7 +28,7 @@ class TestGPXExport:
         assert "attachment" in response.headers["Content-Disposition"]
         assert sample_route.url_slug in response.headers["Content-Disposition"]
 
-    def test_gpx_is_valid_xml(self, test_client, sample_route):
+    def test_gpx_is_valid_xml(self, test_client, sample_route, sample_segments):
         """Test that exported GPX is valid XML."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")
 
@@ -38,7 +38,7 @@ class TestGPXExport:
 
         assert root.tag.endswith('gpx')
 
-    def test_gpx_parses_with_gpxpy(self, test_client, sample_route):
+    def test_gpx_parses_with_gpxpy(self, test_client, sample_route, sample_segments):
         """Test that exported GPX can be parsed by gpxpy library."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")
 
@@ -48,7 +48,7 @@ class TestGPXExport:
         assert gpx is not None
         assert len(gpx.tracks) > 0
 
-    def test_gpx_contains_route_metadata(self, test_client, sample_route):
+    def test_gpx_contains_route_metadata(self, test_client, sample_route, sample_segments):
         """Test that GPX contains route name and description."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")
 
@@ -58,7 +58,7 @@ class TestGPXExport:
         assert track.name == sample_route.route_name
         assert track.description == sample_route.description
 
-    def test_gpx_contains_all_track_points(self, test_client, sample_route):
+    def test_gpx_contains_all_track_points(self, test_client, sample_route, sample_segments):
         """Test that GPX contains all segment endpoints as track points."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")
 
@@ -71,7 +71,7 @@ class TestGPXExport:
         expected_point_count = sample_route.segment_count + 1
         assert len(points) == expected_point_count
 
-    def test_gpx_track_point_coordinates(self, test_client, sample_route):
+    def test_gpx_track_point_coordinates(self, test_client, sample_route, sample_segments):
         """Test that GPX track points have correct coordinates."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")
 
@@ -92,7 +92,7 @@ class TestGPXExport:
         assert last_point.latitude == pytest.approx(last_seg["end"][0], abs=1e-6)
         assert last_point.longitude == pytest.approx(last_seg["end"][1], abs=1e-6)
 
-    def test_gpx_elevation_data(self, test_client, sample_route):
+    def test_gpx_elevation_data(self, test_client, sample_route, sample_segments):
         """Test GPX elevation field (currently None - Known Issue #5)."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")
 
@@ -110,7 +110,7 @@ class TestGPXExport:
 
         assert response.status_code == 404
 
-    def test_gpx_coordinate_precision(self, test_client, sample_route):
+    def test_gpx_coordinate_precision(self, test_client, sample_route, sample_segments):
         """Test that GPX preserves coordinate precision."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")
 
@@ -132,7 +132,7 @@ class TestGPXExport:
 class TestKMLExport:
     """Tests for KML export functionality."""
 
-    def test_export_kml(self, test_client, sample_route):
+    def test_export_kml(self, test_client, sample_route, sample_segments):
         """Test GET /routes/{slug}/export/kml returns KML file."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
 
@@ -142,7 +142,7 @@ class TestKMLExport:
         assert "attachment" in response.headers["Content-Disposition"]
         assert sample_route.url_slug in response.headers["Content-Disposition"]
 
-    def test_kml_is_valid_xml(self, test_client, sample_route):
+    def test_kml_is_valid_xml(self, test_client, sample_route, sample_segments):
         """Test that exported KML is valid XML."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
 
@@ -152,7 +152,7 @@ class TestKMLExport:
 
         assert root.tag.endswith('kml')
 
-    def test_kml_contains_document_structure(self, test_client, sample_route):
+    def test_kml_contains_document_structure(self, test_client, sample_route, sample_segments):
         """Test that KML has proper document structure."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
 
@@ -169,7 +169,7 @@ class TestKMLExport:
         assert name is not None
         assert name.text == sample_route.route_name
 
-    def test_kml_contains_placemark(self, test_client, sample_route):
+    def test_kml_contains_placemark(self, test_client, sample_route, sample_segments):
         """Test that KML contains Placemark with LineString."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
 
@@ -185,7 +185,7 @@ class TestKMLExport:
         linestring = placemark.find('.//kml:LineString', ns)
         assert linestring is not None
 
-    def test_kml_coordinates_format(self, test_client, sample_route):
+    def test_kml_coordinates_format(self, test_client, sample_route, sample_segments):
         """Test that KML coordinates are in correct format (lon,lat,0)."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
 
@@ -218,7 +218,7 @@ class TestKMLExport:
                 assert 44 < lat < 45
                 assert alt == 0  # No elevation data
 
-    def test_kml_styling(self, test_client, sample_route):
+    def test_kml_styling(self, test_client, sample_route, sample_segments):
         """Test that KML includes style definition."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
 
@@ -235,7 +235,7 @@ class TestKMLExport:
         linestyle = style.find('kml:LineStyle', ns)
         assert linestyle is not None
 
-    def test_kml_description_contains_stats(self, test_client, sample_route):
+    def test_kml_description_contains_stats(self, test_client, sample_route, sample_segments):
         """Test that KML description includes route statistics."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
 
@@ -262,7 +262,7 @@ class TestKMLExport:
 
         assert response.status_code == 404
 
-    def test_kml_coordinate_count_matches_segments(self, test_client, sample_route):
+    def test_kml_coordinate_count_matches_segments(self, test_client, sample_route, sample_segments):
         """Test that KML has correct number of coordinates."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
 
@@ -282,7 +282,7 @@ class TestKMLExport:
 class TestExportComparison:
     """Tests comparing GPX and KML exports for consistency."""
 
-    def test_gpx_and_kml_have_same_coordinates(self, test_client, sample_route):
+    def test_gpx_and_kml_have_same_coordinates(self, test_client, sample_route, sample_segments):
         """Test that GPX and KML exports contain the same coordinates."""
         # Get GPX
         gpx_response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")
@@ -310,7 +310,7 @@ class TestExportComparison:
                 assert gpx_point.longitude == pytest.approx(kml_lon, abs=1e-6)
                 assert gpx_point.latitude == pytest.approx(kml_lat, abs=1e-6)
 
-    def test_both_exports_contain_route_name(self, test_client, sample_route):
+    def test_both_exports_contain_route_name(self, test_client, sample_route, sample_segments):
         """Test that both formats contain the route name."""
         # GPX
         gpx_response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")

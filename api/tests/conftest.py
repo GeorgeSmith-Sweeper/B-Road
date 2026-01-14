@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from server import app
 from models import Base, RouteSession, SavedRoute, RouteSegment
-from database import get_db, get_db_session
+from database import get_db
 
 # Import test data fixtures
 from tests.fixtures.sample_segments import (

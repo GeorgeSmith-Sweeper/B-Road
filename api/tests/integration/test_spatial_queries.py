@@ -280,12 +280,13 @@ class TestGeometryValidation:
 
     def test_self_intersecting_linestring_detected(self, test_db_session):
         """Test that self-intersecting LineString is detected."""
-        # Create a figure-8 shape (self-intersecting)
+        # Create a bowtie/figure-8 shape (self-intersecting)
+        # Lines from (0,0) to (1,1) and from (0,1) to (1,0) cross each other
         figure_eight = LineString([
             (0, 0),
             (1, 1),
-            (1, -1),
-            (0, 0)
+            (0, 1),
+            (1, 0)
         ])
 
         result = test_db_session.execute(text("""
