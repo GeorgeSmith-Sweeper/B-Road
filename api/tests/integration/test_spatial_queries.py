@@ -66,7 +66,7 @@ class TestPostGISSpatialOperations:
 
     def test_st_length_calculation(self, test_db_session):
         """Test ST_Length for distance calculation."""
-        # Create a simple horizontal line (1 degree longitude at equator ≈ 111km)
+        # Create a simple horizontal line (1 degree longitude at equator ~ 111km)
         line = LineString([(0, 0), (1, 0)])
 
         result = test_db_session.execute(text("""

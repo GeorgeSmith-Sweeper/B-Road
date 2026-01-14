@@ -63,7 +63,7 @@ class TestSavedRoute:
     def test_saved_route_with_geometry(self, test_db_session, sample_session):
         """Test creating a SavedRoute with PostGIS LineString geometry."""
         # Create LineString from coordinates
-        coords = [(−72.575, 44.260), (−72.580, 44.265), (−72.585, 44.270)]
+        coords = [(-72.575, 44.260), (-72.580, 44.265), (-72.585, 44.270)]
         linestring = LineString(coords)
 
         route = SavedRoute(
