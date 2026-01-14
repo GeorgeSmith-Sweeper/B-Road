@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from server import app
 from models import Base, RouteSession, SavedRoute, RouteSegment
-from database import get_db
+from database import get_db, get_db_session
 
 # Import test data fixtures
 from tests.fixtures.sample_segments import (
@@ -165,14 +165,15 @@ def test_client(test_db_session):
 
     This client uses the test database session instead of the production one.
     """
-    # Override the get_db dependency to use test database
-    def override_get_db():
+    # Override the get_db_session dependency to use test database
+    # Note: Routers use get_db_session, not get_db
+    def override_get_db_session():
         try:
             yield test_db_session
         finally:
             pass  # Session cleanup handled by test_db_session fixture
 
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_db_session] = override_get_db_session
 
     with TestClient(app) as client:
         yield client

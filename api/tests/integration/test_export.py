@@ -368,7 +368,7 @@ class TestExportEdgeCases:
         test_db_session.commit()
 
         # Export GPX
-        gpx_response = test_client.get(f"/routes/single-seg/export/gpx")
+        gpx_response = test_client.get("/routes/single-seg/export/gpx")
         assert gpx_response.status_code == 200
 
         gpx = gpxpy.parse(gpx_response.content)
@@ -414,7 +414,7 @@ class TestExportEdgeCases:
         test_db_session.commit()
 
         # GPX should handle special chars
-        gpx_response = test_client.get(f"/routes/special-chars/export/gpx")
+        gpx_response = test_client.get("/routes/special-chars/export/gpx")
         assert gpx_response.status_code == 200
 
         # Should parse without XML errors
