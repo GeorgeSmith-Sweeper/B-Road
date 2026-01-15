@@ -295,10 +295,12 @@ class TestModelRelationships:
             db.add_all([route1, route2])
             db.commit()
 
-            # Access routes through session relationship
-            db.refresh(sample_session)
-            assert len(sample_session.routes) == 2
-            route_names = {r.route_name for r in sample_session.routes}
+            # Query for the session fresh in this db session to test relationship
+            fresh_session = db.query(RouteSession).filter_by(
+                session_id=sample_session.session_id
+            ).first()
+            assert len(fresh_session.routes) == 2
+            route_names = {r.route_name for r in fresh_session.routes}
             assert route_names == {"Route 1", "Route 2"}
         finally:
             db.close()
@@ -311,7 +313,6 @@ class TestModelRelationships:
         db = TestSessionLocal()
         try:
             # Create segments for route
-            segments = []
             for i in range(3):
                 seg = RouteSegment(
                     route_id=sample_route.route_id,
@@ -325,26 +326,37 @@ class TestModelRelationships:
                     curvature=5.0,
                     curvature_level=1
                 )
-                segments.append(seg)
                 db.add(seg)
 
             db.commit()
 
-            # Access segments through route relationship
-            db.refresh(sample_route)
-            assert len(sample_route.segments) == 3
+            # Query for the route fresh in this db session to test relationship
+            fresh_route = db.query(SavedRoute).filter_by(
+                route_id=sample_route.route_id
+            ).first()
+            assert len(fresh_route.segments) == 3
 
             # Verify segments are ordered by position
-            positions = [seg.position for seg in sample_route.segments]
+            positions = [seg.position for seg in fresh_route.segments]
             assert positions == [1, 2, 3]
         finally:
             db.close()
 
-    def test_segment_back_reference_to_route(self, sample_route, sample_segments):
+    def test_segment_back_reference_to_route(self, test_engine, sample_route, sample_segments):
         """Test back reference from RouteSegment to SavedRoute."""
-        segment = sample_segments[0]
+        from sqlalchemy.orm import sessionmaker
 
-        # Access route through segment relationship
-        assert segment.route is not None
-        assert segment.route.route_id == sample_route.route_id
-        assert segment.route.route_name == sample_route.route_name
+        TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+        db = TestSessionLocal()
+        try:
+            # Query for the segment fresh in this db session to test back reference
+            fresh_segment = db.query(RouteSegment).filter_by(
+                segment_id=sample_segments[0].segment_id
+            ).first()
+
+            # Access route through segment relationship
+            assert fresh_segment.route is not None
+            assert fresh_segment.route.route_id == sample_route.route_id
+            assert fresh_segment.route.route_name == sample_route.route_name
+        finally:
+            db.close()

@@ -191,10 +191,14 @@ class TestSegmentOrdering:
                 db.add(seg)
 
             db.commit()
-            db.refresh(sample_route)
+
+            # Query for the route fresh in this db session to test ordering
+            fresh_route = db.query(SavedRoute).filter_by(
+                route_id=sample_route.route_id
+            ).first()
 
             # Segments should be returned in position order
-            positions = [seg.position for seg in sample_route.segments]
+            positions = [seg.position for seg in fresh_route.segments]
             assert positions == [1, 2, 3]
         finally:
             db.close()
