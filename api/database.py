@@ -20,8 +20,7 @@ DATABASE_AVAILABLE = True
 # Database configuration
 # Can be overridden by environment variable
 DATABASE_URL = os.getenv(
-    'DATABASE_URL',
-    'postgresql://localhost:5432/curvature'  # Default local connection
+    "DATABASE_URL", "postgresql://localhost:5432/curvature"  # Default local connection
 )
 
 # Create SQLAlchemy engine
