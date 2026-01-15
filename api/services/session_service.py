@@ -22,5 +22,5 @@ class SessionService:
 
         return SessionResponse(
             session_id=str(session.session_id),
-            created_at=session.created_at.isoformat()
+            created_at=session.created_at.isoformat(),
         )

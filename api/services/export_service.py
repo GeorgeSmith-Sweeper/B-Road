@@ -46,9 +46,7 @@ class ExportService:
                 gpx_segment.points.append(
                     gpxpy.gpx.GPXTrackPoint(seg.start_lat, seg.start_lon)
                 )
-            gpx_segment.points.append(
-                gpxpy.gpx.GPXTrackPoint(seg.end_lat, seg.end_lon)
-            )
+            gpx_segment.points.append(gpxpy.gpx.GPXTrackPoint(seg.end_lat, seg.end_lon))
 
         gpx_xml = gpx.to_xml()
         filename = f"{route.url_slug}.gpx"

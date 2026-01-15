@@ -4,7 +4,16 @@ SQLAlchemy models for saved routes feature.
 These models correspond to the schema in api/schema/saved_routes.sql
 """
 
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Float,
+    Boolean,
+    DateTime,
+    Text,
+    ForeignKey,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -22,7 +31,8 @@ class RouteSession(Base):
     Simple session management without authentication.
     Allows tracking routes per user/browser session.
     """
-    __tablename__ = 'route_sessions'
+
+    __tablename__ = "route_sessions"
 
     session_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -30,10 +40,14 @@ class RouteSession(Base):
     session_name = Column(String(255), nullable=True)
 
     # Relationships
-    routes = relationship("SavedRoute", back_populates="session", cascade="all, delete-orphan")
+    routes = relationship(
+        "SavedRoute", back_populates="session", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
-        return f"<RouteSession(session_id={self.session_id}, created={self.created_at})>"
+        return (
+            f"<RouteSession(session_id={self.session_id}, created={self.created_at})>"
+        )
 
 
 class SavedRoute(Base):
@@ -43,10 +57,13 @@ class SavedRoute(Base):
     Stores both the complete route data in JSONB (preserving all segment details)
     and normalized geometry for spatial queries.
     """
-    __tablename__ = 'saved_routes'
+
+    __tablename__ = "saved_routes"
 
     route_id = Column(Integer, primary_key=True)
-    session_id = Column(UUID(as_uuid=True), ForeignKey('route_sessions.session_id', ondelete='CASCADE'))
+    session_id = Column(
+        UUID(as_uuid=True), ForeignKey("route_sessions.session_id", ondelete="CASCADE")
+    )
     route_name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -58,7 +75,7 @@ class SavedRoute(Base):
     segment_count = Column(Integer)
 
     # Geometry and data storage
-    geom = Column(Geometry('LINESTRING', srid=4326))  # PostGIS LineString
+    geom = Column(Geometry("LINESTRING", srid=4326))  # PostGIS LineString
     route_data = Column(JSONB)  # Complete segment data
 
     # Sharing
@@ -67,8 +84,12 @@ class SavedRoute(Base):
 
     # Relationships
     session = relationship("RouteSession", back_populates="routes")
-    segments = relationship("RouteSegment", back_populates="route", cascade="all, delete-orphan",
-                          order_by="RouteSegment.position")
+    segments = relationship(
+        "RouteSegment",
+        back_populates="route",
+        cascade="all, delete-orphan",
+        order_by="RouteSegment.position",
+    )
 
     def __repr__(self):
         return f"<SavedRoute(id={self.route_id}, name='{self.route_name}', segments={self.segment_count})>"
@@ -91,10 +112,11 @@ class RouteSegment(Base):
     Normalized storage for querying. Position indicates order in the route.
     Complete segment data is also preserved in SavedRoute.route_data JSONB field.
     """
-    __tablename__ = 'route_segments'
+
+    __tablename__ = "route_segments"
 
     id = Column(Integer, primary_key=True)
-    route_id = Column(Integer, ForeignKey('saved_routes.route_id', ondelete='CASCADE'))
+    route_id = Column(Integer, ForeignKey("saved_routes.route_id", ondelete="CASCADE"))
     position = Column(Integer, nullable=False)  # Order in route (1, 2, 3...)
 
     # Segment geometry

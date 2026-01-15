@@ -33,10 +33,10 @@ class TestGPXExport:
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")
 
         # Should parse without errors
-        gpx_content = response.content.decode('utf-8')
+        gpx_content = response.content.decode("utf-8")
         root = ET.fromstring(gpx_content)
 
-        assert root.tag.endswith('gpx')
+        assert root.tag.endswith("gpx")
 
     def test_gpx_parses_with_gpxpy(self, test_client, sample_route, sample_segments):
         """Test that exported GPX can be parsed by gpxpy library."""
@@ -48,7 +48,9 @@ class TestGPXExport:
         assert gpx is not None
         assert len(gpx.tracks) > 0
 
-    def test_gpx_contains_route_metadata(self, test_client, sample_route, sample_segments):
+    def test_gpx_contains_route_metadata(
+        self, test_client, sample_route, sample_segments
+    ):
         """Test that GPX contains route name and description."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")
 
@@ -58,7 +60,9 @@ class TestGPXExport:
         assert track.name == sample_route.route_name
         assert track.description == sample_route.description
 
-    def test_gpx_contains_all_track_points(self, test_client, sample_route, sample_segments):
+    def test_gpx_contains_all_track_points(
+        self, test_client, sample_route, sample_segments
+    ):
         """Test that GPX contains all segment endpoints as track points."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")
 
@@ -71,7 +75,9 @@ class TestGPXExport:
         expected_point_count = sample_route.segment_count + 1
         assert len(points) == expected_point_count
 
-    def test_gpx_track_point_coordinates(self, test_client, sample_route, sample_segments):
+    def test_gpx_track_point_coordinates(
+        self, test_client, sample_route, sample_segments
+    ):
         """Test that GPX track points have correct coordinates."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")
 
@@ -124,8 +130,8 @@ class TestGPXExport:
             lon_str = str(point.longitude)
 
             # Should have decimal point
-            assert '.' in lat_str
-            assert '.' in lon_str
+            assert "." in lat_str
+            assert "." in lon_str
 
 
 @pytest.mark.integration
@@ -137,7 +143,9 @@ class TestKMLExport:
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
 
         assert response.status_code == 200
-        assert "application/vnd.google-earth.kml+xml" in response.headers["content-type"]
+        assert (
+            "application/vnd.google-earth.kml+xml" in response.headers["content-type"]
+        )
         assert "Content-Disposition" in response.headers
         assert "attachment" in response.headers["Content-Disposition"]
         assert sample_route.url_slug in response.headers["Content-Disposition"]
@@ -147,25 +155,27 @@ class TestKMLExport:
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
 
         # Should parse without errors
-        kml_content = response.content.decode('utf-8')
+        kml_content = response.content.decode("utf-8")
         root = ET.fromstring(kml_content)
 
-        assert root.tag.endswith('kml')
+        assert root.tag.endswith("kml")
 
-    def test_kml_contains_document_structure(self, test_client, sample_route, sample_segments):
+    def test_kml_contains_document_structure(
+        self, test_client, sample_route, sample_segments
+    ):
         """Test that KML has proper document structure."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
 
         root = ET.fromstring(response.content)
 
         # Find Document element
-        ns = {'kml': 'http://www.opengis.net/kml/2.2'}
-        document = root.find('kml:Document', ns)
+        ns = {"kml": "http://www.opengis.net/kml/2.2"}
+        document = root.find("kml:Document", ns)
 
         assert document is not None
 
         # Should have name
-        name = document.find('kml:name', ns)
+        name = document.find("kml:name", ns)
         assert name is not None
         assert name.text == sample_route.route_name
 
@@ -174,15 +184,15 @@ class TestKMLExport:
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
 
         root = ET.fromstring(response.content)
-        ns = {'kml': 'http://www.opengis.net/kml/2.2'}
+        ns = {"kml": "http://www.opengis.net/kml/2.2"}
 
-        document = root.find('kml:Document', ns)
-        placemark = document.find('kml:Placemark', ns)
+        document = root.find("kml:Document", ns)
+        placemark = document.find("kml:Placemark", ns)
 
         assert placemark is not None
 
         # Should have LineString
-        linestring = placemark.find('.//kml:LineString', ns)
+        linestring = placemark.find(".//kml:LineString", ns)
         assert linestring is not None
 
     def test_kml_coordinates_format(self, test_client, sample_route, sample_segments):
@@ -190,14 +200,14 @@ class TestKMLExport:
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
 
         root = ET.fromstring(response.content)
-        ns = {'kml': 'http://www.opengis.net/kml/2.2'}
+        ns = {"kml": "http://www.opengis.net/kml/2.2"}
 
-        coordinates = root.find('.//kml:coordinates', ns)
+        coordinates = root.find(".//kml:coordinates", ns)
         assert coordinates is not None
 
         # Parse coordinates
         coord_text = coordinates.text.strip()
-        coord_lines = coord_text.split('\n')
+        coord_lines = coord_text.split("\n")
 
         # Should have multiple coordinate lines
         assert len(coord_lines) >= 2
@@ -206,7 +216,7 @@ class TestKMLExport:
         for line in coord_lines:
             line = line.strip()
             if line:
-                parts = line.split(',')
+                parts = line.split(",")
                 assert len(parts) == 3
                 # Parse as floats to verify format
                 lon = float(parts[0])
@@ -223,35 +233,37 @@ class TestKMLExport:
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
 
         root = ET.fromstring(response.content)
-        ns = {'kml': 'http://www.opengis.net/kml/2.2'}
+        ns = {"kml": "http://www.opengis.net/kml/2.2"}
 
-        document = root.find('kml:Document', ns)
-        style = document.find('kml:Style', ns)
+        document = root.find("kml:Document", ns)
+        style = document.find("kml:Style", ns)
 
         assert style is not None
-        assert style.get('id') == 'route-style'
+        assert style.get("id") == "route-style"
 
         # Should have LineStyle
-        linestyle = style.find('kml:LineStyle', ns)
+        linestyle = style.find("kml:LineStyle", ns)
         assert linestyle is not None
 
-    def test_kml_description_contains_stats(self, test_client, sample_route, sample_segments):
+    def test_kml_description_contains_stats(
+        self, test_client, sample_route, sample_segments
+    ):
         """Test that KML description includes route statistics."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
 
         root = ET.fromstring(response.content)
-        ns = {'kml': 'http://www.opengis.net/kml/2.2'}
+        ns = {"kml": "http://www.opengis.net/kml/2.2"}
 
-        placemark = root.find('.//kml:Placemark', ns)
-        description = placemark.find('kml:description', ns)
+        placemark = root.find(".//kml:Placemark", ns)
+        description = placemark.find("kml:description", ns)
 
         assert description is not None
         desc_text = description.text
 
         # Should contain statistics
-        assert 'Curvature' in desc_text
-        assert 'Distance' in desc_text
-        assert 'Segments' in desc_text
+        assert "Curvature" in desc_text
+        assert "Distance" in desc_text
+        assert "Segments" in desc_text
 
         # Should contain actual values
         assert str(int(sample_route.total_curvature)) in desc_text
@@ -262,16 +274,18 @@ class TestKMLExport:
 
         assert response.status_code == 404
 
-    def test_kml_coordinate_count_matches_segments(self, test_client, sample_route, sample_segments):
+    def test_kml_coordinate_count_matches_segments(
+        self, test_client, sample_route, sample_segments
+    ):
         """Test that KML has correct number of coordinates."""
         response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
 
         root = ET.fromstring(response.content)
-        ns = {'kml': 'http://www.opengis.net/kml/2.2'}
+        ns = {"kml": "http://www.opengis.net/kml/2.2"}
 
-        coordinates = root.find('.//kml:coordinates', ns)
+        coordinates = root.find(".//kml:coordinates", ns)
         coord_text = coordinates.text.strip()
-        coord_lines = [line.strip() for line in coord_text.split('\n') if line.strip()]
+        coord_lines = [line.strip() for line in coord_text.split("\n") if line.strip()]
 
         # Should have segment_count + 1 coordinates
         expected_count = sample_route.segment_count + 1
@@ -282,7 +296,9 @@ class TestKMLExport:
 class TestExportComparison:
     """Tests comparing GPX and KML exports for consistency."""
 
-    def test_gpx_and_kml_have_same_coordinates(self, test_client, sample_route, sample_segments):
+    def test_gpx_and_kml_have_same_coordinates(
+        self, test_client, sample_route, sample_segments
+    ):
         """Test that GPX and KML exports contain the same coordinates."""
         # Get GPX
         gpx_response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")
@@ -292,9 +308,9 @@ class TestExportComparison:
         # Get KML
         kml_response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
         root = ET.fromstring(kml_response.content)
-        ns = {'kml': 'http://www.opengis.net/kml/2.2'}
-        coordinates = root.find('.//kml:coordinates', ns)
-        kml_coords = coordinates.text.strip().split('\n')
+        ns = {"kml": "http://www.opengis.net/kml/2.2"}
+        coordinates = root.find(".//kml:coordinates", ns)
+        kml_coords = coordinates.text.strip().split("\n")
 
         # Should have same number of points
         assert len(gpx_points) == len(kml_coords)
@@ -303,14 +319,16 @@ class TestExportComparison:
         for gpx_point, kml_line in zip(gpx_points, kml_coords):
             kml_line = kml_line.strip()
             if kml_line:
-                kml_parts = kml_line.split(',')
+                kml_parts = kml_line.split(",")
                 kml_lon = float(kml_parts[0])
                 kml_lat = float(kml_parts[1])
 
                 assert gpx_point.longitude == pytest.approx(kml_lon, abs=1e-6)
                 assert gpx_point.latitude == pytest.approx(kml_lat, abs=1e-6)
 
-    def test_both_exports_contain_route_name(self, test_client, sample_route, sample_segments):
+    def test_both_exports_contain_route_name(
+        self, test_client, sample_route, sample_segments
+    ):
         """Test that both formats contain the route name."""
         # GPX
         gpx_response = test_client.get(f"/routes/{sample_route.url_slug}/export/gpx")
@@ -320,8 +338,8 @@ class TestExportComparison:
         # KML
         kml_response = test_client.get(f"/routes/{sample_route.url_slug}/export/kml")
         root = ET.fromstring(kml_response.content)
-        ns = {'kml': 'http://www.opengis.net/kml/2.2'}
-        kml_name = root.find('.//kml:Placemark/kml:name', ns).text
+        ns = {"kml": "http://www.opengis.net/kml/2.2"}
+        kml_name = root.find(".//kml:Placemark/kml:name", ns).text
 
         assert gpx_name == sample_route.route_name
         assert kml_name == sample_route.route_name
@@ -332,7 +350,9 @@ class TestExportComparison:
 class TestExportEdgeCases:
     """Tests for edge cases in export functionality."""
 
-    def test_export_route_with_single_segment(self, test_client, test_engine, sample_session):
+    def test_export_route_with_single_segment(
+        self, test_client, test_engine, sample_session
+    ):
         """Test exporting a route with only one segment."""
         from models import SavedRoute, RouteSegment
         from shapely.geometry import LineString
@@ -340,7 +360,9 @@ class TestExportEdgeCases:
         from sqlalchemy.orm import sessionmaker
 
         # Create data using test_engine so test_client can see it
-        TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+        TestSessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=test_engine
+        )
         db = TestSessionLocal()
         try:
             # Create minimal route with single segment
@@ -352,8 +374,8 @@ class TestExportEdgeCases:
                 total_length=100.0,
                 segment_count=1,
                 geom=from_shape(linestring, srid=4326),
-                route_data={'segments': []},
-                url_slug="single-seg-test"
+                route_data={"segments": []},
+                url_slug="single-seg-test",
             )
             db.add(route)
             db.commit()
@@ -369,7 +391,7 @@ class TestExportEdgeCases:
                 length=100.0,
                 radius=50.0,
                 curvature=5.0,
-                curvature_level=1
+                curvature_level=1,
             )
             db.add(seg)
             db.commit()
@@ -386,13 +408,15 @@ class TestExportEdgeCases:
         # Should have 2 points (start and end)
         assert len(points) == 2
 
-    def test_export_preserves_special_characters_in_name(self, test_client, test_db_session, sample_session):
+    def test_export_preserves_special_characters_in_name(
+        self, test_client, test_db_session, sample_session
+    ):
         """Test that route names with special characters export correctly."""
         from models import SavedRoute, RouteSegment
         from shapely.geometry import LineString
         from geoalchemy2.shape import from_shape
 
-        special_name = "Test & Route with \"Quotes\" & <Symbols>"
+        special_name = 'Test & Route with "Quotes" & <Symbols>'
 
         linestring = LineString([(-72.0, 44.0), (-72.01, 44.01)])
         route = SavedRoute(
@@ -402,8 +426,8 @@ class TestExportEdgeCases:
             total_length=100.0,
             segment_count=1,
             geom=from_shape(linestring, srid=4326),
-            route_data={'segments': []},
-            url_slug="special-chars"
+            route_data={"segments": []},
+            url_slug="special-chars",
         )
         test_db_session.add(route)
 
@@ -417,7 +441,7 @@ class TestExportEdgeCases:
             length=100.0,
             radius=50.0,
             curvature=5.0,
-            curvature_level=1
+            curvature_level=1,
         )
         test_db_session.add(seg)
         test_db_session.commit()

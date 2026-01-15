@@ -39,7 +39,7 @@ from api.routers import routes, sessions, data, health
 app = FastAPI(
     title="Curvature API",
     description="API for finding and exploring curvy roads",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # Enable CORS so web browsers can access the API
@@ -78,5 +78,5 @@ if __name__ == "__main__":
         "server:app",
         host="0.0.0.0",  # Listen on all network interfaces
         port=8000,
-        reload=True
+        reload=True,
     )

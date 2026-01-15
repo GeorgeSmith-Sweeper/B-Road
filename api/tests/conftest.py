@@ -22,6 +22,7 @@ from geoalchemy2.shape import from_shape
 
 # Import app and models
 import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from server import app
@@ -34,16 +35,16 @@ from tests.fixtures.sample_segments import (
     DISCONNECTED_SEGMENTS,
     SINGLE_SEGMENT,
     SAMPLE_ROUTE_METADATA,
-    CONNECTED_SEGMENTS_STATS
+    CONNECTED_SEGMENTS_STATS,
 )
 
 
 # Database connection configuration for tests
-TEST_DB_NAME = os.getenv('TEST_DB_NAME', 'curvature_test')
-TEST_DB_USER = os.getenv('TEST_DB_USER', 'postgres')
-TEST_DB_PASSWORD = os.getenv('TEST_DB_PASSWORD', '')
-TEST_DB_HOST = os.getenv('TEST_DB_HOST', 'localhost')
-TEST_DB_PORT = os.getenv('TEST_DB_PORT', '5432')
+TEST_DB_NAME = os.getenv("TEST_DB_NAME", "curvature_test")
+TEST_DB_USER = os.getenv("TEST_DB_USER", "postgres")
+TEST_DB_PASSWORD = os.getenv("TEST_DB_PASSWORD", "")
+TEST_DB_HOST = os.getenv("TEST_DB_HOST", "localhost")
+TEST_DB_PORT = os.getenv("TEST_DB_PORT", "5432")
 
 
 @pytest.fixture(scope="session")
@@ -85,11 +86,11 @@ def postgresql_proc():
         conn.close()
 
         yield {
-            'host': TEST_DB_HOST,
-            'port': TEST_DB_PORT,
-            'user': TEST_DB_USER,
-            'password': TEST_DB_PASSWORD,
-            'dbname': TEST_DB_NAME
+            "host": TEST_DB_HOST,
+            "port": TEST_DB_PORT,
+            "user": TEST_DB_USER,
+            "password": TEST_DB_PASSWORD,
+            "dbname": TEST_DB_NAME,
         }
 
     finally:
@@ -99,12 +100,14 @@ def postgresql_proc():
         cursor = conn.cursor()
 
         # Terminate connections to test database
-        cursor.execute(f"""
+        cursor.execute(
+            f"""
             SELECT pg_terminate_backend(pg_stat_activity.pid)
             FROM pg_stat_activity
             WHERE pg_stat_activity.datname = '{TEST_DB_NAME}'
             AND pid <> pg_backend_pid()
-        """)
+        """
+        )
 
         cursor.execute(f"DROP DATABASE IF EXISTS {TEST_DB_NAME}")
         cursor.close()
@@ -163,9 +166,12 @@ def test_client(test_engine):
     This client uses the test database instead of the production one.
     All requests through TestClient will use test database sessions.
     """
+
     # Override get_db_session to create sessions from test engine
     def override_get_db_session():
-        TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+        TestSessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=test_engine
+        )
         db = TestSessionLocal()
         try:
             yield db
@@ -178,6 +184,7 @@ def test_client(test_engine):
 
     # Must import from the same module that routers import from
     from api.database import get_db_session
+
     app.dependency_overrides[get_db_session] = override_get_db_session
 
     with TestClient(app) as client:
@@ -197,9 +204,7 @@ def sample_session(test_engine) -> RouteSession:
     TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
     db = TestSessionLocal()
     try:
-        session = RouteSession(
-            session_name="Test Session"
-        )
+        session = RouteSession(session_name="Test Session")
         db.add(session)
         db.commit()
         db.refresh(session)
@@ -237,9 +242,9 @@ def sample_route(test_engine, sample_session) -> SavedRoute:
             total_length=CONNECTED_SEGMENTS_STATS["total_length"],
             segment_count=CONNECTED_SEGMENTS_STATS["segment_count"],
             geom=from_shape(linestring, srid=4326),
-            route_data={'segments': CONNECTED_SEGMENTS},
+            route_data={"segments": CONNECTED_SEGMENTS},
             url_slug=f"test-mountain-loop-{uuid.uuid4().hex[:8]}",
-            is_public=SAMPLE_ROUTE_METADATA["is_public"]
+            is_public=SAMPLE_ROUTE_METADATA["is_public"],
         )
 
         db.add(route)
@@ -279,7 +284,7 @@ def sample_segments(test_engine, sample_route) -> list[RouteSegment]:
                 source_way_id=seg_data["way_id"],
                 way_name=seg_data["name"],
                 highway_type=seg_data["highway"],
-                surface_type=seg_data["surface"]
+                surface_type=seg_data["surface"],
             )
             db.add(segment)
             segments.append(segment)
@@ -338,6 +343,7 @@ def clean_database(test_engine):
 
 # Utility functions for tests
 
+
 def assert_segments_connected(segments: list) -> bool:
     """
     Assert that a list of segment dictionaries are connected end-to-end.
@@ -351,7 +357,9 @@ def assert_segments_connected(segments: list) -> bool:
     for i in range(len(segments) - 1):
         current_end = segments[i]["end"]
         next_start = segments[i + 1]["start"]
-        assert current_end == next_start, f"Segment {i} end {current_end} != Segment {i+1} start {next_start}"
+        assert (
+            current_end == next_start
+        ), f"Segment {i} end {current_end} != Segment {i+1} start {next_start}"
     return True
 
 

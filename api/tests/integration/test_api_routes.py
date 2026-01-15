@@ -17,7 +17,7 @@ from tests.fixtures.sample_segments import (
     CONNECTED_SEGMENTS,
     DISCONNECTED_SEGMENTS,
     SAMPLE_ROUTE_METADATA,
-    SAMPLE_PUBLIC_ROUTE_METADATA
+    SAMPLE_PUBLIC_ROUTE_METADATA,
 )
 
 
@@ -82,12 +82,11 @@ class TestRouteCRUDOperations:
             "route_name": SAMPLE_ROUTE_METADATA["route_name"],
             "description": SAMPLE_ROUTE_METADATA["description"],
             "segments": CONNECTED_SEGMENTS,
-            "is_public": False
+            "is_public": False,
         }
 
         response = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}",
-            json=payload
+            f"/routes/save?session_id={sample_session.session_id}", json=payload
         )
 
         assert response.status_code == 200
@@ -103,12 +102,11 @@ class TestRouteCRUDOperations:
         payload = {
             "route_name": "Test Route",
             "segments": CONNECTED_SEGMENTS,
-            "is_public": False
+            "is_public": False,
         }
 
         response = test_client.post(
-            f"/routes/save?session_id={fake_session_id}",
-            json=payload
+            f"/routes/save?session_id={fake_session_id}", json=payload
         )
 
         assert response.status_code == 404
@@ -170,8 +168,8 @@ class TestRouteCRUDOperations:
             json={
                 "route_name": new_name,
                 "description": new_description,
-                "is_public": True
-            }
+                "is_public": True,
+            },
         )
 
         assert response.status_code == 200
@@ -192,7 +190,7 @@ class TestRouteCRUDOperations:
         response = test_client.put(
             f"/routes/{sample_route.route_id}",
             params={"session_id": wrong_session_id},
-            json={"route_name": "Hacked Name"}
+            json={"route_name": "Hacked Name"},
         )
 
         assert response.status_code == 404
@@ -202,8 +200,7 @@ class TestRouteCRUDOperations:
         route_id = sample_route.route_id
 
         response = test_client.delete(
-            f"/routes/{route_id}",
-            params={"session_id": str(sample_session.session_id)}
+            f"/routes/{route_id}", params={"session_id": str(sample_session.session_id)}
         )
 
         assert response.status_code == 200
@@ -219,8 +216,7 @@ class TestRouteCRUDOperations:
         wrong_session_id = str(uuid.uuid4())
 
         response = test_client.delete(
-            f"/routes/{sample_route.route_id}",
-            params={"session_id": wrong_session_id}
+            f"/routes/{sample_route.route_id}", params={"session_id": wrong_session_id}
         )
 
         assert response.status_code == 404
@@ -235,12 +231,11 @@ class TestRouteDataValidation:
         payload = {
             "route_name": "Stats Test",
             "segments": CONNECTED_SEGMENTS,
-            "is_public": False
+            "is_public": False,
         }
 
         response = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}",
-            json=payload
+            f"/routes/save?session_id={sample_session.session_id}", json=payload
         )
 
         assert response.status_code == 200
@@ -255,7 +250,9 @@ class TestRouteDataValidation:
         expected_length = sum(seg["length"] for seg in CONNECTED_SEGMENTS)
 
         assert data["total_curvature"] == pytest.approx(expected_curvature)
-        assert data["total_length_km"] == pytest.approx(expected_length / 1000, rel=0.01)
+        assert data["total_length_km"] == pytest.approx(
+            expected_length / 1000, rel=0.01
+        )
         assert data["segment_count"] == len(CONNECTED_SEGMENTS)
 
     def test_save_route_preserves_segment_data(self, test_client, sample_session):
@@ -263,12 +260,11 @@ class TestRouteDataValidation:
         payload = {
             "route_name": "Preservation Test",
             "segments": CONNECTED_SEGMENTS,
-            "is_public": False
+            "is_public": False,
         }
 
         response = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}",
-            json=payload
+            f"/routes/save?session_id={sample_session.session_id}", json=payload
         )
 
         route_id = response.json()["route_id"]
@@ -292,12 +288,11 @@ class TestRouteDataValidation:
         payload = {
             "route_name": "GeoJSON Test",
             "segments": CONNECTED_SEGMENTS,
-            "is_public": False
+            "is_public": False,
         }
 
         response = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}",
-            json=payload
+            f"/routes/save?session_id={sample_session.session_id}", json=payload
         )
 
         route_id = response.json()["route_id"]
@@ -327,8 +322,7 @@ class TestDataLoading:
     def test_load_data_missing_file(self, test_client):
         """Test POST /data/load with nonexistent file returns 404."""
         response = test_client.post(
-            "/data/load",
-            params={"filepath": "/nonexistent/file.msgpack"}
+            "/data/load", params={"filepath": "/nonexistent/file.msgpack"}
         )
 
         assert response.status_code == 404
@@ -348,28 +342,19 @@ class TestErrorHandling:
     def test_missing_required_fields(self, test_client, sample_session):
         """Test that missing required fields returns validation error."""
         # Missing route_name
-        payload = {
-            "segments": CONNECTED_SEGMENTS
-        }
+        payload = {"segments": CONNECTED_SEGMENTS}
 
         response = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}",
-            json=payload
+            f"/routes/save?session_id={sample_session.session_id}", json=payload
         )
 
         assert response.status_code == 422  # Validation error
 
     def test_invalid_session_uuid_format(self, test_client):
         """Test that invalid UUID format returns error."""
-        payload = {
-            "route_name": "Test",
-            "segments": CONNECTED_SEGMENTS
-        }
+        payload = {"route_name": "Test", "segments": CONNECTED_SEGMENTS}
 
-        response = test_client.post(
-            "/routes/save?session_id=not-a-uuid",
-            json=payload
-        )
+        response = test_client.post("/routes/save?session_id=not-a-uuid", json=payload)
 
         # Should return 422 (validation error) or 404
         assert response.status_code in [404, 422]
@@ -385,12 +370,11 @@ class TestPublicRoutes:
             "route_name": SAMPLE_PUBLIC_ROUTE_METADATA["route_name"],
             "description": SAMPLE_PUBLIC_ROUTE_METADATA["description"],
             "segments": CONNECTED_SEGMENTS,
-            "is_public": True
+            "is_public": True,
         }
 
         response = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}",
-            json=payload
+            f"/routes/save?session_id={sample_session.session_id}", json=payload
         )
 
         assert response.status_code == 200
@@ -409,7 +393,7 @@ class TestPublicRoutes:
         response = test_client.put(
             f"/routes/{sample_route.route_id}",
             params={"session_id": str(sample_session.session_id)},
-            json={"is_public": True}
+            json={"is_public": True},
         )
 
         assert response.status_code == 200
@@ -428,12 +412,11 @@ class TestURLSlugGeneration:
         payload = {
             "route_name": "My Test Route",
             "segments": CONNECTED_SEGMENTS,
-            "is_public": False
+            "is_public": False,
         }
 
         response = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}",
-            json=payload
+            f"/routes/save?session_id={sample_session.session_id}", json=payload
         )
 
         data = response.json()
@@ -448,20 +431,18 @@ class TestURLSlugGeneration:
         payload = {
             "route_name": "Duplicate Name",
             "segments": CONNECTED_SEGMENTS,
-            "is_public": False
+            "is_public": False,
         }
 
         # Create first route
         response1 = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}",
-            json=payload
+            f"/routes/save?session_id={sample_session.session_id}", json=payload
         )
         slug1 = response1.json()["url_slug"]
 
         # Create second route with same name
         response2 = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}",
-            json=payload
+            f"/routes/save?session_id={sample_session.session_id}", json=payload
         )
         slug2 = response2.json()["url_slug"]
 
@@ -496,12 +477,9 @@ class TestConcurrentOperations:
         payload = {
             "route_name": "Session 1 Route",
             "segments": CONNECTED_SEGMENTS,
-            "is_public": False
+            "is_public": False,
         }
-        test_client.post(
-            f"/routes/save?session_id={session1.session_id}",
-            json=payload
-        )
+        test_client.post(f"/routes/save?session_id={session1.session_id}", json=payload)
 
         # List routes for session2 (should be empty)
         response = test_client.get(f"/routes/list?session_id={session2.session_id}")

@@ -41,16 +41,22 @@ class RouteRepository(BaseRepository[SavedRoute]):
 
     def get_by_session(self, session_id: uuid.UUID) -> List[SavedRoute]:
         """Get all routes for a session, ordered by creation date"""
-        return (self.db.query(SavedRoute)
-                .filter_by(session_id=session_id)
-                .order_by(desc(SavedRoute.created_at))
-                .all())
+        return (
+            self.db.query(SavedRoute)
+            .filter_by(session_id=session_id)
+            .order_by(desc(SavedRoute.created_at))
+            .all()
+        )
 
-    def get_by_session_and_id(self, session_id: uuid.UUID, route_id: int) -> Optional[SavedRoute]:
+    def get_by_session_and_id(
+        self, session_id: uuid.UUID, route_id: int
+    ) -> Optional[SavedRoute]:
         """Get route by ID and session (for authorization)"""
-        return (self.db.query(SavedRoute)
-                .filter_by(route_id=route_id, session_id=session_id)
-                .first())
+        return (
+            self.db.query(SavedRoute)
+            .filter_by(route_id=route_id, session_id=session_id)
+            .first()
+        )
 
     def create_route(self, route: SavedRoute) -> SavedRoute:
         """Create a new route"""

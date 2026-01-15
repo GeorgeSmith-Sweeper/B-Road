@@ -28,7 +28,7 @@ DATABASE_URL = os.getenv(
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
-    echo=False  # Set to True for SQL query logging during development
+    echo=False,  # Set to True for SQL query logging during development
 )
 
 # Session factory

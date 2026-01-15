@@ -34,7 +34,7 @@ async def get_roads_geojson(
     min_curvature: Optional[float] = Query(300),
     max_curvature: Optional[float] = Query(None),
     surface: Optional[str] = Query(None),
-    limit: Optional[int] = Query(100)
+    limit: Optional[int] = Query(100),
 ):
     """Get roads as GeoJSON FeatureCollection"""
     try:
@@ -42,7 +42,7 @@ async def get_roads_geojson(
             min_curvature=min_curvature,
             max_curvature=max_curvature,
             surface=surface,
-            limit=limit
+            limit=limit,
         )
 
         geojson = geometry_service.collections_to_geojson(
@@ -54,9 +54,9 @@ async def get_roads_geojson(
                     "min_curvature": min_curvature,
                     "max_curvature": max_curvature,
                     "surface": surface,
-                    "limit": limit
-                }
-            }
+                    "limit": limit,
+                },
+            },
         )
 
         return JSONResponse(content=geojson)
@@ -68,30 +68,35 @@ async def get_roads_geojson(
 
 @router.get("/roads")
 async def search_roads(
-    min_curvature: Optional[float] = Query(300),
-    limit: Optional[int] = Query(20)
+    min_curvature: Optional[float] = Query(300), limit: Optional[int] = Query(20)
 ):
     """Search for roads and return as simple JSON"""
     try:
         collections = data_service.get_filtered_collections(
-            min_curvature=min_curvature,
-            limit=limit
+            min_curvature=min_curvature, limit=limit
         )
 
         results = []
         for collection in collections:
-            results.append({
-                "name": data_service.tools.get_collection_name(collection),
-                "curvature": round(data_service.tools.get_collection_curvature(collection), 2),
-                "length_km": round(data_service.tools.get_collection_length(collection) / 1000, 2),
-                "length_mi": round(data_service.tools.get_collection_length(collection) / 1609, 2),
-                "surface": data_service.tools.get_collection_paved_style(collection)
-            })
+            results.append(
+                {
+                    "name": data_service.tools.get_collection_name(collection),
+                    "curvature": round(
+                        data_service.tools.get_collection_curvature(collection), 2
+                    ),
+                    "length_km": round(
+                        data_service.tools.get_collection_length(collection) / 1000, 2
+                    ),
+                    "length_mi": round(
+                        data_service.tools.get_collection_length(collection) / 1609, 2
+                    ),
+                    "surface": data_service.tools.get_collection_paved_style(
+                        collection
+                    ),
+                }
+            )
 
-        return {
-            "total_found": len(results),
-            "roads": results
-        }
+        return {"total_found": len(results), "roads": results}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -102,14 +107,12 @@ async def search_roads(
 async def get_road_segments(
     min_curvature: Optional[float] = Query(300),
     bbox: Optional[str] = Query(None),
-    limit: Optional[int] = Query(500)
+    limit: Optional[int] = Query(500),
 ):
     """Get individual road segments for stitching mode"""
     try:
         segments = data_service.get_segments(
-            min_curvature=min_curvature,
-            bbox=bbox,
-            limit=limit
+            min_curvature=min_curvature, bbox=bbox, limit=limit
         )
 
         geojson = geometry_service.segments_to_geojson(segments)

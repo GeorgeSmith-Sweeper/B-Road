@@ -16,7 +16,7 @@ CONNECTED_SEGMENTS = [
         "curvature_level": 2,
         "name": "Mountain Road",
         "highway": "tertiary",
-        "surface": "paved"
+        "surface": "paved",
     },
     {
         "way_id": 12345,
@@ -28,7 +28,7 @@ CONNECTED_SEGMENTS = [
         "curvature_level": 3,
         "name": "Mountain Road",
         "highway": "tertiary",
-        "surface": "paved"
+        "surface": "paved",
     },
     {
         "way_id": 12346,
@@ -40,8 +40,8 @@ CONNECTED_SEGMENTS = [
         "curvature_level": 3,
         "name": "Mountain Road",
         "highway": "tertiary",
-        "surface": "paved"
-    }
+        "surface": "paved",
+    },
 ]
 
 # Disconnected segments (for validation testing)
@@ -56,7 +56,7 @@ DISCONNECTED_SEGMENTS = [
         "curvature_level": 2,
         "name": "Mountain Road",
         "highway": "tertiary",
-        "surface": "paved"
+        "surface": "paved",
     },
     {
         "way_id": 12346,
@@ -68,8 +68,8 @@ DISCONNECTED_SEGMENTS = [
         "curvature_level": 3,
         "name": "Other Road",
         "highway": "tertiary",
-        "surface": "paved"
-    }
+        "surface": "paved",
+    },
 ]
 
 # Single segment for simple tests
@@ -83,25 +83,27 @@ SINGLE_SEGMENT = {
     "curvature_level": 1,
     "name": "Test Road",
     "highway": "secondary",
-    "surface": "paved"
+    "surface": "paved",
 }
 
 # Route with many segments (for performance testing)
 LONG_ROUTE_SEGMENTS = []
 base_lat, base_lon = 44.0, -72.0
 for i in range(100):
-    LONG_ROUTE_SEGMENTS.append({
-        "way_id": 50000 + (i // 10),
-        "start": [base_lat + (i * 0.001), base_lon + (i * 0.001)],
-        "end": [base_lat + ((i + 1) * 0.001), base_lon + ((i + 1) * 0.001)],
-        "length": 100.0 + (i % 20),
-        "radius": 50.0 + (i % 50),
-        "curvature": 5.0 + (i % 15),
-        "curvature_level": (i % 4) + 1,
-        "name": f"Route Section {i // 10}",
-        "highway": "tertiary",
-        "surface": "paved" if i % 3 == 0 else "unpaved"
-    })
+    LONG_ROUTE_SEGMENTS.append(
+        {
+            "way_id": 50000 + (i // 10),
+            "start": [base_lat + (i * 0.001), base_lon + (i * 0.001)],
+            "end": [base_lat + ((i + 1) * 0.001), base_lon + ((i + 1) * 0.001)],
+            "length": 100.0 + (i % 20),
+            "radius": 50.0 + (i % 50),
+            "curvature": 5.0 + (i % 15),
+            "curvature_level": (i % 4) + 1,
+            "name": f"Route Section {i // 10}",
+            "highway": "tertiary",
+            "surface": "paved" if i % 3 == 0 else "unpaved",
+        }
+    )
 
 # Invalid segments (for error testing)
 INVALID_LATITUDE_SEGMENT = {
@@ -114,7 +116,7 @@ INVALID_LATITUDE_SEGMENT = {
     "curvature_level": 2,
     "name": "Invalid Road",
     "highway": "tertiary",
-    "surface": "paved"
+    "surface": "paved",
 }
 
 INVALID_LONGITUDE_SEGMENT = {
@@ -127,25 +129,25 @@ INVALID_LONGITUDE_SEGMENT = {
     "curvature_level": 2,
     "name": "Invalid Road",
     "highway": "tertiary",
-    "surface": "paved"
+    "surface": "paved",
 }
 
 # Sample route metadata
 SAMPLE_ROUTE_METADATA = {
     "route_name": "Test Mountain Loop",
     "description": "A scenic route through the Green Mountains",
-    "is_public": False
+    "is_public": False,
 }
 
 SAMPLE_PUBLIC_ROUTE_METADATA = {
     "route_name": "Public Scenic Route",
     "description": "Popular twisty road route",
-    "is_public": True
+    "is_public": True,
 }
 
 # Expected statistics for CONNECTED_SEGMENTS
 CONNECTED_SEGMENTS_STATS = {
     "total_curvature": 60.0,  # 15 + 20 + 25
-    "total_length": 1650.0,   # 500 + 550 + 600
-    "segment_count": 3
+    "total_length": 1650.0,  # 500 + 550 + 600
+    "segment_count": 3,
 }

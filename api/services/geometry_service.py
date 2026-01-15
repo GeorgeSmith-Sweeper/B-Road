@@ -10,20 +10,20 @@ class GeometryService:
     """Service for geometry transformations."""
 
     def __init__(self):
-        self.tools = OutputTools('km')
+        self.tools = OutputTools("km")
 
     def collection_to_geojson_feature(self, collection: dict) -> dict:
         """Convert a curvature collection to a GeoJSON Feature"""
         # Build the line coordinates from all segments in all ways
         coords = []
 
-        for way in collection['ways']:
-            if 'segments' in way and len(way['segments']) > 0:
-                first_segment = way['segments'][0]
-                coords.append([first_segment['start'][1], first_segment['start'][0]])
+        for way in collection["ways"]:
+            if "segments" in way and len(way["segments"]) > 0:
+                first_segment = way["segments"][0]
+                coords.append([first_segment["start"][1], first_segment["start"][0]])
 
-                for segment in way['segments']:
-                    coords.append([segment['end'][1], segment['end'][0]])
+                for segment in way["segments"]:
+                    coords.append([segment["end"][1], segment["end"][0]])
 
         # Calculate properties
         curvature = self.tools.get_collection_curvature(collection)
@@ -34,26 +34,21 @@ class GeometryService:
         # Build GeoJSON Feature
         feature = {
             "type": "Feature",
-            "geometry": {
-                "type": "LineString",
-                "coordinates": coords
-            },
+            "geometry": {"type": "LineString", "coordinates": coords},
             "properties": {
                 "name": name,
                 "curvature": round(curvature, 2),
                 "length_km": round(length / 1000, 2),
                 "length_mi": round(length / 1609, 2),
                 "surface": surface,
-                "join_type": collection.get('join_type', 'none'),
-            }
+                "join_type": collection.get("join_type", "none"),
+            },
         }
 
         return feature
 
     def collections_to_geojson(
-        self,
-        collections: List[dict],
-        metadata: dict = None
+        self, collections: List[dict], metadata: dict = None
     ) -> dict:
         """Convert multiple collections to GeoJSON FeatureCollection"""
         features = []
@@ -65,10 +60,7 @@ class GeometryService:
                 # Skip collections that can't be converted
                 continue
 
-        geojson = {
-            "type": "FeatureCollection",
-            "features": features
-        }
+        geojson = {"type": "FeatureCollection", "features": features}
 
         if metadata:
             geojson["metadata"] = metadata
@@ -85,15 +77,12 @@ class GeometryService:
                 "geometry": {
                     "type": "LineString",
                     "coordinates": [
-                        [seg['start'][1], seg['start'][0]],
-                        [seg['end'][1], seg['end'][0]]
-                    ]
+                        [seg["start"][1], seg["start"][0]],
+                        [seg["end"][1], seg["end"][0]],
+                    ],
                 },
-                "properties": seg
+                "properties": seg,
             }
             features.append(feature)
 
-        return {
-            "type": "FeatureCollection",
-            "features": features
-        }
+        return {"type": "FeatureCollection", "features": features}

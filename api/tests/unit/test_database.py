@@ -41,30 +41,42 @@ class TestDatabaseConnection:
         """Test that all required tables exist."""
         with test_engine.connect() as conn:
             # Check route_sessions table
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT EXISTS (
                     SELECT FROM information_schema.tables
                     WHERE table_name = 'route_sessions'
                 );
-            """))
+            """
+                )
+            )
             assert result.fetchone()[0] is True
 
             # Check saved_routes table
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT EXISTS (
                     SELECT FROM information_schema.tables
                     WHERE table_name = 'saved_routes'
                 );
-            """))
+            """
+                )
+            )
             assert result.fetchone()[0] is True
 
             # Check route_segments table
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT EXISTS (
                     SELECT FROM information_schema.tables
                     WHERE table_name = 'route_segments'
                 );
-            """))
+            """
+                )
+            )
             assert result.fetchone()[0] is True
 
 
@@ -86,9 +98,9 @@ class TestSessionManagement:
         test_db_session.commit()
 
         # Query it back
-        queried = test_db_session.query(RouteSession).filter_by(
-            session_name="Test"
-        ).first()
+        queried = (
+            test_db_session.query(RouteSession).filter_by(session_name="Test").first()
+        )
 
         assert queried is not None
         assert queried.session_name == "Test"
@@ -108,7 +120,7 @@ class TestSessionManagement:
             total_curvature=50.0,
             total_length=1000.0,
             segment_count=2,
-            url_slug="test-slug"
+            url_slug="test-slug",
         )
         test_db_session.add(route1)
         test_db_session.commit()
@@ -120,7 +132,7 @@ class TestSessionManagement:
             total_curvature=60.0,
             total_length=1200.0,
             segment_count=2,
-            url_slug="test-slug"  # Duplicate!
+            url_slug="test-slug",  # Duplicate!
         )
         test_db_session.add(route2)
 
@@ -144,24 +156,32 @@ class TestPostGISFunctionality:
         """Test that PostGIS geometric types are registered."""
         with test_engine.connect() as conn:
             # Check that GEOMETRY type is available
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT data_type
                 FROM information_schema.columns
                 WHERE table_name = 'saved_routes'
                 AND column_name = 'geom';
-            """))
+            """
+                )
+            )
             data_type = result.fetchone()[0]
-            assert data_type == 'USER-DEFINED'  # PostGIS types are user-defined
+            assert data_type == "USER-DEFINED"  # PostGIS types are user-defined
 
     def test_postgis_st_length_function(self, test_engine):
         """Test that ST_Length function works."""
         with test_engine.connect() as conn:
             # Create a simple line and measure it
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT ST_Length(
                     ST_GeomFromText('LINESTRING(0 0, 1 0)', 4326)
                 );
-            """))
+            """
+                )
+            )
             length = result.fetchone()[0]
             # Length should be approximately 1 (in the units of the SRID)
             assert length == pytest.approx(1.0, rel=0.01)
@@ -170,22 +190,30 @@ class TestPostGISFunctionality:
         """Test that ST_Intersects function works."""
         with test_engine.connect() as conn:
             # Test two intersecting lines
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT ST_Intersects(
                     ST_GeomFromText('LINESTRING(0 0, 2 2)', 4326),
                     ST_GeomFromText('LINESTRING(0 2, 2 0)', 4326)
                 );
-            """))
+            """
+                )
+            )
             intersects = result.fetchone()[0]
             assert intersects is True
 
             # Test two non-intersecting lines
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT ST_Intersects(
                     ST_GeomFromText('LINESTRING(0 0, 1 0)', 4326),
                     ST_GeomFromText('LINESTRING(2 0, 3 0)', 4326)
                 );
-            """))
+            """
+                )
+            )
             intersects = result.fetchone()[0]
             assert intersects is False
 
@@ -194,11 +222,15 @@ class TestPostGISFunctionality:
         with test_engine.connect() as conn:
             # Calculate distance in meters using geography type
             # Distance from equator (0,0) to (0,1) should be ~111km
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT ST_Length(
                     ST_GeographyFromText('LINESTRING(0 0, 0 1)')
                 );
-            """))
+            """
+                )
+            )
             length = result.fetchone()[0]
             # Should be approximately 111,000 meters (111 km)
             assert 110000 < length < 112000
@@ -206,16 +238,20 @@ class TestPostGISFunctionality:
     def test_postgis_srid_4326(self, test_engine):
         """Test that SRID 4326 (WGS84) is available."""
         with test_engine.connect() as conn:
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT auth_name, auth_srid, srtext
                 FROM spatial_ref_sys
                 WHERE srid = 4326;
-            """))
+            """
+                )
+            )
             row = result.fetchone()
             assert row is not None
-            assert row.auth_name == 'EPSG'
+            assert row.auth_name == "EPSG"
             assert row.auth_srid == 4326
-            assert 'WGS 84' in row.srtext or 'WGS84' in row.srtext
+            assert "WGS 84" in row.srtext or "WGS84" in row.srtext
 
 
 @pytest.mark.unit
@@ -225,26 +261,34 @@ class TestDatabaseIndexes:
     def test_saved_routes_geom_index_exists(self, test_engine):
         """Test that GIST index on geom column exists."""
         with test_engine.connect() as conn:
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT indexname
                 FROM pg_indexes
                 WHERE tablename = 'saved_routes'
                 AND indexname LIKE '%geom%';
-            """))
+            """
+                )
+            )
             indexes = [row[0] for row in result.fetchall()]
             # Should have a GIST index on geom column
             assert len(indexes) > 0
-            assert any('geom' in idx for idx in indexes)
+            assert any("geom" in idx for idx in indexes)
 
     def test_url_slug_unique_constraint(self, test_engine):
         """Test that url_slug has unique constraint."""
         with test_engine.connect() as conn:
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT constraint_name
                 FROM information_schema.table_constraints
                 WHERE table_name = 'saved_routes'
                 AND constraint_type = 'UNIQUE';
-            """))
+            """
+                )
+            )
             constraints = [row[0] for row in result.fetchall()]
             # Should have unique constraint (might be on url_slug column or in constraint name)
             assert len(constraints) > 0
@@ -253,21 +297,29 @@ class TestDatabaseIndexes:
         """Test that foreign key relationships are enforced."""
         with test_engine.connect() as conn:
             # Check saved_routes -> route_sessions FK
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT constraint_name
                 FROM information_schema.table_constraints
                 WHERE table_name = 'saved_routes'
                 AND constraint_type = 'FOREIGN KEY';
-            """))
+            """
+                )
+            )
             fk_constraints = [row[0] for row in result.fetchall()]
             assert len(fk_constraints) > 0
 
             # Check route_segments -> saved_routes FK
-            result = conn.execute(text("""
+            result = conn.execute(
+                text(
+                    """
                 SELECT constraint_name
                 FROM information_schema.table_constraints
                 WHERE table_name = 'route_segments'
                 AND constraint_type = 'FOREIGN KEY';
-            """))
+            """
+                )
+            )
             fk_constraints = [row[0] for row in result.fetchall()]
             assert len(fk_constraints) > 0

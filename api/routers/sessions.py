@@ -21,7 +21,7 @@ def get_session_service(db: Session = Depends(get_db_session)) -> SessionService
 @router.post("/create", response_model=SessionResponse)
 async def create_session(
     session_name: Optional[str] = None,
-    service: SessionService = Depends(get_session_service)
+    service: SessionService = Depends(get_session_service),
 ):
     """Create a new user session for route building"""
     try:

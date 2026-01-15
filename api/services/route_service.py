@@ -14,8 +14,12 @@ from geoalchemy2.shape import from_shape
 
 from api.models.orm import SavedRoute, RouteSegment
 from api.models.schemas import (
-    SaveRouteRequest, UpdateRouteRequest, RouteResponse,
-    RouteDetailResponse, RouteListResponse, SaveRouteResponse
+    SaveRouteRequest,
+    UpdateRouteRequest,
+    RouteResponse,
+    RouteDetailResponse,
+    RouteListResponse,
+    SaveRouteResponse,
 )
 from api.repositories.route_repository import RouteRepository
 from api.repositories.session_repository import SessionRepository
@@ -32,9 +36,7 @@ class RouteService:
         self.segment_repo = SegmentRepository(db)
 
     def save_route(
-        self,
-        request: SaveRouteRequest,
-        session_id: str
+        self, request: SaveRouteRequest, session_id: str
     ) -> SaveRouteResponse:
         """
         Save a stitched route to the database.
@@ -78,9 +80,9 @@ class RouteService:
             total_length=total_length,
             segment_count=segment_count,
             geom=from_shape(linestring, srid=4326),
-            route_data={'segments': [seg.model_dump() for seg in request.segments]},
+            route_data={"segments": [seg.model_dump() for seg in request.segments]},
             url_slug=url_slug,
-            is_public=request.is_public
+            is_public=request.is_public,
         )
 
         route = self.route_repo.create_route(route)
@@ -102,16 +104,14 @@ class RouteService:
                 source_way_id=seg.way_id,
                 way_name=seg.name,
                 highway_type=seg.highway,
-                surface_type=seg.surface
+                surface_type=seg.surface,
             )
             route_segments.append(route_segment)
 
         self.segment_repo.create_segments(route_segments)
 
         return SaveRouteResponse(
-            route_id=route.route_id,
-            url_slug=url_slug,
-            share_url=f"/routes/{url_slug}"
+            route_id=route.route_id, url_slug=url_slug, share_url=f"/routes/{url_slug}"
         )
 
     def get_route(self, identifier: str) -> RouteDetailResponse:
@@ -140,17 +140,14 @@ class RouteService:
             is_public=route.is_public,
             geojson={
                 "type": "Feature",
-                "geometry": {
-                    "type": "LineString",
-                    "coordinates": coords
-                },
+                "geometry": {"type": "LineString", "coordinates": coords},
                 "properties": {
                     "name": route.route_name,
                     "curvature": route.total_curvature,
-                    "length_mi": route.total_length / 1609.34
-                }
+                    "length_mi": route.total_length / 1609.34,
+                },
             },
-            segments=route.route_data['segments']
+            segments=route.route_data["segments"],
         )
 
     def list_routes(self, session_id: str) -> RouteListResponse:
@@ -169,7 +166,7 @@ class RouteService:
                 segment_count=r.segment_count,
                 url_slug=r.url_slug,
                 created_at=r.created_at.isoformat(),
-                is_public=r.is_public
+                is_public=r.is_public,
             )
             for r in routes
         ]
@@ -177,10 +174,7 @@ class RouteService:
         return RouteListResponse(routes=route_responses)
 
     def update_route(
-        self,
-        route_id: int,
-        session_id: str,
-        request: UpdateRouteRequest
+        self, route_id: int, session_id: str, request: UpdateRouteRequest
     ) -> dict:
         """Update route metadata"""
         session_uuid = uuid.UUID(session_id)
@@ -215,8 +209,8 @@ class RouteService:
 
     def _generate_url_slug(self, route_name: str, session_id: str) -> str:
         """Generate unique URL slug from route name"""
-        slug_base = route_name.lower().replace(' ', '-')[:30]
-        slug_base = ''.join(c for c in slug_base if c.isalnum() or c == '-')
+        slug_base = route_name.lower().replace(" ", "-")[:30]
+        slug_base = "".join(c for c in slug_base if c.isalnum() or c == "-")
         slug_hash = hashlib.md5(
             f"{session_id}{route_name}{datetime.utcnow()}".encode()
         ).hexdigest()[:8]

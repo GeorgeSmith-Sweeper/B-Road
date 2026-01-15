@@ -31,7 +31,9 @@ ELEVATION_TIMEOUT = 30  # seconds
 # Densification settings
 METERS_PER_MILE = 1609.34
 TARGET_POINTS_PER_MILE = 30
-DENSIFY_DISTANCE_METERS = METERS_PER_MILE / TARGET_POINTS_PER_MILE  # ~53.6m between points
+DENSIFY_DISTANCE_METERS = (
+    METERS_PER_MILE / TARGET_POINTS_PER_MILE
+)  # ~53.6m between points
 
 # Coordinate precision (6 decimal places = ~0.1m accuracy)
 COORD_PRECISION = 6
@@ -93,15 +95,21 @@ class ExportService:
         densified = linestring.segmentize(densify_distance_degrees)
 
         # Extract coordinates as (lon, lat) tuples
-        coords = [(round(x, COORD_PRECISION), round(y, COORD_PRECISION))
-                  for x, y in densified.coords]
+        coords = [
+            (round(x, COORD_PRECISION), round(y, COORD_PRECISION))
+            for x, y in densified.coords
+        ]
 
-        logger.info(f"Densified route {route.route_id}: {len(linestring.coords)} -> {len(coords)} points "
-                   f"({total_length_miles:.1f} mi, {len(coords)/total_length_miles:.1f} pts/mi)")
+        logger.info(
+            f"Densified route {route.route_id}: {len(linestring.coords)} -> {len(coords)} points "
+            f"({total_length_miles:.1f} mi, {len(coords)/total_length_miles:.1f} pts/mi)"
+        )
 
         return coords
 
-    async def fetch_elevations(self, coordinates: List[Tuple[float, float]]) -> Dict[Tuple[float, float], float]:
+    async def fetch_elevations(
+        self, coordinates: List[Tuple[float, float]]
+    ) -> Dict[Tuple[float, float], float]:
         """
         Fetch elevation data from Open-Elevation API.
 
@@ -122,16 +130,18 @@ class ExportService:
             async with httpx.AsyncClient(timeout=ELEVATION_TIMEOUT) as client:
                 # Process in batches
                 for i in range(0, len(coordinates), ELEVATION_BATCH_SIZE):
-                    batch = coordinates[i:i + ELEVATION_BATCH_SIZE]
+                    batch = coordinates[i : i + ELEVATION_BATCH_SIZE]
 
                     # Open-Elevation expects {"locations": [{"latitude": y, "longitude": x}, ...]}
-                    locations = [{"latitude": lat, "longitude": lon} for lon, lat in batch]
+                    locations = [
+                        {"latitude": lat, "longitude": lon} for lon, lat in batch
+                    ]
 
                     try:
                         response = await client.post(
                             OPEN_ELEVATION_API,
                             json={"locations": locations},
-                            timeout=ELEVATION_TIMEOUT
+                            timeout=ELEVATION_TIMEOUT,
                         )
                         response.raise_for_status()
 
@@ -143,11 +153,15 @@ class ExportService:
                             if elevation is not None:
                                 elevations[coord] = round(elevation, 1)
 
-                        logger.info(f"Fetched elevations for batch {i//ELEVATION_BATCH_SIZE + 1}: "
-                                  f"{len(elevations)} points")
+                        logger.info(
+                            f"Fetched elevations for batch {i//ELEVATION_BATCH_SIZE + 1}: "
+                            f"{len(elevations)} points"
+                        )
 
                     except (httpx.HTTPError, KeyError, ValueError) as e:
-                        logger.warning(f"Failed to fetch elevation batch {i//ELEVATION_BATCH_SIZE + 1}: {e}")
+                        logger.warning(
+                            f"Failed to fetch elevation batch {i//ELEVATION_BATCH_SIZE + 1}: {e}"
+                        )
                         continue
 
         except Exception as e:
@@ -180,7 +194,10 @@ class ExportService:
 
         # Add metadata
         gpx.name = route.route_name
-        gpx.description = route.description or f"Curvature: {route.total_curvature:.0f}, Distance: {route.length_mi:.1f} mi"
+        gpx.description = (
+            route.description
+            or f"Curvature: {route.total_curvature:.0f}, Distance: {route.length_mi:.1f} mi"
+        )
         gpx.creator = "B-Road GPX Optimizer - https://github.com/adamfranco/curvature"
         gpx.time = datetime.utcnow()
 
@@ -216,13 +233,15 @@ class ExportService:
                 latitude=lat,
                 longitude=lon,
                 elevation=elevation,
-                time=None  # No timestamps for route tracks
+                time=None,  # No timestamps for route tracks
             )
 
             gpx_segment.points.append(point)
 
-        logger.info(f"Generated GPX for route {route.route_id}: {len(coordinates)} points, "
-                   f"{len(elevations)} with elevation data")
+        logger.info(
+            f"Generated GPX for route {route.route_id}: {len(coordinates)} points, "
+            f"{len(elevations)} with elevation data"
+        )
 
         # Generate XML with proper formatting
         return gpx.to_xml(version="1.1")
@@ -251,7 +270,9 @@ class ExportService:
         coordinates = "\n".join(coords_list)
 
         # Calculate route statistics
-        curvature_per_mile = route.total_curvature / route.length_mi if route.length_mi > 0 else 0
+        curvature_per_mile = (
+            route.total_curvature / route.length_mi if route.length_mi > 0 else 0
+        )
 
         # Determine line color based on curvature (AABBGGRR format for KML)
         if curvature_per_mile > 200:
@@ -309,7 +330,9 @@ class ExportService:
   </Document>
 </kml>"""
 
-        logger.info(f"Generated KML for route {route.route_id}: {len(coords_list)} points")
+        logger.info(
+            f"Generated KML for route {route.route_id}: {len(coords_list)} points"
+        )
 
         return kml
 

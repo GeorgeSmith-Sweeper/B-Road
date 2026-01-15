@@ -42,7 +42,7 @@ def sample_route():
         segment_count=5,
         url_slug="test-scenic-route-abc123",
         is_public=True,
-        created_at=datetime(2024, 1, 15, 10, 30, 0)
+        created_at=datetime(2024, 1, 15, 10, 30, 0),
     )
 
     # Create a simple linestring (Vermont coordinates)
@@ -51,7 +51,7 @@ def sample_route():
         (-72.51, 44.01),
         (-72.52, 44.015),
         (-72.53, 44.02),
-        (-72.54, 44.025)
+        (-72.54, 44.025),
     ]
     route.geom = from_shape(LineString(coords), srid=4326)
 
@@ -59,13 +59,13 @@ def sample_route():
     route.segments = []
     for i in range(5):
         seg = RouteSegment(
-            id=i+1,
+            id=i + 1,
             route_id=1,
-            position=i+1,
+            position=i + 1,
             start_lat=coords[i][1],
             start_lon=coords[i][0],
-            end_lat=coords[i+1][1] if i < 4 else coords[i][1],
-            end_lon=coords[i+1][0] if i < 4 else coords[i][0],
+            end_lat=coords[i + 1][1] if i < 4 else coords[i][1],
+            end_lon=coords[i + 1][0] if i < 4 else coords[i][0],
             length=643.74,  # ~0.4 miles each
             radius=500.0,
             curvature=100.0,
@@ -73,7 +73,7 @@ def sample_route():
             source_way_id=12345 + i,
             way_name=f"Mountain Road {i+1}",
             highway_type="tertiary",
-            surface_type="paved"
+            surface_type="paved",
         )
         route.segments.append(seg)
 
@@ -119,6 +119,7 @@ class TestExportService:
 
         # Get original point count
         from geoalchemy2.shape import to_shape
+
         original_linestring = to_shape(sample_route.geom)
         original_count = len(original_linestring.coords)
 
@@ -133,8 +134,8 @@ class TestExportService:
             assert isinstance(lon, float)
             assert isinstance(lat, float)
             # Check precision (6 decimal places max)
-            assert len(str(lon).split('.')[-1]) <= COORD_PRECISION
-            assert len(str(lat).split('.')[-1]) <= COORD_PRECISION
+            assert len(str(lon).split(".")[-1]) <= COORD_PRECISION
+            assert len(str(lat).split(".")[-1]) <= COORD_PRECISION
 
     def test_densify_achieves_target_density(self, mock_db_session, sample_route):
         """Test that densification achieves ~30 points per mile."""
@@ -162,13 +163,15 @@ class TestExportService:
             "results": [
                 {"latitude": 44.0, "longitude": -72.5, "elevation": 305.5},
                 {"latitude": 44.01, "longitude": -72.51, "elevation": 310.2},
-                {"latitude": 44.02, "longitude": -72.52, "elevation": 315.8}
+                {"latitude": 44.02, "longitude": -72.52, "elevation": 315.8},
             ]
         }
         mock_response.raise_for_status = Mock()
 
-        with patch('httpx.AsyncClient') as mock_client:
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(return_value=mock_response)
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
+                return_value=mock_response
+            )
 
             elevations = await service.fetch_elevations(coords)
 
@@ -184,8 +187,10 @@ class TestExportService:
 
         coords = [(-72.5, 44.0), (-72.51, 44.01)]
 
-        with patch('httpx.AsyncClient') as mock_client:
-            mock_client.return_value.__aenter__.return_value.post = AsyncMock(side_effect=Exception("API Error"))
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
+                side_effect=Exception("API Error")
+            )
 
             elevations = await service.fetch_elevations(coords)
 
@@ -200,7 +205,7 @@ class TestExportService:
         service = ExportService(mock_db_session)
 
         # Mock elevation API
-        with patch.object(service, 'fetch_elevations', AsyncMock(return_value={})):
+        with patch.object(service, "fetch_elevations", AsyncMock(return_value={})):
             gpx_xml = await service.generate_gpx_track("test-scenic-route-abc123")
 
         assert gpx_xml is not None
@@ -233,12 +238,11 @@ class TestExportService:
         service = ExportService(mock_db_session)
 
         # Mock elevation API with data
-        mock_elevations = {
-            (-72.5, 44.0): 305.5,
-            (-72.51, 44.01): 310.2
-        }
+        mock_elevations = {(-72.5, 44.0): 305.5, (-72.51, 44.01): 310.2}
 
-        with patch.object(service, 'fetch_elevations', AsyncMock(return_value=mock_elevations)):
+        with patch.object(
+            service, "fetch_elevations", AsyncMock(return_value=mock_elevations)
+        ):
             gpx_xml = await service.generate_gpx_track("test-scenic-route-abc123")
 
         # Parse GPX
@@ -250,13 +254,15 @@ class TestExportService:
         assert len(points_with_elevation) > 0
 
     @pytest.mark.asyncio
-    async def test_generate_gpx_coordinate_precision(self, mock_db_session, sample_route):
+    async def test_generate_gpx_coordinate_precision(
+        self, mock_db_session, sample_route
+    ):
         """Test GPX coordinates have correct precision."""
         mock_db_session.query().filter_by().first.return_value = sample_route
 
         service = ExportService(mock_db_session)
 
-        with patch.object(service, 'fetch_elevations', AsyncMock(return_value={})):
+        with patch.object(service, "fetch_elevations", AsyncMock(return_value={})):
             gpx_xml = await service.generate_gpx_track("test-scenic-route-abc123")
 
         # Parse and check precision
@@ -268,12 +274,12 @@ class TestExportService:
             lat_str = str(point.latitude)
             lon_str = str(point.longitude)
 
-            if '.' in lat_str:
-                lat_decimals = len(lat_str.split('.')[-1])
+            if "." in lat_str:
+                lat_decimals = len(lat_str.split(".")[-1])
                 assert lat_decimals <= COORD_PRECISION
 
-            if '.' in lon_str:
-                lon_decimals = len(lon_str.split('.')[-1])
+            if "." in lon_str:
+                lon_decimals = len(lon_str.split(".")[-1])
                 assert lon_decimals <= COORD_PRECISION
 
     def test_generate_kml_structure(self, mock_db_session, sample_route):
@@ -289,23 +295,23 @@ class TestExportService:
         root = ET.fromstring(kml_xml)
 
         # Check namespaces
-        assert 'kml' in root.tag.lower()
+        assert "kml" in root.tag.lower()
 
         # Check document
-        doc = root.find('.//{http://www.opengis.net/kml/2.2}Document')
+        doc = root.find(".//{http://www.opengis.net/kml/2.2}Document")
         assert doc is not None
 
         # Check name
-        name = doc.find('.//{http://www.opengis.net/kml/2.2}name')
+        name = doc.find(".//{http://www.opengis.net/kml/2.2}name")
         assert name is not None
         assert name.text == "Test Scenic Route"
 
         # Check placemark
-        placemark = doc.find('.//{http://www.opengis.net/kml/2.2}Placemark')
+        placemark = doc.find(".//{http://www.opengis.net/kml/2.2}Placemark")
         assert placemark is not None
 
         # Check coordinates
-        coords = doc.find('.//{http://www.opengis.net/kml/2.2}coordinates')
+        coords = doc.find(".//{http://www.opengis.net/kml/2.2}coordinates")
         assert coords is not None
         assert len(coords.text.strip()) > 0
 
@@ -320,15 +326,15 @@ class TestExportService:
         root = ET.fromstring(kml_xml)
 
         # Check style definition
-        style = root.find('.//{http://www.opengis.net/kml/2.2}Style')
+        style = root.find(".//{http://www.opengis.net/kml/2.2}Style")
         assert style is not None
 
         # Check line style
-        line_style = style.find('.//{http://www.opengis.net/kml/2.2}LineStyle')
+        line_style = style.find(".//{http://www.opengis.net/kml/2.2}LineStyle")
         assert line_style is not None
 
-        color = line_style.find('.//{http://www.opengis.net/kml/2.2}color')
-        width = line_style.find('.//{http://www.opengis.net/kml/2.2}width')
+        color = line_style.find(".//{http://www.opengis.net/kml/2.2}color")
+        width = line_style.find(".//{http://www.opengis.net/kml/2.2}width")
 
         assert color is not None
         assert width is not None
@@ -377,8 +383,13 @@ class TestConvenienceFunctions:
 
         mock_db_session.query().filter_by().first.return_value = sample_route
 
-        with patch('api.export_service.ExportService.fetch_elevations', AsyncMock(return_value={})):
-            gpx_xml = await generate_gpx_for_route(mock_db_session, "test-scenic-route-abc123")
+        with patch(
+            "api.export_service.ExportService.fetch_elevations",
+            AsyncMock(return_value={}),
+        ):
+            gpx_xml = await generate_gpx_for_route(
+                mock_db_session, "test-scenic-route-abc123"
+            )
 
         assert gpx_xml is not None
         assert "Test Scenic Route" in gpx_xml

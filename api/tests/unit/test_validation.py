@@ -20,7 +20,7 @@ from tests.fixtures.sample_segments import (
     INVALID_LATITUDE_SEGMENT,
     INVALID_LONGITUDE_SEGMENT,
     CONNECTED_SEGMENTS_STATS,
-    SINGLE_SEGMENT
+    SINGLE_SEGMENT,
 )
 from tests.conftest import assert_segments_connected, create_test_linestring
 
@@ -79,7 +79,9 @@ class TestSegmentConnectivity:
 
     def test_disconnected_segments_validation(self):
         """Test that disconnected segments fail validation."""
-        with pytest.raises(AssertionError, match="Segment .* end .* != Segment .* start"):
+        with pytest.raises(
+            AssertionError, match="Segment .* end .* != Segment .* start"
+        ):
             assert_segments_connected(DISCONNECTED_SEGMENTS)
 
     def test_single_segment_always_valid(self):
@@ -99,7 +101,7 @@ class TestSegmentConnectivity:
                 "length": 500.0,
                 "radius": 100.0,
                 "curvature": 15.0,
-                "curvature_level": 2
+                "curvature_level": 2,
             },
             {
                 "way_id": 2,
@@ -108,8 +110,8 @@ class TestSegmentConnectivity:
                 "length": 550.0,
                 "radius": 80.0,
                 "curvature": 20.0,
-                "curvature_level": 3
-            }
+                "curvature_level": 3,
+            },
         ]
 
         with pytest.raises(AssertionError):
@@ -123,11 +125,11 @@ class TestCoordinateValidation:
     def test_valid_latitude_range(self):
         """Test that valid latitudes (-90 to 90) are accepted."""
         valid_coords = [
-            [0.0, 0.0],      # Equator, Prime Meridian
-            [90.0, 0.0],     # North Pole
-            [-90.0, 0.0],    # South Pole
+            [0.0, 0.0],  # Equator, Prime Meridian
+            [90.0, 0.0],  # North Pole
+            [-90.0, 0.0],  # South Pole
             [45.0, -122.0],  # Portland, OR
-            [-33.9, 18.4],   # Cape Town
+            [-33.9, 18.4],  # Cape Town
         ]
 
         for lat, lon in valid_coords:
@@ -165,7 +167,9 @@ class TestSegmentOrdering:
         """Test that segments are returned in position order."""
         from sqlalchemy.orm import sessionmaker
 
-        TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+        TestSessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=test_engine
+        )
         db = TestSessionLocal()
         try:
             # Create segments out of order
@@ -186,16 +190,16 @@ class TestSegmentOrdering:
                     length=100.0,
                     radius=50.0,
                     curvature=5.0,
-                    curvature_level=1
+                    curvature_level=1,
                 )
                 db.add(seg)
 
             db.commit()
 
             # Query for the route fresh in this db session to test ordering
-            fresh_route = db.query(SavedRoute).filter_by(
-                route_id=sample_route.route_id
-            ).first()
+            fresh_route = (
+                db.query(SavedRoute).filter_by(route_id=sample_route.route_id).first()
+            )
 
             # Segments should be returned in position order
             positions = [seg.position for seg in fresh_route.segments]
@@ -237,7 +241,9 @@ class TestLineStringConstruction:
 
         # First coordinate should match first segment start
         first_seg = CONNECTED_SEGMENTS[0]
-        assert coords[0] == pytest.approx((first_seg["start"][1], first_seg["start"][0]))
+        assert coords[0] == pytest.approx(
+            (first_seg["start"][1], first_seg["start"][0])
+        )
 
         # Last coordinate should match last segment end
         last_seg = CONNECTED_SEGMENTS[-1]
@@ -273,8 +279,8 @@ class TestRouteDataIntegrity:
             total_length=1650.0,
             segment_count=3,
             geom=from_shape(linestring, srid=4326),
-            route_data={'segments': CONNECTED_SEGMENTS},
-            url_slug="valid-route-test"
+            route_data={"segments": CONNECTED_SEGMENTS},
+            url_slug="valid-route-test",
         )
 
         test_db_session.add(route)
@@ -284,7 +290,9 @@ class TestRouteDataIntegrity:
         assert route.route_id is not None
         assert route.geom is not None
 
-    def test_statistics_match_segment_data(self, test_db_session, sample_route, sample_segments):
+    def test_statistics_match_segment_data(
+        self, test_db_session, sample_route, sample_segments
+    ):
         """Test that route statistics match actual segment data."""
         # Calculate from actual segments
         total_curvature = sum(seg.curvature for seg in sample_segments)
@@ -299,16 +307,16 @@ class TestRouteDataIntegrity:
         """Test that JSONB route_data field preserves structure."""
         route_data = sample_route.route_data
 
-        assert 'segments' in route_data
-        assert isinstance(route_data['segments'], list)
-        assert len(route_data['segments']) == 3
+        assert "segments" in route_data
+        assert isinstance(route_data["segments"], list)
+        assert len(route_data["segments"]) == 3
 
         # Verify segment structure is preserved
-        first_seg = route_data['segments'][0]
-        assert 'way_id' in first_seg
-        assert 'start' in first_seg
-        assert 'end' in first_seg
-        assert 'curvature' in first_seg
+        first_seg = route_data["segments"][0]
+        assert "way_id" in first_seg
+        assert "start" in first_seg
+        assert "end" in first_seg
+        assert "curvature" in first_seg
 
     def test_negative_curvature_rejected(self):
         """Test that negative curvature values are invalid."""
@@ -320,7 +328,7 @@ class TestRouteDataIntegrity:
             "length": 100.0,
             "radius": 50.0,
             "curvature": -10.0,  # Invalid!
-            "curvature_level": 1
+            "curvature_level": 1,
         }
 
         # In a real implementation, this should be validated
@@ -335,7 +343,7 @@ class TestRouteDataIntegrity:
             "length": 0.0,
             "radius": 0.0,
             "curvature": 0.0,
-            "curvature_level": 0
+            "curvature_level": 0,
         }
 
         # Zero-length segments might indicate data errors

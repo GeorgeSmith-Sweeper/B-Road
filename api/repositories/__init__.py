@@ -8,8 +8,8 @@ from api.repositories.session_repository import SessionRepository
 from api.repositories.segment_repository import SegmentRepository
 
 __all__ = [
-    'BaseRepository',
-    'RouteRepository',
-    'SessionRepository',
-    'SegmentRepository',
+    "BaseRepository",
+    "RouteRepository",
+    "SessionRepository",
+    "SegmentRepository",
 ]
