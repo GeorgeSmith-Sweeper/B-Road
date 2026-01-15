@@ -351,7 +351,7 @@ class TestModelRelationships:
         try:
             # Query for the segment fresh in this db session to test back reference
             fresh_segment = db.query(RouteSegment).filter_by(
-                segment_id=sample_segments[0].segment_id
+                id=sample_segments[0].id
             ).first()
 
             # Access route through segment relationship
