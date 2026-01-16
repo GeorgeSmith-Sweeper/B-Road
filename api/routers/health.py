@@ -42,21 +42,26 @@ async def health_check():
 @router.get("/config")
 async def get_config():
     """Get frontend configuration including API keys"""
-    try:
-        from api import config
+    import os
 
-        if not hasattr(config, "GOOGLE_MAPS_API_KEY"):
-            raise HTTPException(
-                status_code=500, detail="Google Maps API key not configured"
-            )
+    # Try to get Mapbox token from environment or config file
+    mapbox_token = os.getenv("MAPBOX_ACCESS_TOKEN", "")
 
-        return {
-            "google_maps_api_key": config.GOOGLE_MAPS_API_KEY,
-            "default_center": {"lat": 44.0, "lng": -72.7},
-            "default_zoom": 8,
-        }
-    except ImportError:
+    if not mapbox_token:
+        try:
+            from api import config
+            mapbox_token = getattr(config, "MAPBOX_ACCESS_TOKEN", "")
+        except ImportError:
+            pass
+
+    if not mapbox_token:
         raise HTTPException(
             status_code=500,
-            detail="Configuration not found. Please create api/config.py from config.example.py",
+            detail="Mapbox API token not configured. Set MAPBOX_ACCESS_TOKEN environment variable.",
         )
+
+    return {
+        "mapbox_api_key": mapbox_token,
+        "default_center": {"lat": 44.0, "lng": -72.7},
+        "default_zoom": 8,
+    }
