@@ -9,3 +9,4 @@ kml/*
 *.msgpack
 .cache
 .claude/
+api/config.py
