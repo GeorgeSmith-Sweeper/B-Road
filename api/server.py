@@ -1,82 +1,46 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 """
-Curvature API Server
-====================
-A FastAPI-based REST API for querying curvature road data.
+B-Road API Server
+=================
+A simplified FastAPI-based REST API for browsing curvature road data.
 
 This server provides endpoints to:
-- Search for curvy roads by various criteria
-- Return GeoJSON for map visualization
-- Serve the web interface
-- Save and manage custom routes
+- Load and filter msgpack data from any region
+- Return GeoJSON for Mapbox visualization
+- Serve configuration for the frontend
 
-Author: George Smith-Sweeper (contribution to adamfranco/curvature)
+No database required - all data loaded from msgpack files.
 """
 
-import os
-import sys
-from pathlib import Path
-
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-# Add parent directory to path to import curvature modules
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from api.routers import health, data
 
-# Check database availability
-try:
-    from api.database import DATABASE_AVAILABLE
-except ImportError:
-    DATABASE_AVAILABLE = False
-    print("Warning: Database module not available")
-
-# Import routers
-from api.routers import routes, sessions, data, health
-
-# Initialize FastAPI app
 app = FastAPI(
-    title="Curvature API",
-    description="API for finding and exploring curvy roads",
-    version="1.0.0",
+    title="B-Road API",
+    description="API for browsing curvy roads from curvature data",
+    version="2.0.0",
 )
 
-# Enable CORS so web browsers can access the API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify actual domains
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Mount routers
 app.include_router(health.router)
 app.include_router(data.router)
 
-# Mount database-dependent routers only if database is available
-if DATABASE_AVAILABLE:
-    app.include_router(sessions.router)
-    app.include_router(routes.router)
-else:
-    print("Warning: Database not available. Route saving features disabled.")
-    print("Install requirements: pip install -r api/requirements.txt")
-
-# Mount the web interface static files
-web_path = Path(__file__).parent.parent / "web" / "static"
-if web_path.exists():
-    app.mount("/static", StaticFiles(directory=str(web_path)), name="static")
-
-# Run the server
 if __name__ == "__main__":
     import uvicorn
 
-    # Start the server on http://localhost:8000
-    # reload=True means the server restarts when code changes (great for development)
     uvicorn.run(
         "server:app",
-        host="0.0.0.0",  # Listen on all network interfaces
+        host="0.0.0.0",
         port=8000,
         reload=True,
     )

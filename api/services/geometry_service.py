@@ -2,7 +2,7 @@
 Service for GeoJSON conversions.
 """
 
-from typing import List, Dict
+from typing import List
 from curvature.output import OutputTools
 
 
@@ -66,23 +66,3 @@ class GeometryService:
             geojson["metadata"] = metadata
 
         return geojson
-
-    def segments_to_geojson(self, segments: List[dict]) -> dict:
-        """Convert segment data to GeoJSON FeatureCollection"""
-        features = []
-        for seg in segments:
-            feature = {
-                "type": "Feature",
-                "id": f"{seg['way_id']}-{seg['segment_index']}",
-                "geometry": {
-                    "type": "LineString",
-                    "coordinates": [
-                        [seg["start"][1], seg["start"][0]],
-                        [seg["end"][1], seg["end"][0]],
-                    ],
-                },
-                "properties": seg,
-            }
-            features.append(feature)
-
-        return {"type": "FeatureCollection", "features": features}

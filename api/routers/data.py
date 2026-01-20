@@ -1,7 +1,7 @@
 """
 FastAPI router for curvature data browsing.
 
-Handles msgpack data loading and road/segment queries.
+Handles msgpack data loading and road queries.
 """
 
 from fastapi import APIRouter, HTTPException, Query
@@ -97,27 +97,6 @@ async def search_roads(
             )
 
         return {"total_found": len(results), "roads": results}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/roads/segments")
-async def get_road_segments(
-    min_curvature: Optional[float] = Query(300),
-    bbox: Optional[str] = Query(None),
-    limit: Optional[int] = Query(500),
-):
-    """Get individual road segments for stitching mode"""
-    try:
-        segments = data_service.get_segments(
-            min_curvature=min_curvature, bbox=bbox, limit=limit
-        )
-
-        geojson = geometry_service.segments_to_geojson(segments)
-
-        return JSONResponse(content=geojson)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

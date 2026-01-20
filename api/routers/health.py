@@ -1,7 +1,8 @@
 """
-FastAPI router for health and status endpoints.
+FastAPI router for health and configuration endpoints.
 """
 
+import os
 from fastapi import APIRouter, HTTPException
 
 router = APIRouter(tags=["health"])
@@ -11,13 +12,13 @@ router = APIRouter(tags=["health"])
 async def root():
     """Root endpoint - returns API info"""
     return {
-        "name": "Curvature API",
-        "version": "1.0.0",
+        "name": "B-Road API",
+        "version": "2.0.0",
         "endpoints": {
-            "/routes": "Search for roads",
+            "/data/load": "Load a msgpack data file",
             "/roads/geojson": "Get roads as GeoJSON",
             "/config": "Get frontend configuration",
-            "/docs": "Interactive API documentation",
+            "/health": "Health check",
         },
     }
 
@@ -25,9 +26,7 @@ async def root():
 @router.get("/health")
 async def health_check():
     """Health check endpoint"""
-    # Import here to avoid circular dependency
     from api.routers.data import data_service
-    from api.database import DATABASE_AVAILABLE
 
     return {
         "status": "healthy",
@@ -35,21 +34,18 @@ async def health_check():
         "collections_count": (
             len(data_service.road_collections) if data_service.data_loaded else 0
         ),
-        "database_available": DATABASE_AVAILABLE,
     }
 
 
 @router.get("/config")
 async def get_config():
     """Get frontend configuration including API keys"""
-    import os
-
-    # Try to get Mapbox token from environment or config file
     mapbox_token = os.getenv("MAPBOX_ACCESS_TOKEN", "")
 
     if not mapbox_token:
         try:
             from api import config
+
             mapbox_token = getattr(config, "MAPBOX_ACCESS_TOKEN", "")
         except ImportError:
             pass

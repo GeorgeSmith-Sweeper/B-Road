@@ -1,238 +1,157 @@
-# B-Road: Enhanced Curvature Road Analyzer
+# B-Road: Curvature Road Viewer
 
-B-Road is an enhanced version of [adamfranco/curvature](https://github.com/adamfranco/curvature) that adds interactive route building and saving capabilities. Find the twistiest roads, build custom routes by stitching segments together, and export them for your GPS device or Google Earth.
+B-Road is a simplified web application for visualizing curvy roads from [adamfranco/curvature](https://github.com/adamfranco/curvature) data. Load any region's processed msgpack file and explore the twistiest roads on an interactive Mapbox map.
 
-## 🎯 What's New in B-Road
+## What Changed (v2.0)
 
-### Route Stitching & Saving
-- **Interactive Route Builder**: Click road segments on a map to build custom turn-by-turn routes
-- **Smart Validation**: Automatically ensures segments connect end-to-end
-- **Real-Time Stats**: See distance and curvature totals as you build
-- **Persistent Storage**: Save routes to PostgreSQL/PostGIS with full segment details
-- **Multiple Export Formats**: Download as KML (Google Earth) or GPX (GPS devices)
-- **Shareable URLs**: Every route gets a unique URL for easy sharing
-- **Session Management**: Your routes persist across browser sessions
+This version is a **major simplification** of the previous B-Road application:
 
-### Enhanced Web Interface
-- **Dual Mode Operation**:
-  - **Browse Mode** (original): Search and explore curvy roads
-  - **Build Mode** (new): Click segments to create custom routes
-- **Interactive Map**: Google Maps integration with segment-level selection
-- **Saved Routes Library**: View, manage, and export all your saved routes
+### Removed
+- PostgreSQL/PostGIS database dependency
+- Route stitching and building features
+- Session management
+- Route saving and exporting (KML/GPX)
+- Google Maps (replaced with Mapbox)
 
-## 🚀 Quick Start
+### Kept
+- Curvature data loading from msgpack files
+- Road filtering by curvature and surface type
+- Interactive map visualization with curvature-based coloring
+- Click-to-view road details
+
+### Why Simplify?
+The previous version added significant complexity (database, sessions, route building) that made the application harder to maintain and deploy. This simplified version focuses on the core use case: **visualizing curvy roads on a map**.
+
+## Quick Start
 
 ### Prerequisites
 
-- Python 3.7+
-- PostgreSQL 12+ with PostGIS extension
-- Google Maps API key ([get one here](https://developers.google.com/maps/documentation/javascript/get-api-key))
-- OpenStreetMap data in PBF or XML format
+- Python 3.9+
+- Node.js 18+
+- Mapbox API key ([get one here](https://account.mapbox.com/access-tokens/))
 
 ### Installation
 
-1. **Clone the repository**:
+1. **Clone and setup backend**:
 ```bash
 git clone https://github.com/GeorgeSmith-Sweeper/B-Road.git
 cd B-Road
-```
-
-2. **Set up the database**:
-```bash
-# Create database
-createdb curvature
-
-# Enable PostGIS extension
-psql curvature -c "CREATE EXTENSION postgis;"
-
-# Run schema for saved routes
-psql curvature < api/schema/saved_routes.sql
-```
-
-3. **Install Python dependencies**:
-```bash
-cd api
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-4. **Configure API keys**:
+2. **Configure Mapbox token**:
 ```bash
-# Copy example config
-cp config.example.py config.py
-
-# Edit config.py and add your credentials:
-# - GOOGLE_MAPS_API_KEY = "your_key_here"
-# - DATABASE_URL = "postgresql://user:password@localhost:5432/curvature"
+# Create api/config.py with your token
+echo 'MAPBOX_ACCESS_TOKEN = "your_token_here"' > api/config.py
 ```
 
-5. **Process OpenStreetMap data** (using original curvature tools):
+3. **Setup frontend**:
 ```bash
-# Example: Process Vermont data
-./processing_chains/adams_default.sh vermont-latest.osm.pbf vermont
-
-# This creates vermont.msgpack for loading into the web interface
+cd frontend
+npm install
 ```
 
-6. **Start the server**:
+4. **Process OSM data** (or use existing msgpack files):
 ```bash
-python server.py
+# Download a small region (e.g., Monaco)
+curl -L -o monaco.osm.pbf "https://download.geofabrik.de/europe/monaco-latest.osm.pbf"
+
+# Process through curvature pipeline
+./processing_chains/adams_default.sh -v -t /tmp -o . monaco.osm.pbf
 ```
 
-7. **Open the web interface**:
+### Running
+
+**Terminal 1 - Backend**:
+```bash
+source venv/bin/activate
+uvicorn api.server:app --reload --port 8000
 ```
-http://localhost:8000/static/index.html
+
+**Terminal 2 - Frontend**:
+```bash
+cd frontend
+npm run dev
 ```
 
-## 📖 Usage Guide
+Open http://localhost:3000
 
-### Browse Mode (Original Curvature Functionality)
+## Usage
 
-1. **Load Data**: Enter the path to your processed `.msgpack` file
-2. **Set Filters**: Adjust minimum curvature, surface type, and result limit
-3. **Search**: Click "Search Roads" to display curvy roads on the map
-4. **Explore**: Click roads to see details, zoom to specific routes
+1. Enter the path to a `.msgpack` file (e.g., `/path/to/monaco.msgpack`)
+2. Click **Load Data**
+3. Adjust filters (minimum curvature, surface type, max results)
+4. Click **Search Roads**
+5. Click on roads to see details (name, curvature, length, surface)
 
-### Build Route Mode (New Feature)
+## Curvature Legend
 
-1. **Switch Mode**: Click the "Build Route" button
-2. **Load Segments**: Load data and search to display clickable road segments
-3. **Build Route**: Click connected segments in sequence to build your route
-   - Segments must connect end-to-end (the system validates this)
-   - Watch real-time stats update: distance, curvature, segment count
-4. **Save Route**:
-   - Enter a route name and optional description
-   - Click "Save Route"
-   - Route is stored in the database with unique URL
-5. **Manage Routes**:
-   - View saved routes in the sidebar
-   - Click "View" to display on map
-   - Export as KML or GPX
-   - Delete routes you no longer need
+| Color | Curvature | Description |
+|-------|-----------|-------------|
+| Yellow | 300-600 | Pleasant curves |
+| Orange | 600-1000 | Moderately twisty |
+| Red | 1000-2000 | Very curvy |
+| Purple | 2000+ | Extremely twisty |
 
-## 📚 Documentation
-
-- **[API Documentation](API_README.md)**: Complete REST API reference with endpoints, examples, and troubleshooting
-- **[Original Curvature README](CURVATURE_ORIGINAL_README.md)**: Documentation for the base curvature analysis tools
-
-## 🗺️ Example Use Cases
-
-- **Motorcycle Trip Planning**: Find the curviest roads and stitch them into a day trip
-- **Cycling Routes**: Build scenic routes with optimal curvature for road cycling
-- **Driving Tours**: Create custom scenic drives through mountainous regions
-- **GPS Navigation**: Export routes to GPX for use in Garmin, etc.
-- **Route Sharing**: Share your favorite twisty road combinations via URL
-
-## 🛠️ Technology Stack
+## Tech Stack
 
 **Backend**:
-- FastAPI - Modern Python web framework
-- PostgreSQL + PostGIS - Spatial database
-- SQLAlchemy - ORM with geographic types
-- Shapely - Geometric operations
-- gpxpy - GPX file generation
+- FastAPI (Python)
+- No database required
 
 **Frontend**:
-- Google Maps JavaScript API
-- Vanilla JavaScript (no frameworks)
-- Responsive CSS design
+- Next.js 16
+- Mapbox GL JS
+- Zustand (state management)
+- Tailwind CSS
 
-**Data Processing** (original curvature):
-- Python 3.7+
-- PyOsmium - OpenStreetMap data parsing
-- NumPy - Mathematical operations
-- MessagePack - Binary data serialization
+**Data Processing**:
+- Curvature tools (from adamfranco/curvature)
+- PyOsmium for OSM parsing
+- MessagePack for data serialization
 
-## 📊 Database Schema
+## API Endpoints
 
-B-Road adds three new tables to store saved routes:
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/config` | GET | Get Mapbox token and defaults |
+| `/health` | GET | Health check |
+| `/data/load?filepath=...` | POST | Load a msgpack file |
+| `/roads/geojson` | GET | Get filtered roads as GeoJSON |
 
-- **`route_sessions`**: User session management
-- **`saved_routes`**: Route metadata with PostGIS geometry
-- **`route_segments`**: Individual segments with full curvature data
+## Project Structure
 
-See [API_README.md](API_README.md) for complete schema documentation.
-
-## 🔄 Keeping Up with Upstream
-
-This project is based on adamfranco/curvature. To pull in updates from the original project:
-
-```bash
-# Add upstream remote (if not already added)
-git remote add upstream https://github.com/adamfranco/curvature.git
-
-# Fetch and merge updates
-git fetch upstream
-git merge upstream/master
+```
+B-Road/
+├── api/
+│   ├── server.py           # FastAPI application
+│   ├── routers/
+│   │   ├── data.py         # Data loading endpoints
+│   │   └── health.py       # Health/config endpoints
+│   └── services/
+│       ├── data_service.py     # Msgpack loading/filtering
+│       └── geometry_service.py # GeoJSON conversion
+├── frontend/
+│   ├── app/page.tsx        # Main page
+│   ├── components/
+│   │   ├── Map.tsx         # Mapbox map
+│   │   └── Sidebar.tsx     # Filters UI
+│   ├── lib/api.ts          # API client
+│   ├── store/useAppStore.ts # Zustand store
+│   └── types/index.ts      # TypeScript types
+├── curvature/              # Original curvature library
+├── processing_chains/      # OSM processing scripts
+└── bin/                    # Curvature CLI tools
 ```
 
-## 🤝 Contributing
+## License
 
-Contributions are welcome! Please:
+This project inherits the license from [adamfranco/curvature](https://github.com/adamfranco/curvature).
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes with clear messages
-4. Push to your branch
-5. Open a Pull Request
-
-## 📝 License
-
-This project inherits the license from [adamfranco/curvature](https://github.com/adamfranco/curvature). Please refer to the original project for license details.
-
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **Adam Franco** - Original [curvature](https://github.com/adamfranco/curvature) project
 - **OpenStreetMap Contributors** - Map data
-- Built with assistance from [Claude Code](https://claude.com/claude-code)
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/GeorgeSmith-Sweeper/B-Road/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/GeorgeSmith-Sweeper/B-Road/discussions)
-- **Original Project**: [adamfranco/curvature](https://github.com/adamfranco/curvature)
-
-## 🗺️ API Endpoints Overview
-
-### Original Endpoints
-- `POST /data/load` - Load msgpack data file
-- `GET /roads/geojson` - Get roads as GeoJSON
-- `GET /roads` - Search roads (simple JSON)
-
-### New Route Stitching Endpoints
-- `POST /sessions/create` - Create user session
-- `GET /roads/segments` - Get individual segments for stitching
-- `POST /routes/save` - Save a stitched route
-- `GET /routes/list` - List saved routes
-- `GET /routes/{slug}` - Get route details
-- `DELETE /routes/{id}` - Delete route
-- `GET /routes/{slug}/export/kml` - Export as KML
-- `GET /routes/{slug}/export/gpx` - Export as GPX
-
-See [API_README.md](API_README.md) for complete endpoint documentation.
-
-## 🎬 Demo
-
-*(Add screenshots or GIFs here once deployed)*
-
-## 🚧 Roadmap
-
-Future enhancements being considered:
-
-- [ ] User authentication and accounts
-- [ ] Public route sharing gallery
-- [ ] Route elevation profiles
-- [ ] Mobile-responsive design improvements
-- [ ] Offline map support
-- [ ] Route optimization suggestions
-- [ ] Integration with weather APIs
-- [ ] Social features (likes, comments on routes)
-
-## 📈 Project Status
-
-**Current Version**: 1.0.0 (Initial Release)
-
-**Status**: Active development - the core features are stable and functional.
-
----
-
-**Built on the shoulders of [adamfranco/curvature](https://github.com/adamfranco/curvature) 🏔️**
+- Built with assistance from [Claude Code](https://claude.ai/code)
