@@ -2,250 +2,166 @@
 
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
-import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import { useAppStore } from '@/store/useAppStore';
-import { RoadFeature, Segment } from '@/types';
+import { apiClient } from '@/lib/api';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
-interface MapProps {
-  onSegmentClick?: (segment: Segment) => void;
-}
+export default function Map() {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
 
-export default function Map({ onSegmentClick }: MapProps) {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const [mapLoaded, setMapLoaded] = useState(false);
+  const mapboxToken = useAppStore((state) => state.mapboxToken);
+  const curvatureData = useAppStore((state) => state.curvatureData);
+  const setCurvatureData = useAppStore((state) => state.setCurvatureData);
+  const selectedSource = useAppStore((state) => state.selectedSource);
+  const setCurvatureLoading = useAppStore((state) => state.setCurvatureLoading);
+  const searchFilters = useAppStore((state) => state.searchFilters);
 
-  const { mapboxToken, currentData, mode, selectedSegments } = useAppStore();
+  // Fetch curvature data for the current viewport
+  const fetchData = async (map: mapboxgl.Map) => {
+    const bounds = map.getBounds();
+    const zoom = map.getZoom();
+
+    let minCurvature = searchFilters.min_curvature;
+    let limit = 2000;
+
+    if (zoom < 8) {
+      minCurvature = Math.max(1000, minCurvature);
+      limit = 500;
+    } else if (zoom < 10) {
+      minCurvature = Math.max(500, minCurvature);
+      limit = 1000;
+    }
+
+    const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+
+    try {
+      setCurvatureLoading(true);
+      const data = await apiClient.getCurvatureSegments(
+        bbox,
+        minCurvature,
+        limit,
+        selectedSource || undefined
+      );
+      setCurvatureData(data);
+    } catch (error) {
+      console.error('Error fetching curvature data:', error);
+    } finally {
+      setCurvatureLoading(false);
+    }
+  };
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current || map.current || !mapboxToken) return;
+    if (!mapContainerRef.current || !mapboxToken || mapRef.current) return;
 
     mapboxgl.accessToken = mapboxToken;
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
+    const map = new mapboxgl.Map({
+      container: mapContainerRef.current,
       style: 'mapbox://styles/mapbox/outdoors-v12',
-      center: [-72.7, 44.0], // Vermont coordinates
+      center: [-72.7, 44.0],
       zoom: 8,
     });
 
-    map.current.on('load', () => {
-      setMapLoaded(true);
+    mapRef.current = map;
+
+    map.on('load', () => {
+      setIsLoaded(true);
+      fetchData(map);
+    });
+
+    let debounceTimeout: NodeJS.Timeout;
+    map.on('moveend', () => {
+      clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(() => fetchData(map), 300);
     });
 
     return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
+      clearTimeout(debounceTimeout);
+      map.remove();
+      mapRef.current = null;
     };
   }, [mapboxToken]);
 
-  // Add/update roads layer when data changes
+  // Update data layer when curvatureData changes
   useEffect(() => {
-    if (!map.current || !mapLoaded || !currentData) return;
+    const map = mapRef.current;
+    if (!map || !isLoaded) return;
 
-    const mapInstance = map.current;
+    // Update or add source
+    const source = map.getSource('curvature') as mapboxgl.GeoJSONSource;
+    if (source && curvatureData) {
+      source.setData(curvatureData);
+    } else if (curvatureData) {
+      map.addSource('curvature', {
+        type: 'geojson',
+        data: curvatureData,
+      });
 
-    // Remove existing layers and sources
-    if (mapInstance.getLayer('roads-layer')) {
-      mapInstance.removeLayer('roads-layer');
-    }
-    if (mapInstance.getLayer('selected-segments-layer')) {
-      mapInstance.removeLayer('selected-segments-layer');
-    }
-    if (mapInstance.getSource('roads')) {
-      mapInstance.removeSource('roads');
-    }
-    if (mapInstance.getSource('selected-segments')) {
-      mapInstance.removeSource('selected-segments');
-    }
+      map.addLayer({
+        id: 'curvature-layer',
+        type: 'line',
+        source: 'curvature',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+        },
+        paint: {
+          'line-color': [
+            'case',
+            ['<', ['get', 'curvature'], 600], '#FFC107',
+            ['<', ['get', 'curvature'], 1000], '#FF9800',
+            ['<', ['get', 'curvature'], 2000], '#F44336',
+            '#9C27B0',
+          ],
+          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 1, 8, 2, 12, 4],
+          'line-opacity': 0.8,
+        },
+      });
 
-    // Add roads source
-    mapInstance.addSource('roads', {
-      type: 'geojson',
-      data: currentData,
-    });
-
-    // Add roads layer with curvature-based coloring
-    mapInstance.addLayer({
-      id: 'roads-layer',
-      type: 'line',
-      source: 'roads',
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round',
-      },
-      paint: {
-        'line-color': [
-          'case',
-          ['<', ['get', 'curvature'], 600],
-          '#FFC107', // Yellow - mild curves
-          ['<', ['get', 'curvature'], 1000],
-          '#FF9800', // Orange - moderate curves
-          ['<', ['get', 'curvature'], 2000],
-          '#F44336', // Red - very curvy
-          '#9C27B0', // Purple - extremely curvy
-        ],
-        'line-width': 3,
-        'line-opacity': 0.8,
-      },
-    });
-
-    // Add click handler
-    mapInstance.on('click', 'roads-layer', (e) => {
-      if (!e.features || e.features.length === 0) return;
-
-      const feature = e.features[0] as unknown as RoadFeature;
-
-      if (mode === 'stitch' && onSegmentClick) {
-        // Convert feature to Segment for route building
-        const segment: Segment = {
-          id: feature.id?.toString() || '',
-          way_id: feature.properties.way_id || '',
-          start: feature.properties.start || [0, 0],
-          end: feature.properties.end || [0, 0],
-          length: feature.properties.length || 0,
-          radius: feature.properties.radius || 0,
-          curvature: feature.properties.curvature,
-          curvature_level: feature.properties.curvature_level || '',
-          name: feature.properties.name,
-          highway: feature.properties.highway || '',
-          surface: feature.properties.surface,
-        };
-        onSegmentClick(segment);
-      } else {
-        // Show popup with road details
-        const props = feature.properties;
-        const curvatureClass =
-          props.curvature < 600
-            ? 'bg-yellow-400 text-black'
-            : props.curvature < 1000
-            ? 'bg-orange-500 text-white'
-            : 'bg-red-500 text-white';
+      // Click handler for popups
+      map.on('click', 'curvature-layer', (e) => {
+        if (!e.features?.length) return;
+        const props = e.features[0].properties;
 
         new mapboxgl.Popup()
           .setLngLat(e.lngLat)
-          .setHTML(
-            `
-            <div class="p-2">
-              <h3 class="font-bold text-lg mb-2">${props.name}</h3>
-              <table class="text-sm">
-                <tr>
-                  <td class="font-semibold pr-2">Curvature:</td>
-                  <td>
-                    <span class="px-2 py-1 rounded ${curvatureClass}">
-                      ${Math.round(props.curvature)}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="font-semibold pr-2">Length:</td>
-                  <td>${props.length_mi.toFixed(2)} mi (${props.length_km.toFixed(2)} km)</td>
-                </tr>
-                <tr>
-                  <td class="font-semibold pr-2">Surface:</td>
-                  <td>${props.surface}</td>
-                </tr>
-              </table>
+          .setHTML(`
+            <div style="padding: 8px;">
+              <strong>${props?.name || 'Unnamed Road'}</strong><br/>
+              Curvature: ${props?.curvature}<br/>
+              Length: ${props?.length_mi?.toFixed(2)} mi<br/>
+              Surface: ${props?.surface || 'unknown'}
             </div>
-          `
-          )
-          .addTo(mapInstance);
-      }
-    });
-
-    // Change cursor on hover
-    mapInstance.on('mouseenter', 'roads-layer', () => {
-      mapInstance.getCanvas().style.cursor = 'pointer';
-    });
-
-    mapInstance.on('mouseleave', 'roads-layer', () => {
-      mapInstance.getCanvas().style.cursor = '';
-    });
-
-    // Fit bounds to show all roads
-    if (currentData.features.length > 0) {
-      const bounds = new mapboxgl.LngLatBounds();
-      currentData.features.forEach((feature) => {
-        feature.geometry.coordinates.forEach((coord) => {
-          bounds.extend(coord as [number, number]);
-        });
+          `)
+          .addTo(map);
       });
-      mapInstance.fitBounds(bounds, { padding: 50 });
-    }
-  }, [mapLoaded, currentData, mode, onSegmentClick]);
 
-  // Update selected segments visualization
+      map.on('mouseenter', 'curvature-layer', () => {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+
+      map.on('mouseleave', 'curvature-layer', () => {
+        map.getCanvas().style.cursor = '';
+      });
+    }
+  }, [curvatureData, isLoaded]);
+
+  // Refetch when filters change
   useEffect(() => {
-    if (!map.current || !mapLoaded || selectedSegments.length === 0) return;
-
-    const mapInstance = map.current;
-
-    // Create GeoJSON for selected route
-    const coordinates: [number, number][] = [];
-    selectedSegments.forEach((seg, idx) => {
-      if (idx === 0) {
-        coordinates.push([seg.start[1], seg.start[0]]);
-      }
-      coordinates.push([seg.end[1], seg.end[0]]);
-    });
-
-    const routeGeoJSON = {
-      type: 'FeatureCollection' as const,
-      features: [
-        {
-          type: 'Feature' as const,
-          geometry: {
-            type: 'LineString' as const,
-            coordinates,
-          },
-          properties: {},
-        },
-      ],
-    };
-
-    // Remove existing selected layer
-    if (mapInstance.getLayer('selected-segments-layer')) {
-      mapInstance.removeLayer('selected-segments-layer');
+    if (mapRef.current && isLoaded) {
+      fetchData(mapRef.current);
     }
-    if (mapInstance.getSource('selected-segments')) {
-      mapInstance.removeSource('selected-segments');
-    }
-
-    // Add selected route layer
-    mapInstance.addSource('selected-segments', {
-      type: 'geojson',
-      data: routeGeoJSON,
-    });
-
-    mapInstance.addLayer({
-      id: 'selected-segments-layer',
-      type: 'line',
-      source: 'selected-segments',
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round',
-      },
-      paint: {
-        'line-color': '#00ff00',
-        'line-width': 5,
-        'line-opacity': 0.8,
-      },
-    });
-  }, [mapLoaded, selectedSegments]);
+  }, [selectedSource, searchFilters.min_curvature]);
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={mapContainer} className="absolute inset-0" />
-      {!mapboxToken && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
-          <p className="text-gray-600">Loading map configuration...</p>
-        </div>
-      )}
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <div
+        ref={mapContainerRef}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
     </div>
   );
 }

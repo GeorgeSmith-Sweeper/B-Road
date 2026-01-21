@@ -1,12 +1,9 @@
 import axios from 'axios';
 import {
   AppConfig,
-  RoadsGeoJSON,
-  Session,
-  SaveRouteRequest,
-  SaveRouteResponse,
-  SavedRoutesResponse,
-  RouteViewResponse,
+  CurvatureGeoJSON,
+  SourceInfo,
+  SourceBounds,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -22,86 +19,61 @@ export const apiClient = {
     return response.data;
   },
 
-  // Load data from msgpack file
-  loadData: async (filepath: string): Promise<{ message: string }> => {
-    const response = await api.post('/data/load', null, {
-      params: { filepath },
-    });
-    return response.data;
-  },
+  // Curvature API methods
 
-  // Search roads (browse mode)
-  searchRoads: async (
-    min_curvature: number,
-    surface: string,
-    limit: number
-  ): Promise<RoadsGeoJSON> => {
+  // Get curvature segments by bounding box
+  getCurvatureSegments: async (
+    bbox: string,
+    minCurvature: number = 300,
+    limit: number = 1000,
+    source?: string
+  ): Promise<CurvatureGeoJSON> => {
     const params: Record<string, string | number> = {
-      min_curvature,
+      bbox,
+      min_curvature: minCurvature,
       limit,
     };
-    if (surface) {
-      params.surface = surface;
+    if (source) {
+      params.source = source;
     }
-    const response = await api.get<RoadsGeoJSON>('/roads/geojson', { params });
-    return response.data;
-  },
-
-  // Load segments (stitch mode)
-  loadSegments: async (
-    min_curvature: number,
-    limit: number = 500
-  ): Promise<RoadsGeoJSON> => {
-    const response = await api.get<RoadsGeoJSON>('/roads/segments', {
-      params: { min_curvature, limit },
+    const response = await api.get<CurvatureGeoJSON>('/curvature/segments', {
+      params,
     });
     return response.data;
   },
 
-  // Create session
-  createSession: async (): Promise<Session> => {
-    const response = await api.post<Session>('/sessions/create');
+  // List available curvature data sources (states)
+  listCurvatureSources: async (): Promise<SourceInfo[]> => {
+    const response = await api.get<SourceInfo[]>('/curvature/sources');
     return response.data;
   },
 
-  // Save route
-  saveRoute: async (
-    sessionId: string,
-    routeData: SaveRouteRequest
-  ): Promise<SaveRouteResponse> => {
-    const response = await api.post<SaveRouteResponse>(
-      '/routes/save',
-      routeData,
+  // Get segments for a specific source
+  getCurvatureSourceSegments: async (
+    sourceName: string,
+    minCurvature: number = 300,
+    limit: number = 1000
+  ): Promise<CurvatureGeoJSON> => {
+    const response = await api.get<CurvatureGeoJSON>(
+      `/curvature/sources/${sourceName}/segments`,
       {
-        params: { session_id: sessionId },
+        params: { min_curvature: minCurvature, limit },
       }
     );
     return response.data;
   },
 
-  // List saved routes
-  listRoutes: async (sessionId: string): Promise<SavedRoutesResponse> => {
-    const response = await api.get<SavedRoutesResponse>('/routes/list', {
-      params: { session_id: sessionId },
-    });
+  // Get bounds for a source
+  getCurvatureSourceBounds: async (sourceName: string): Promise<SourceBounds> => {
+    const response = await api.get<SourceBounds>(
+      `/curvature/sources/${sourceName}/bounds`
+    );
     return response.data;
   },
 
-  // View route
-  viewRoute: async (urlSlug: string): Promise<RouteViewResponse> => {
-    const response = await api.get<RouteViewResponse>(`/routes/${urlSlug}`);
+  // Get detail for a single segment
+  getCurvatureSegmentDetail: async (segmentId: number): Promise<unknown> => {
+    const response = await api.get(`/curvature/segments/${segmentId}`);
     return response.data;
-  },
-
-  // Delete route
-  deleteRoute: async (routeId: number, sessionId: string): Promise<void> => {
-    await api.delete(`/routes/${routeId}`, {
-      params: { session_id: sessionId },
-    });
-  },
-
-  // Export route
-  getExportUrl: (urlSlug: string, format: 'kml' | 'gpx'): string => {
-    return `${API_BASE_URL}/routes/${urlSlug}/export/${format}`;
   },
 };

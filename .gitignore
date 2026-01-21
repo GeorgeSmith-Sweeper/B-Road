@@ -10,3 +10,7 @@ kml/*
 .cache
 .claude/
 api/config.py
+.env
+.env.*
+!.env.example
+!.env.*.example
