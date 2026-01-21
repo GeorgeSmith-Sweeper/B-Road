@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { apiClient } from '@/lib/api';
+import { ApiError } from '@/types';
 
 export default function Sidebar() {
   const {
@@ -14,20 +15,32 @@ export default function Sidebar() {
     setSelectedSource,
     curvatureLoading,
     curvatureData,
+    sourcesError,
+    setSourcesError,
   } = useAppStore();
 
-  // Load curvature sources on mount
+  const [sourcesLoading, setSourcesLoading] = useState(false);
+
+  // Load curvature sources
+  const loadSources = useCallback(async () => {
+    setSourcesLoading(true);
+    setSourcesError(null);
+    try {
+      const sources = await apiClient.listCurvatureSources();
+      setCurvatureSources(sources);
+    } catch (error) {
+      const apiError = error as ApiError;
+      console.error('Failed to load curvature sources:', apiError);
+      setSourcesError(apiError);
+    } finally {
+      setSourcesLoading(false);
+    }
+  }, [setCurvatureSources, setSourcesError]);
+
+  // Load sources on mount
   useEffect(() => {
-    const loadSources = async () => {
-      try {
-        const sources = await apiClient.listCurvatureSources();
-        setCurvatureSources(sources);
-      } catch (error) {
-        console.error('Failed to load curvature sources:', error);
-      }
-    };
     loadSources();
-  }, [setCurvatureSources]);
+  }, [loadSources]);
 
   return (
     <div className="w-[400px] bg-gray-50 p-5 overflow-y-auto border-r border-gray-300 shadow-lg">
@@ -42,18 +55,37 @@ export default function Sidebar() {
         <label className="block mb-1 text-sm font-semibold text-gray-700">
           Filter by State:
         </label>
-        <select
-          value={selectedSource || ''}
-          onChange={(e) => setSelectedSource(e.target.value || null)}
-          className="w-full p-2 border border-gray-300 rounded text-sm mb-3"
-        >
-          <option value="">All States</option>
-          {curvatureSources.map((source) => (
-            <option key={source.id} value={source.name}>
-              {source.name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} ({source.segment_count.toLocaleString()})
+
+        {sourcesError ? (
+          <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded">
+            <p className="text-sm text-red-700 mb-2">{sourcesError.message}</p>
+            {sourcesError.retryable && (
+              <button
+                onClick={loadSources}
+                disabled={sourcesLoading}
+                className="text-sm bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 disabled:opacity-50"
+              >
+                {sourcesLoading ? 'Retrying...' : 'Retry'}
+              </button>
+            )}
+          </div>
+        ) : (
+          <select
+            value={selectedSource || ''}
+            onChange={(e) => setSelectedSource(e.target.value || null)}
+            className="w-full p-2 border border-gray-300 rounded text-sm mb-3"
+            disabled={sourcesLoading}
+          >
+            <option value="">
+              {sourcesLoading ? 'Loading states...' : 'All States'}
             </option>
-          ))}
-        </select>
+            {curvatureSources.map((source) => (
+              <option key={source.id} value={source.name}>
+                {source.name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} ({source.segment_count.toLocaleString()})
+              </option>
+            ))}
+          </select>
+        )}
 
         {/* Loading indicator and stats */}
         <div className="bg-gray-50 p-3 rounded border-l-4 border-blue-500">

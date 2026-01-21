@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { SearchFilters, SourceInfo, CurvatureGeoJSON } from '@/types';
+import { SearchFilters, SourceInfo, CurvatureGeoJSON, ApiError } from '@/types';
 
 interface AppState {
   // Search filters
@@ -35,6 +35,14 @@ interface AppState {
   // Curvature loading state
   curvatureLoading: boolean;
   setCurvatureLoading: (loading: boolean) => void;
+
+  // Error states
+  curvatureError: ApiError | null;
+  setCurvatureError: (error: ApiError | null) => void;
+  sourcesError: ApiError | null;
+  setSourcesError: (error: ApiError | null) => void;
+  initError: ApiError | null;
+  setInitError: (error: ApiError | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -72,4 +80,12 @@ export const useAppStore = create<AppState>((set) => ({
   // Curvature loading
   curvatureLoading: false,
   setCurvatureLoading: (loading) => set({ curvatureLoading: loading }),
+
+  // Error states
+  curvatureError: null,
+  setCurvatureError: (error) => set({ curvatureError: error }),
+  sourcesError: null,
+  setSourcesError: (error) => set({ sourcesError: error }),
+  initError: null,
+  setInitError: (error) => set({ initError: error }),
 }));

@@ -3,6 +3,14 @@ export interface AppConfig {
   mapbox_api_key: string;
 }
 
+// API Error
+export interface ApiError {
+  message: string;
+  type: 'network' | 'server' | 'timeout' | 'cancelled' | 'unknown';
+  status?: number;
+  retryable: boolean;
+}
+
 // Search Filters
 export interface SearchFilters {
   min_curvature: number;
