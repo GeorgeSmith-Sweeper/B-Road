@@ -8,8 +8,6 @@ A FastAPI-based REST API for querying curvature road data.
 This server provides endpoints to:
 - Search for curvy roads by various criteria
 - Return GeoJSON for map visualization
-- Serve the web interface
-- Save and manage custom routes
 
 Author: George Smith-Sweeper (contribution to adamfranco/curvature)
 """
@@ -17,6 +15,10 @@ Author: George Smith-Sweeper (contribution to adamfranco/curvature)
 import os
 import sys
 from pathlib import Path
+
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent / ".env")
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -33,7 +35,7 @@ except ImportError:
     print("Warning: Database module not available")
 
 # Import routers
-from api.routers import routes, sessions, data, health
+from api.routers import health, curvature
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -53,14 +55,12 @@ app.add_middleware(
 
 # Mount routers
 app.include_router(health.router)
-app.include_router(data.router)
 
 # Mount database-dependent routers only if database is available
 if DATABASE_AVAILABLE:
-    app.include_router(sessions.router)
-    app.include_router(routes.router)
+    app.include_router(curvature.router)
 else:
-    print("Warning: Database not available. Route saving features disabled.")
+    print("Warning: Database not available. Curvature data features disabled.")
     print("Install requirements: pip install -r api/requirements.txt")
 
 # Mount the web interface static files

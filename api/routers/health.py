@@ -3,6 +3,7 @@ FastAPI router for health and status endpoints.
 """
 
 from fastapi import APIRouter, HTTPException
+import os
 
 router = APIRouter(tags=["health"])
 
@@ -14,8 +15,8 @@ async def root():
         "name": "Curvature API",
         "version": "1.0.0",
         "endpoints": {
-            "/routes": "Search for roads",
-            "/roads/geojson": "Get roads as GeoJSON",
+            "/curvature/segments": "Get curvature segments by bounding box",
+            "/curvature/sources": "List available data sources",
             "/config": "Get frontend configuration",
             "/docs": "Interactive API documentation",
         },
@@ -25,16 +26,10 @@ async def root():
 @router.get("/health")
 async def health_check():
     """Health check endpoint"""
-    # Import here to avoid circular dependency
-    from api.routers.data import data_service
     from api.database import DATABASE_AVAILABLE
 
     return {
         "status": "healthy",
-        "data_loaded": data_service.data_loaded,
-        "collections_count": (
-            len(data_service.road_collections) if data_service.data_loaded else 0
-        ),
         "database_available": DATABASE_AVAILABLE,
     }
 
@@ -42,8 +37,6 @@ async def health_check():
 @router.get("/config")
 async def get_config():
     """Get frontend configuration including API keys"""
-    import os
-
     # Try to get Mapbox token from environment or config file
     mapbox_token = os.getenv("MAPBOX_ACCESS_TOKEN", "")
 
