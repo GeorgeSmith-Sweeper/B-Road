@@ -1,0 +1,48 @@
+# =============================================================================
+# B-Road Docker Compose - Test Configuration
+# =============================================================================
+# Usage: docker compose -f docker-compose.test.yml up --abort-on-container-exit
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Test Database - Isolated on different port
+  # ---------------------------------------------------------------------------
+  db-test:
+    image: postgis/postgis:15-3.4-alpine
+    container_name: b-road-db-test
+    environment:
+      POSTGRES_USER: curvature_test
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: curvature_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    volumes:
+      - ./docker/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U curvature_test -d curvature_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  # ---------------------------------------------------------------------------
+  # API Test Runner
+  # ---------------------------------------------------------------------------
+  api-test:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+      target: test
+    container_name: b-road-api-test
+    environment:
+      DATABASE_URL: postgresql://curvature_test:test_password@db-test:5432/curvature_test
+      MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN:-test_token}
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - ./api:/app/api:ro
+    depends_on:
+      db-test:
+        condition: service_healthy

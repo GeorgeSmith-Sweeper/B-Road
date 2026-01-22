@@ -1,0 +1,79 @@
+# =============================================================================
+# B-Road Docker Ignore
+# =============================================================================
+
+# Git
+.git
+.gitignore
+
+# Dependencies (will be installed in container)
+node_modules
+frontend/node_modules
+venv
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Build outputs
+.next
+frontend/.next
+frontend/out
+dist
+build
+*.egg-info
+
+# IDE and editor
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment files (secrets)
+.env
+.env.local
+.env.*.local
+*.env
+
+# Data files (large)
+*.msgpack
+*.osm
+*.pbf
+*.osm.gz
+*.osm.bz2
+output-master
+output
+data
+
+# Test and coverage
+.coverage
+htmlcov
+.pytest_cache
+coverage
+.nyc_output
+
+# Logs
+*.log
+logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Documentation (not needed in container)
+*.md
+!README.md
+docs
+
+# Docker files (avoid recursion)
+Dockerfile*
+docker-compose*.yml
+.docker
+
+# Misc
+*.bak
+*.tmp
+.cache
