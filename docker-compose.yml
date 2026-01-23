@@ -46,6 +46,7 @@ services:
       - "8000:8000"
     volumes:
       - ./api:/app/api:ro
+      - ./curvature:/app/curvature:ro
       - api_cache:/app/.cache
     depends_on:
       db:

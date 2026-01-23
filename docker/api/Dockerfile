@@ -76,6 +76,7 @@ COPY --from=deps /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY api/ ./api/
+COPY curvature/ ./curvature/
 
 # Set environment for production
 ENV PYTHONUNBUFFERED=1 \
@@ -111,6 +112,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Copy application code
 COPY api/ ./api/
+COPY curvature/ ./curvature/
 
 USER appuser
 

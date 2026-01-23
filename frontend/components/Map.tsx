@@ -128,23 +128,35 @@ export default function Map() {
   // Initialize layer once and update data when curvatureData changes
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !isLoaded) return;
+    if (!map || !isLoaded || !curvatureData) return;
 
-    // Update existing source if it exists
-    const source = map.getSource('curvature') as mapboxgl.GeoJSONSource | undefined;
-    if (source && curvatureData) {
-      source.setData(curvatureData);
+    // Check if source already exists on the map
+    const existingSource = map.getSource('curvature') as mapboxgl.GeoJSONSource | undefined;
+
+    if (existingSource) {
+      // Source exists, just update the data
+      existingSource.setData(curvatureData);
       return;
     }
 
-    // Only initialize layer once
-    if (layerInitializedRef.current || !curvatureData) return;
-    layerInitializedRef.current = true;
+    // Source doesn't exist, add it along with the layer
+    try {
+      map.addSource('curvature', {
+        type: 'geojson',
+        data: curvatureData,
+      });
+    } catch (e) {
+      // Source may already exist due to race condition, try to update instead
+      const source = map.getSource('curvature') as mapboxgl.GeoJSONSource | undefined;
+      if (source) {
+        source.setData(curvatureData);
+      }
+      return;
+    }
 
-    map.addSource('curvature', {
-      type: 'geojson',
-      data: curvatureData,
-    });
+    // Only add layer and event handlers once
+    if (layerInitializedRef.current) return;
+    layerInitializedRef.current = true;
 
     map.addLayer({
       id: 'curvature-layer',

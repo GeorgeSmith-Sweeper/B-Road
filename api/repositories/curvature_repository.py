@@ -2,8 +2,7 @@
 Repository for querying curvature_segments from the curvature PostGIS database.
 
 This repository queries the curvature data loaded by the curvature processing
-pipeline (bin/curvature-output-postgis). Data is stored in SRID 900913 (Web Mercator)
-but transformed to 4326 (WGS84) for API responses.
+pipeline (bin/curvature-output-postgis). Data is stored in SRID 4326 (WGS84).
 """
 
 from sqlalchemy import text
@@ -59,15 +58,12 @@ class CurvatureRepository:
                 cs.length,
                 cs.paved,
                 s.source as source_name,
-                ST_AsGeoJSON(ST_Transform(cs.geom, 4326)) as geometry
+                ST_AsGeoJSON(cs.geom) as geometry
             FROM curvature_segments cs
             LEFT JOIN sources s ON cs.fk_source = s.id
             WHERE ST_Intersects(
                 cs.geom,
-                ST_Transform(
-                    ST_MakeEnvelope(:west, :south, :east, :north, 4326),
-                    900913
-                )
+                ST_MakeEnvelope(:west, :south, :east, :north, 4326)
             )
             AND cs.curvature >= :min_curvature
             {source_filter}
@@ -129,7 +125,7 @@ class CurvatureRepository:
                 cs.length,
                 cs.paved,
                 s.source as source_name,
-                ST_AsGeoJSON(ST_Transform(cs.geom, 4326)) as geometry
+                ST_AsGeoJSON(cs.geom) as geometry
             FROM curvature_segments cs
             JOIN sources s ON cs.fk_source = s.id
             WHERE s.source = :source_name
@@ -215,7 +211,7 @@ class CurvatureRepository:
                 cs.length,
                 cs.paved,
                 s.source as source_name,
-                ST_AsGeoJSON(ST_Transform(cs.geom, 4326)) as geometry
+                ST_AsGeoJSON(cs.geom) as geometry
             FROM curvature_segments cs
             LEFT JOIN sources s ON cs.fk_source = s.id
             WHERE cs.id = :segment_id
@@ -294,10 +290,10 @@ class CurvatureRepository:
         """
         query = text("""
             SELECT
-                ST_XMin(ST_Transform(ST_SetSRID(ST_Extent(cs.geom), 900913), 4326)) as west,
-                ST_YMin(ST_Transform(ST_SetSRID(ST_Extent(cs.geom), 900913), 4326)) as south,
-                ST_XMax(ST_Transform(ST_SetSRID(ST_Extent(cs.geom), 900913), 4326)) as east,
-                ST_YMax(ST_Transform(ST_SetSRID(ST_Extent(cs.geom), 900913), 4326)) as north
+                ST_XMin(ST_Extent(cs.geom)) as west,
+                ST_YMin(ST_Extent(cs.geom)) as south,
+                ST_XMax(ST_Extent(cs.geom)) as east,
+                ST_YMax(ST_Extent(cs.geom)) as north
             FROM curvature_segments cs
             JOIN sources s ON cs.fk_source = s.id
             WHERE s.source = :source_name

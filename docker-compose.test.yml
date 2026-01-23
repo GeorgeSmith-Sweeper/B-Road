@@ -43,6 +43,7 @@ services:
       PYTHONUNBUFFERED: 1
     volumes:
       - ./api:/app/api:ro
+      - ./curvature:/app/curvature:ro
     depends_on:
       db-test:
         condition: service_healthy

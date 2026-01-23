@@ -86,16 +86,16 @@ logs-db:
 # -----------------------------------------------------------------------------
 
 test:
-	docker compose -f docker-compose.test.yml up --build --abort-on-container-exit api-test
-	docker compose -f docker-compose.test.yml down -v
+	docker compose -f docker compose.test.yml up --build --abort-on-container-exit api-test
+	docker compose -f docker compose.test.yml down -v
 
 lint:
 	docker compose exec api python -m flake8 api/ || true
 	docker compose exec frontend npm run lint || true
 
 coverage:
-	docker compose -f docker-compose.test.yml run --rm api-test pytest -v --cov=api --cov-report=html --cov-report=term-missing
-	docker compose -f docker-compose.test.yml down -v
+	docker compose -f docker compose.test.yml run --rm api-test pytest -v --cov=api --cov-report=html --cov-report=term-missing
+	docker compose -f docker compose.test.yml down -v
 	@echo "Coverage report generated in htmlcov/"
 
 # -----------------------------------------------------------------------------
@@ -131,16 +131,16 @@ health:
 # -----------------------------------------------------------------------------
 
 prod-build:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml build
+	docker compose -f docker compose.yml -f docker compose.prod.yml build
 
 prod-up:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+	docker compose -f docker compose.yml -f docker compose.prod.yml up -d
 	@echo ""
 	@echo "Production services starting..."
 	@echo "Run 'make health' to check status"
 
 prod-down:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+	docker compose -f docker compose.yml -f docker compose.prod.yml down
 
 # -----------------------------------------------------------------------------
 # Maintenance
@@ -148,8 +148,8 @@ prod-down:
 
 clean:
 	docker compose down -v --rmi local --remove-orphans
-	docker compose -f docker-compose.test.yml down -v --rmi local --remove-orphans 2>/dev/null || true
+	docker compose -f docker compose.test.yml down -v --rmi local --remove-orphans 2>/dev/null || true
 
 clean-volumes:
 	docker compose down -v
-	docker compose -f docker-compose.test.yml down -v 2>/dev/null || true
+	docker compose -f docker compose.test.yml down -v 2>/dev/null || true
