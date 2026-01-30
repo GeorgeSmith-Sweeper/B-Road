@@ -11,6 +11,8 @@ Tests the /curvature/tiles/{z}/{x}/{y}.pbf endpoint including:
 import pytest
 from fastapi.testclient import TestClient
 
+pytestmark = pytest.mark.usefixtures("seed_curvature_data")
+
 
 @pytest.mark.integration
 class TestTileEndpoint:

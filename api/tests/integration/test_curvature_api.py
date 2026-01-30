@@ -16,6 +16,8 @@ from tests.fixtures.curvature_fixtures import (
     EXPECTED_SOURCE_COUNTS,
 )
 
+pytestmark = pytest.mark.usefixtures("seed_curvature_data")
+
 
 class TestCurvatureSegmentsEndpoint:
     """Tests for GET /curvature/segments"""

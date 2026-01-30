@@ -7,6 +7,7 @@ This file provides:
 - Sample data fixtures for routes and segments
 """
 
+import json
 import os
 import pytest
 import uuid
@@ -36,6 +37,12 @@ from tests.fixtures.sample_segments import (
     SINGLE_SEGMENT,
     SAMPLE_ROUTE_METADATA,
     CONNECTED_SEGMENTS_STATS,
+)
+from tests.fixtures.curvature_fixtures import (
+    SAMPLE_SOURCES,
+    ALL_SEGMENTS,
+    SAMPLE_TAGS,
+    SAMPLE_SEGMENT_WAYS,
 )
 
 
@@ -125,14 +132,148 @@ def test_engine(postgresql_proc):
 
     engine = create_engine(db_url, pool_pre_ping=True, echo=False)
 
-    # Create all tables
+    # Create all ORM-managed tables
     Base.metadata.create_all(bind=engine)
+
+    # Create curvature pipeline tables (not managed by SQLAlchemy ORM)
+    with engine.connect() as conn:
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS sources (
+                id SERIAL PRIMARY KEY,
+                source VARCHAR NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS tags (
+                tag_id SERIAL PRIMARY KEY,
+                tag_value VARCHAR NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS curvature_segments (
+                id SERIAL PRIMARY KEY,
+                id_hash VARCHAR,
+                name VARCHAR,
+                curvature INTEGER,
+                length FLOAT,
+                paved BOOLEAN,
+                fk_source INTEGER REFERENCES sources(id),
+                geom GEOMETRY(LINESTRING, 4326)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_curvature_segments_geom
+                ON curvature_segments USING GIST (geom);
+            CREATE INDEX IF NOT EXISTS idx_curvature_segments_curvature
+                ON curvature_segments (curvature);
+
+            CREATE TABLE IF NOT EXISTS segment_ways (
+                id SERIAL PRIMARY KEY,
+                fk_segment INTEGER REFERENCES curvature_segments(id),
+                position INTEGER,
+                name VARCHAR,
+                curvature INTEGER,
+                length FLOAT,
+                min_lon FLOAT,
+                max_lon FLOAT,
+                min_lat FLOAT,
+                max_lat FLOAT,
+                fk_highway INTEGER REFERENCES tags(tag_id),
+                fk_surface INTEGER REFERENCES tags(tag_id)
+            );
+        """))
+        conn.commit()
 
     yield engine
 
-    # Cleanup: drop all tables after session
+    # Cleanup: drop curvature pipeline tables first (respect FK constraints)
+    with engine.connect() as conn:
+        conn.execute(text("""
+            DROP TABLE IF EXISTS segment_ways;
+            DROP TABLE IF EXISTS curvature_segments;
+            DROP TABLE IF EXISTS tags;
+            DROP TABLE IF EXISTS sources;
+        """))
+        conn.commit()
+
+    # Drop all ORM-managed tables
     Base.metadata.drop_all(bind=engine)
     engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def seed_curvature_data(test_engine):
+    """
+    Seed curvature pipeline tables with test data (session scope).
+
+    Inserts sample sources, segments, tags, and segment ways
+    for curvature and tile integration tests.
+    """
+    with test_engine.connect() as conn:
+        # Insert sources
+        for source in SAMPLE_SOURCES:
+            conn.execute(
+                text("INSERT INTO sources (id, source) VALUES (:id, :source)"),
+                {"id": source["id"], "source": source["source"]},
+            )
+
+        # Insert tags
+        for tag in SAMPLE_TAGS:
+            conn.execute(
+                text("INSERT INTO tags (tag_id, tag_value) VALUES (:tag_id, :tag_value)"),
+                {"tag_id": tag["tag_id"], "tag_value": tag["tag_value"]},
+            )
+
+        # Insert curvature segments
+        for seg in ALL_SEGMENTS:
+            geojson = json.dumps(seg["geometry_4326"])
+            conn.execute(
+                text("""
+                    INSERT INTO curvature_segments
+                        (id, id_hash, name, curvature, length, paved, fk_source, geom)
+                    VALUES
+                        (:id, :id_hash, :name, :curvature, :length, :paved, :fk_source,
+                         ST_GeomFromGeoJSON(:geojson))
+                """),
+                {
+                    "id": seg["id"],
+                    "id_hash": seg["id_hash"],
+                    "name": seg["name"],
+                    "curvature": seg["curvature"],
+                    "length": seg["length"],
+                    "paved": seg["paved"],
+                    "fk_source": seg["fk_source"],
+                    "geojson": geojson,
+                },
+            )
+
+        # Insert segment ways
+        for way in SAMPLE_SEGMENT_WAYS:
+            conn.execute(
+                text("""
+                    INSERT INTO segment_ways
+                        (id, fk_segment, position, name, curvature, length,
+                         min_lon, max_lon, min_lat, max_lat, fk_highway, fk_surface)
+                    VALUES
+                        (:id, :fk_segment, :position, :name, :curvature, :length,
+                         :min_lon, :max_lon, :min_lat, :max_lat, :fk_highway, :fk_surface)
+                """),
+                {
+                    "id": way["id"],
+                    "fk_segment": way["fk_segment"],
+                    "position": way["position"],
+                    "name": way["name"],
+                    "curvature": way["curvature"],
+                    "length": way["length"],
+                    "min_lon": way["min_lon"],
+                    "max_lon": way["max_lon"],
+                    "min_lat": way["min_lat"],
+                    "max_lat": way["max_lat"],
+                    "fk_highway": way["fk_highway"],
+                    "fk_surface": way["fk_surface"],
+                },
+            )
+
+        conn.commit()
+
+    yield
 
 
 @pytest.fixture(scope="function")
