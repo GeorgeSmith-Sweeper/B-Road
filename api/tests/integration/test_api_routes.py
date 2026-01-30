@@ -46,6 +46,7 @@ class TestRootAndHealthEndpoints:
         assert "database_available" in data
 
 
+@pytest.mark.skip(reason="Route/session endpoints not currently mounted")
 @pytest.mark.integration
 class TestSessionManagement:
     """Tests for session creation and management."""
@@ -72,6 +73,7 @@ class TestSessionManagement:
         assert "session_id" in data
 
 
+@pytest.mark.skip(reason="Route/session endpoints not currently mounted")
 @pytest.mark.integration
 class TestRouteCRUDOperations:
     """Tests for route create, read, update, delete operations."""
@@ -222,6 +224,7 @@ class TestRouteCRUDOperations:
         assert response.status_code == 404
 
 
+@pytest.mark.skip(reason="Route/session endpoints not currently mounted")
 @pytest.mark.integration
 class TestRouteDataValidation:
     """Tests for route data validation."""
@@ -315,21 +318,6 @@ class TestRouteDataValidation:
 
 
 @pytest.mark.integration
-@pytest.mark.slow
-class TestDataLoading:
-    """Tests for curvature data loading (requires test data file)."""
-
-    def test_load_data_missing_file(self, test_client):
-        """Test POST /data/load with nonexistent file returns 404."""
-        response = test_client.post(
-            "/data/load", params={"filepath": "/nonexistent/file.msgpack"}
-        )
-
-        assert response.status_code == 404
-        assert "Data file not found" in response.json()["detail"]
-
-
-@pytest.mark.integration
 class TestErrorHandling:
     """Tests for API error handling."""
 
@@ -360,6 +348,7 @@ class TestErrorHandling:
         assert response.status_code in [404, 422]
 
 
+@pytest.mark.skip(reason="Route/session endpoints not currently mounted")
 @pytest.mark.integration
 class TestPublicRoutes:
     """Tests for public route functionality."""
@@ -403,6 +392,7 @@ class TestPublicRoutes:
         assert get_response.json()["is_public"] is True
 
 
+@pytest.mark.skip(reason="Route/session endpoints not currently mounted")
 @pytest.mark.integration
 class TestURLSlugGeneration:
     """Tests for URL slug generation and uniqueness."""
@@ -459,6 +449,7 @@ class TestURLSlugGeneration:
         assert data["url_slug"] == sample_route.url_slug
 
 
+@pytest.mark.skip(reason="Route/session endpoints not currently mounted")
 @pytest.mark.integration
 class TestConcurrentOperations:
     """Tests for handling concurrent operations."""

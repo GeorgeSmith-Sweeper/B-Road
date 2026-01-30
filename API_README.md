@@ -7,7 +7,7 @@ A FastAPI + Next.js application for finding and exploring curvy roads, backed by
 ```
 OSM PBF --> curvature pipeline --> msgpack --> bin/curvature-output-postgis --> PostGIS
                                                                                  |
-                                                                            FastAPI (GeoJSON)
+                                                                     FastAPI (GeoJSON + MVT tiles)
                                                                                  |
                                                                          Mapbox GL JS (Next.js)
 ```
@@ -67,7 +67,7 @@ Defined in `.env` (see `.env.example` for the template):
 
 ## API Endpoints
 
-The API has two routers: **health** (no prefix) and **curvature** (prefix `/curvature`). Interactive documentation is available at `/docs` when the server is running.
+The API has three routers: **health** (no prefix), **curvature** (prefix `/curvature`), and **tiles** (prefix `/curvature/tiles`). Interactive documentation is available at `/docs` when the server is running.
 
 ---
 
@@ -294,6 +294,68 @@ Get detailed information about a single segment, including its constituent OSM w
 
 ---
 
+### Tiles Router
+
+Vector tile endpoints for efficient map rendering. The frontend uses these tiles instead of GeoJSON for viewport-based loading.
+
+#### `GET /curvature/tiles/{z}/{x}/{y}.pbf`
+
+Get a Mapbox Vector Tile (MVT) for the given ZXY slippy map coordinates. Returns protobuf-encoded binary data that Mapbox GL JS renders natively.
+
+**Path Parameters:**
+
+| Parameter | Type | Description                        |
+|-----------|------|------------------------------------|
+| `z`       | int  | Zoom level (0--22)                 |
+| `x`       | int  | Tile column (0 to 2^z - 1)        |
+| `y`       | int  | Tile row (0 to 2^z - 1)           |
+
+**Query Parameters:**
+
+| Parameter | Type   | Required | Description                                  |
+|-----------|--------|----------|----------------------------------------------|
+| `source`  | string | No       | Filter by source name (e.g., `"vermont"`)    |
+
+**Zoom-based curvature filtering** (applied automatically by the server):
+
+| Zoom Level | Min Curvature |
+|------------|---------------|
+| < 8        | 1000          |
+| 8 -- 10    | 500           |
+| > 10       | 300           |
+
+**Response (200):** Binary protobuf (`application/x-protobuf`) with `Cache-Control: public, max-age=3600`.
+
+The tile contains a layer named `curvature` with these properties per feature:
+
+| Property      | Type    | Description                        |
+|---------------|---------|------------------------------------|
+| `id`          | int     | Segment database ID                |
+| `name`        | string  | Road name                          |
+| `curvature`   | float   | Curvature score                    |
+| `length`      | float   | Length in meters                   |
+| `paved`       | boolean | Whether the road is paved          |
+| `source_name` | string  | Data source name                   |
+
+**Response (204):** Empty tile (no data in this area). `Cache-Control: public, max-age=86400`.
+
+**Errors:**
+- `400` -- Invalid zoom level or tile coordinates out of range
+
+**Example:**
+```bash
+# Get a tile covering Vermont area
+curl http://localhost:8000/curvature/tiles/8/74/93.pbf -o tile.pbf
+
+# Check headers
+curl -I http://localhost:8000/curvature/tiles/8/74/93.pbf
+
+# Filter by source
+curl "http://localhost:8000/curvature/tiles/8/74/93.pbf?source=vermont" -o tile.pbf
+```
+
+---
+
 ### GeoJSON Feature Properties
 
 Every feature returned in a FeatureCollection includes these properties:
@@ -323,7 +385,9 @@ Every feature returned in a FeatureCollection includes these properties:
 
 ## Frontend Map Rendering
 
-The Next.js frontend renders segments on a Mapbox GL JS map with color-coded curvature:
+The Next.js frontend renders segments on a Mapbox GL JS map using **vector tiles** served from PostGIS via `ST_AsMVT`. The map is centered on the US (`-98.5, 39.8`, zoom 5) and loads tiles from `/curvature/tiles/{z}/{x}/{y}.pbf`.
+
+Road segments are color-coded by curvature:
 
 | Curvature Score | Color  | Hex       |
 |-----------------|--------|-----------|
@@ -334,7 +398,9 @@ The Next.js frontend renders segments on a Mapbox GL JS map with color-coded cur
 
 Line width scales with zoom level: z4 = 1px, z8 = 2px, z12 = 4px.
 
-The frontend uses viewport-based loading with a 300ms debounce on map move events. In-flight requests are cancelled when the viewport changes before a response arrives.
+The frontend applies two client-side interactions without network requests:
+- **Source filter:** Selecting a state in the sidebar updates the tile URL with `?source=X` and clears the tile cache.
+- **Curvature slider:** Adjusting the minimum curvature applies a Mapbox GL filter expression instantly on already-loaded tiles.
 
 ## Usage Examples
 
@@ -373,6 +439,16 @@ curl http://localhost:8000/curvature/sources/vermont/bounds
 **Get segment detail:**
 ```bash
 curl http://localhost:8000/curvature/segments/42
+```
+
+**Get a vector tile (binary protobuf):**
+```bash
+curl http://localhost:8000/curvature/tiles/8/74/93.pbf -o tile.pbf
+```
+
+**Check tile headers:**
+```bash
+curl -I http://localhost:8000/curvature/tiles/8/74/93.pbf
 ```
 
 ### Python
@@ -437,6 +513,7 @@ Performance indexes are defined in `api/schema/curvature_indexes.sql`:
 - Composite source + curvature index
 - Partial indexes for high-curvature and paved-only queries
 - Hash index on `id_hash` for deduplication lookups
+- Partial GIST indexes for vector tile queries (curvature >= 300 and >= 1000)
 
 ### Saved Routes Schema (Not Currently Active)
 

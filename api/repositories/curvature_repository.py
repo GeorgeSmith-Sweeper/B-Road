@@ -278,6 +278,90 @@ class CurvatureRepository:
             "ways": ways,
         }
 
+    def get_mvt_tile(
+        self,
+        z: int,
+        x: int,
+        y: int,
+        extent: int = 4096,
+        min_curvature: int = 300,
+        source: Optional[str] = None,
+    ) -> Optional[bytes]:
+        """
+        Get a Mapbox Vector Tile (MVT) for the given ZXY coordinates.
+
+        Uses ST_AsMVT and ST_AsMVTGeom to produce a protobuf-encoded tile
+        that Mapbox GL JS can render natively.
+
+        Args:
+            z: Zoom level
+            x: Tile column
+            y: Tile row
+            extent: Tile extent in pixels (default 4096)
+            min_curvature: Minimum curvature score to include
+            source: Optional source name to filter by
+
+        Returns:
+            Raw protobuf bytes, or None if the tile is empty
+        """
+        from api.utils.tile_math import tile_to_bbox
+
+        west, south, east, north = tile_to_bbox(z, x, y)
+
+        source_filter = ""
+        if source:
+            source_filter = "AND s.source = :source"
+
+        query = text(f"""
+            WITH tile_bounds AS (
+                SELECT ST_MakeEnvelope(:west, :south, :east, :north, 4326) AS geom
+            ),
+            mvt_data AS (
+                SELECT
+                    cs.id,
+                    cs.name,
+                    cs.curvature,
+                    cs.length,
+                    cs.paved,
+                    s.source AS source_name,
+                    ST_AsMVTGeom(
+                        cs.geom,
+                        tb.geom,
+                        :extent,
+                        256,
+                        true
+                    ) AS geom
+                FROM curvature_segments cs
+                LEFT JOIN sources s ON cs.fk_source = s.id
+                CROSS JOIN tile_bounds tb
+                WHERE cs.geom && tb.geom
+                AND cs.curvature >= :min_curvature
+                {source_filter}
+            )
+            SELECT ST_AsMVT(mvt_data, 'curvature', :extent, 'geom') AS tile
+            FROM mvt_data
+            WHERE geom IS NOT NULL
+        """)
+
+        params: Dict[str, Any] = {
+            "west": west,
+            "south": south,
+            "east": east,
+            "north": north,
+            "extent": extent,
+            "min_curvature": min_curvature,
+        }
+        if source:
+            params["source"] = source
+
+        result = self.db.execute(query, params)
+        row = result.fetchone()
+
+        if not row or not row.tile or len(row.tile) == 0:
+            return None
+
+        return bytes(row.tile)
+
     def get_source_bounds(self, source_name: str) -> Optional[Dict[str, float]]:
         """
         Get the bounding box for all segments from a source.
