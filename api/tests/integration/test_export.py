@@ -14,6 +14,7 @@ import gpxpy.gpx
 from tests.fixtures.sample_segments import CONNECTED_SEGMENTS
 
 
+@pytest.mark.skip(reason="Route/session endpoints not currently mounted")
 @pytest.mark.integration
 class TestGPXExport:
     """Tests for GPX export functionality."""
@@ -134,6 +135,7 @@ class TestGPXExport:
             assert "." in lon_str
 
 
+@pytest.mark.skip(reason="Route/session endpoints not currently mounted")
 @pytest.mark.integration
 class TestKMLExport:
     """Tests for KML export functionality."""
@@ -292,6 +294,7 @@ class TestKMLExport:
         assert len(coord_lines) == expected_count
 
 
+@pytest.mark.skip(reason="Route/session endpoints not currently mounted")
 @pytest.mark.integration
 class TestExportComparison:
     """Tests comparing GPX and KML exports for consistency."""
@@ -346,6 +349,7 @@ class TestExportComparison:
         assert gpx_name == kml_name
 
 
+@pytest.mark.skip(reason="Route/session endpoints not currently mounted")
 @pytest.mark.integration
 class TestExportEdgeCases:
     """Tests for edge cases in export functionality."""

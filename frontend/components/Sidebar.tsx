@@ -13,8 +13,6 @@ export default function Sidebar() {
     setCurvatureSources,
     selectedSource,
     setSelectedSource,
-    curvatureLoading,
-    curvatureData,
     sourcesError,
     setSourcesError,
   } = useAppStore();
@@ -41,6 +39,8 @@ export default function Sidebar() {
   useEffect(() => {
     loadSources();
   }, [loadSources]);
+
+  const totalSegments = curvatureSources.reduce((sum, s) => sum + s.segment_count, 0);
 
   return (
     <div className="w-[400px] bg-gray-50 p-5 overflow-y-auto border-r border-gray-300 shadow-lg">
@@ -87,27 +87,15 @@ export default function Sidebar() {
           </select>
         )}
 
-        {/* Loading indicator and stats */}
+        {/* Stats */}
         <div className="bg-gray-50 p-3 rounded border-l-4 border-blue-500">
-          {curvatureLoading ? (
-            <p className="text-sm text-blue-600 flex items-center">
-              <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-              </svg>
-              Loading segments...
+          <p className="text-sm text-gray-700">
+            <strong>Total Segments:</strong> {totalSegments.toLocaleString()}
+          </p>
+          {curvatureSources.length > 0 && (
+            <p className="text-xs text-gray-500 mt-1">
+              {curvatureSources.length} state{curvatureSources.length !== 1 ? 's' : ''} available
             </p>
-          ) : (
-            <>
-              <p className="text-sm text-gray-700">
-                <strong>Visible Segments:</strong> {curvatureData?.features.length || 0}
-              </p>
-              {curvatureSources.length > 0 && (
-                <p className="text-xs text-gray-500 mt-1">
-                  {curvatureSources.length} state{curvatureSources.length !== 1 ? 's' : ''} loaded with {curvatureSources.reduce((sum, s) => sum + s.segment_count, 0).toLocaleString()} total segments
-                </p>
-              )}
-            </>
           )}
         </div>
       </div>
@@ -136,7 +124,7 @@ export default function Sidebar() {
           </span>
         </div>
         <p className="text-xs text-gray-500 mt-1">
-          Pan/zoom the map to load roads in the visible area
+          Filters visible roads instantly
         </p>
       </div>
 

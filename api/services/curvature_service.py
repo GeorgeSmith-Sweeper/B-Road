@@ -124,6 +124,35 @@ class CurvatureService:
             "ways": segment["ways"],
         }
 
+    def get_vector_tile(
+        self,
+        z: int,
+        x: int,
+        y: int,
+        min_curvature: int = 300,
+        source: Optional[str] = None,
+    ) -> Optional[bytes]:
+        """
+        Get a Mapbox Vector Tile for the given ZXY coordinates.
+
+        Args:
+            z: Zoom level
+            x: Tile column
+            y: Tile row
+            min_curvature: Minimum curvature score to include
+            source: Optional source name to filter by
+
+        Returns:
+            Raw protobuf bytes, or None if the tile is empty
+        """
+        return self.curvature_repo.get_mvt_tile(
+            z=z,
+            x=x,
+            y=y,
+            min_curvature=min_curvature,
+            source=source,
+        )
+
     def get_source_bounds(self, source_name: str) -> Optional[Dict[str, float]]:
         """
         Get bounding box for a source.

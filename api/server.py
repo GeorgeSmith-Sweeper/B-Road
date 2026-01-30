@@ -35,7 +35,7 @@ except ImportError:
     print("Warning: Database module not available")
 
 # Import routers
-from api.routers import health, curvature
+from api.routers import health, curvature, tiles
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -59,6 +59,7 @@ app.include_router(health.router)
 # Mount database-dependent routers only if database is available
 if DATABASE_AVAILABLE:
     app.include_router(curvature.router)
+    app.include_router(tiles.router)
 else:
     print("Warning: Database not available. Curvature data features disabled.")
     print("Install requirements: pip install -r api/requirements.txt")

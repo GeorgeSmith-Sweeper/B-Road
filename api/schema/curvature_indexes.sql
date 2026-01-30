@@ -83,6 +83,22 @@ CREATE INDEX IF NOT EXISTS idx_curvature_segments_paved
   WHERE paved = true;
 
 -- =============================================================================
+-- Partial Spatial Indexes for Vector Tile Queries
+-- =============================================================================
+
+-- Partial GIST index for moderate+ curvature roads (curvature >= 300)
+-- Optimizes vector tile queries at zoom > 10
+CREATE INDEX IF NOT EXISTS idx_curvature_segments_geom_curv300
+  ON curvature_segments USING GIST (geom)
+  WHERE curvature >= 300;
+
+-- Partial GIST index for high curvature roads (curvature >= 1000)
+-- Optimizes vector tile queries at zoom < 8
+CREATE INDEX IF NOT EXISTS idx_curvature_segments_geom_curv1000
+  ON curvature_segments USING GIST (geom)
+  WHERE curvature >= 1000;
+
+-- =============================================================================
 -- Analyze Tables
 -- =============================================================================
 

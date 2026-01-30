@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { SearchFilters, SourceInfo, CurvatureGeoJSON, ApiError } from '@/types';
+import { SearchFilters, SourceInfo, ApiError } from '@/types';
 
 interface AppState {
   // Search filters
@@ -18,27 +18,7 @@ interface AppState {
   selectedSource: string | null;
   setSelectedSource: (source: string | null) => void;
 
-  // Curvature segment data (from PostGIS)
-  curvatureData: CurvatureGeoJSON | null;
-  setCurvatureData: (data: CurvatureGeoJSON | null) => void;
-
-  // Current map viewport for debounced loading
-  mapViewport: {
-    west: number;
-    south: number;
-    east: number;
-    north: number;
-    zoom: number;
-  } | null;
-  setMapViewport: (viewport: { west: number; south: number; east: number; north: number; zoom: number } | null) => void;
-
-  // Curvature loading state
-  curvatureLoading: boolean;
-  setCurvatureLoading: (loading: boolean) => void;
-
   // Error states
-  curvatureError: ApiError | null;
-  setCurvatureError: (error: ApiError | null) => void;
   sourcesError: ApiError | null;
   setSourcesError: (error: ApiError | null) => void;
   initError: ApiError | null;
@@ -69,21 +49,7 @@ export const useAppStore = create<AppState>((set) => ({
   selectedSource: null,
   setSelectedSource: (source) => set({ selectedSource: source }),
 
-  // Curvature data
-  curvatureData: null,
-  setCurvatureData: (data) => set({ curvatureData: data }),
-
-  // Map viewport
-  mapViewport: null,
-  setMapViewport: (viewport) => set({ mapViewport: viewport }),
-
-  // Curvature loading
-  curvatureLoading: false,
-  setCurvatureLoading: (loading) => set({ curvatureLoading: loading }),
-
   // Error states
-  curvatureError: null,
-  setCurvatureError: (error) => set({ curvatureError: error }),
   sourcesError: null,
   setSourcesError: (error) => set({ sourcesError: error }),
   initError: null,
