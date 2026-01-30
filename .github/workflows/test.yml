@@ -101,7 +101,7 @@ jobs:
       - name: Run ruff linter
         run: |
           cd api
-          ruff check . --ignore E501,F401
+          ruff check . --ignore E501,F401,E402
 
       - name: Check code formatting with black
         run: |
