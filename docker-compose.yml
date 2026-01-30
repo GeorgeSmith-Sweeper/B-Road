@@ -74,7 +74,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend:/app:ro
+      - ./frontend:/app
       - /app/node_modules
       - next_cache:/app/.next
     depends_on:
