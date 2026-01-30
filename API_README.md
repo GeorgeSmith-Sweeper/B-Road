@@ -1,432 +1,378 @@
-# Curvature API with Route Stitching
+# B-Road: Curvature API
 
-A FastAPI-based REST API for the Curvature road analysis tool, with added functionality for building, saving, and sharing custom routes.
+A FastAPI + Next.js application for finding and exploring curvy roads, backed by PostGIS spatial data and rendered with Mapbox GL JS. The entire stack runs in Docker containers.
 
-## Features
+## Architecture
 
-### Browse Mode (Original Functionality)
-- Load and analyze curvy roads from OpenStreetMap data
-- Filter roads by curvature score, surface type, and length
-- Display roads on an interactive Google Maps interface
-- View detailed road statistics
+```
+OSM PBF --> curvature pipeline --> msgpack --> bin/curvature-output-postgis --> PostGIS
+                                                                                 |
+                                                                            FastAPI (GeoJSON)
+                                                                                 |
+                                                                         Mapbox GL JS (Next.js)
+```
 
-### Route Stitching Mode (New Feature)
-- **Manual Route Building**: Click road segments on the map to build custom routes
-- **Segment Validation**: Automatically validates that segments connect end-to-end
-- **Real-time Statistics**: See distance and curvature totals as you build
-- **Save Routes**: Store routes in PostgreSQL/PostGIS database
-- **Export**: Download routes as KML (Google Earth) or GPX (GPS devices)
-- **Share Routes**: Generate shareable URLs for your routes
-- **Session Management**: Routes persist across browser sessions
+| Layer       | Technology                                              |
+|-------------|---------------------------------------------------------|
+| Frontend    | Next.js (TypeScript), Mapbox GL JS, Zustand, Tailwind CSS |
+| Backend     | FastAPI (Python), SQLAlchemy ORM                        |
+| Database    | PostgreSQL 15 with PostGIS 3.4                          |
+| Development | Docker Compose (3 services: db, api, frontend)          |
+
+The backend follows a layered architecture: **routers** (request handling) → **services** (business logic) → **repositories** (database queries).
 
 ## Quick Start
 
 ### Prerequisites
 
-- Python 3.7+
-- PostgreSQL with PostGIS extension
-- Google Maps API key
-- Curvature msgpack data files (generated from OSM data)
+- Docker and Docker Compose
+- A Mapbox access token (from https://account.mapbox.com/)
+- Curvature data loaded into PostGIS (via `bin/curvature-output-postgis`)
 
-### Installation
+### Setup
 
-1. **Install Python dependencies**:
 ```bash
-cd api
-pip install -r requirements.txt
+# 1. Copy the environment template and fill in your values
+cp .env.example .env
+# Edit .env -- set POSTGRES_PASSWORD and MAPBOX_ACCESS_TOKEN
+
+# 2. Start all services
+make up
+# (or: docker compose up -d)
+
+# 3. Verify everything is running
+make health
 ```
 
-2. **Set up PostgreSQL database**:
-```bash
-# Create database
-createdb curvature
+Once running:
 
-# Enable PostGIS
-psql curvature -c "CREATE EXTENSION postgis;"
+| Service  | URL                         |
+|----------|-----------------------------|
+| Frontend | http://localhost:3000        |
+| API      | http://localhost:8000        |
+| API Docs | http://localhost:8000/docs   |
+| Database | localhost:5432               |
 
-# Run schema (if using existing curvature tables)
-psql curvature < ../output-master/curvature.sql
+## Environment Variables
 
-# Run route stitching schema
-psql curvature < schema/saved_routes.sql
-```
+Defined in `.env` (see `.env.example` for the template):
 
-3. **Configure API keys**:
-```bash
-# Copy example config
-cp config.example.py config.py
-
-# Edit config.py and add your Google Maps API key
-# DATABASE_URL = "postgresql://user:password@localhost:5432/curvature"
-```
-
-4. **Start the server**:
-```bash
-python server.py
-```
-
-The API will be available at http://localhost:8000
-
-### Web Interface
-
-Open http://localhost:8000/static/index.html in your browser.
+| Variable              | Required | Default                  | Description                                |
+|-----------------------|----------|--------------------------|--------------------------------------------|
+| `POSTGRES_USER`       | No       | `curvature`              | PostgreSQL username                        |
+| `POSTGRES_PASSWORD`   | Yes      |                          | PostgreSQL password                        |
+| `DATABASE_URL`        | No       | constructed from above   | Full PostgreSQL connection string           |
+| `MAPBOX_ACCESS_TOKEN` | Yes      |                          | Mapbox GL JS token for map rendering        |
+| `NEXT_PUBLIC_API_URL` | No       | `http://localhost:8000`  | URL the frontend uses to reach the API      |
 
 ## API Endpoints
 
-### Configuration
+The API has two routers: **health** (no prefix) and **curvature** (prefix `/curvature`). Interactive documentation is available at `/docs` when the server is running.
 
-#### GET /config
-Get frontend configuration including Google Maps API key.
+---
 
-**Response**:
+### Health Router
+
+Endpoints for status checks and frontend configuration. No authentication required.
+
+#### `GET /`
+
+Returns API info with a summary of available endpoints.
+
+**Response:**
 ```json
 {
-  "google_maps_api_key": "your_key_here",
+  "name": "Curvature API",
+  "version": "1.0.0",
+  "endpoints": {
+    "/curvature/segments": "Get curvature segments by bounding box",
+    "/curvature/sources": "List available data sources",
+    "/config": "Get frontend configuration",
+    "/docs": "Interactive API documentation"
+  }
+}
+```
+
+#### `GET /health`
+
+Health check endpoint. Reports whether the database connection is available.
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "database_available": true
+}
+```
+
+#### `GET /config`
+
+Returns frontend configuration, including the Mapbox token read from the `MAPBOX_ACCESS_TOKEN` environment variable.
+
+**Response (200):**
+```json
+{
+  "mapbox_api_key": "pk.eyJ1Ijo...",
   "default_center": {"lat": 44.0, "lng": -72.7},
   "default_zoom": 8
 }
 ```
 
-### Data Loading (Browse Mode)
-
-#### POST /data/load
-Load a curvature msgpack file into memory.
-
-**Query Parameters**:
-- `filepath`: Path to .msgpack file
-
-**Response**:
+**Response (500):** Returned when `MAPBOX_ACCESS_TOKEN` is not set.
 ```json
 {
-  "status": "success",
-  "message": "Loaded 150 road collections",
-  "filepath": "/tmp/vermont.msgpack"
+  "detail": "Mapbox API token not configured. Set MAPBOX_ACCESS_TOKEN environment variable."
 }
 ```
 
-#### GET /roads/geojson
-Get roads as GeoJSON FeatureCollection.
+---
 
-**Query Parameters**:
-- `min_curvature`: Minimum curvature score (default: 300)
-- `max_curvature`: Maximum curvature score (optional)
-- `surface`: Surface type - paved, unpaved, or unknown (optional)
-- `limit`: Max number of roads (default: 100)
+### Curvature Router
 
-**Response**:
-```json
-{
-  "type": "FeatureCollection",
-  "features": [...],
-  "metadata": {
-    "total_collections": 500,
-    "filtered_count": 100,
-    "filters": {...}
-  }
-}
-```
+All curvature endpoints are prefixed with `/curvature`. They require a healthy database connection.
 
-#### GET /roads
-Search for roads (simplified JSON format).
+#### `GET /curvature/segments`
 
-**Response**:
-```json
-{
-  "total_found": 50,
-  "roads": [
-    {
-      "name": "VT Route 100",
-      "curvature": 1250.5,
-      "length_km": 25.3,
-      "length_mi": 15.7,
-      "surface": "paved"
-    }
-  ]
-}
-```
+Get road segments within a geographic bounding box. This is the primary endpoint used by the map viewport for loading visible roads.
 
-### Route Stitching (New Endpoints)
+**Query Parameters:**
 
-#### POST /sessions/create
-Create a new user session for route building.
+| Parameter       | Type   | Required | Default | Constraints | Description                                         |
+|-----------------|--------|----------|---------|-------------|-----------------------------------------------------|
+| `bbox`          | string | Yes      |         |             | `"west,south,east,north"` in WGS84 (e.g., `"-73.5,42.7,-71.5,45.0"`) |
+| `min_curvature` | int    | No       | 300     | >= 0        | Minimum curvature score to include                  |
+| `limit`         | int    | No       | 1000    | 1 -- 5000   | Maximum number of segments to return                |
+| `source`        | string | No       |         |             | Filter by source name (e.g., `"vermont"`)           |
 
-**Query Parameters** (optional):
-- `session_name`: Friendly name for the session
+**Zoom-based filtering hints** (recommended values for the frontend):
 
-**Response**:
-```json
-{
-  "session_id": "550e8400-e29b-41d4-a716-446655440000",
-  "created_at": "2024-01-07T12:00:00"
-}
-```
+| Zoom Level | `min_curvature` | `limit` |
+|------------|-----------------|---------|
+| < 8        | 1000            | 500     |
+| 8 -- 10    | 500             | 1000    |
+| > 10       | 300             | 2000    |
 
-#### GET /roads/segments
-Get individual road segments for stitching mode (more granular than /roads/geojson).
-
-**Query Parameters**:
-- `min_curvature`: Minimum curvature for parent collection (default: 300)
-- `bbox`: Bounding box filter (optional): "min_lon,min_lat,max_lon,max_lat"
-- `limit`: Max number of segments (default: 500)
-
-**Response**:
+**Response (200):**
 ```json
 {
   "type": "FeatureCollection",
   "features": [
     {
       "type": "Feature",
-      "id": "12345-0",
+      "id": "42",
       "geometry": {
         "type": "LineString",
-        "coordinates": [...]
+        "coordinates": [[-72.8, 44.2], [-72.7, 44.3]]
       },
       "properties": {
-        "way_id": 12345,
-        "segment_index": 0,
-        "start": [44.5, -73.2],
-        "end": [44.51, -73.21],
-        "length": 120.5,
-        "radius": 85.3,
-        "curvature": 156.7,
-        "curvature_level": 2,
-        "name": "Main Street",
-        "highway": "primary",
-        "surface": "asphalt"
+        "id": 42,
+        "id_hash": "abc123def456",
+        "name": "Route 100",
+        "curvature": 1250.5,
+        "curvature_level": "curvy",
+        "length": 25300,
+        "length_km": 25.3,
+        "length_mi": 15.72,
+        "paved": true,
+        "surface": "paved",
+        "source": "vermont"
       }
     }
-  ]
+  ],
+  "metadata": {
+    "count": 1
+  }
 }
 ```
 
-#### POST /routes/save
-Save a stitched route to the database.
+**Errors:**
+- `400` -- Invalid bbox format, non-numeric values, or west >= east / south >= north
+- `500` -- Database query failure
 
-**Query Parameters**:
-- `session_id`: User session ID (required)
+#### `GET /curvature/sources`
 
-**Request Body**:
+List all available data sources (typically US states) with their segment counts.
+
+**Response (200):**
+```json
+[
+  {"id": 1, "name": "vermont", "segment_count": 4523},
+  {"id": 2, "name": "new_hampshire", "segment_count": 3871}
+]
+```
+
+#### `GET /curvature/sources/{source_name}/segments`
+
+Get all segments for a specific source without bounding box filtering. Useful for loading an entire state at once.
+
+**Path Parameters:**
+
+| Parameter     | Type   | Description                           |
+|---------------|--------|---------------------------------------|
+| `source_name` | string | Source name (e.g., `"vermont"`)       |
+
+**Query Parameters:**
+
+| Parameter       | Type | Required | Default | Constraints | Description                        |
+|-----------------|------|----------|---------|-------------|------------------------------------|
+| `min_curvature` | int  | No       | 300     | >= 0        | Minimum curvature score to include |
+| `limit`         | int  | No       | 1000    | 1 -- 5000   | Maximum number of segments         |
+
+**Response (200):** GeoJSON FeatureCollection (same structure as `/curvature/segments`).
+
+#### `GET /curvature/sources/{source_name}/bounds`
+
+Get the geographic bounding box enclosing all segments from a source. Useful for centering and zooming the map to a state.
+
+**Path Parameters:**
+
+| Parameter     | Type   | Description                           |
+|---------------|--------|---------------------------------------|
+| `source_name` | string | Source name (e.g., `"vermont"`)       |
+
+**Response (200):**
 ```json
 {
-  "route_name": "My Favorite Loop",
-  "description": "Great weekend ride through the mountains",
-  "segments": [
+  "west": -73.43,
+  "south": 42.73,
+  "east": -71.46,
+  "north": 45.02
+}
+```
+
+**Errors:**
+- `404` -- Source not found or has no segments
+
+#### `GET /curvature/segments/{segment_id}`
+
+Get detailed information about a single segment, including its constituent OSM ways and their tags.
+
+**Path Parameters:**
+
+| Parameter    | Type | Description         |
+|--------------|------|---------------------|
+| `segment_id` | int  | The segment ID      |
+
+**Response (200):**
+```json
+{
+  "id": 42,
+  "id_hash": "abc123def456",
+  "name": "Route 100",
+  "curvature": 1250.5,
+  "length": 25300,
+  "length_km": 25.3,
+  "length_mi": 15.72,
+  "paved": true,
+  "source": "vermont",
+  "geometry": {
+    "type": "LineString",
+    "coordinates": [[-72.8, 44.2], [-72.7, 44.3]]
+  },
+  "ways": [
     {
-      "way_id": 12345,
-      "start": [44.5, -73.2],
-      "end": [44.51, -73.21],
-      "length": 120.5,
-      "radius": 85.3,
-      "curvature": 156.7,
-      "curvature_level": 2,
-      "name": "Main Street",
-      "highway": "primary",
+      "way_id": 98765,
+      "position": 0,
+      "name": "Route 100",
+      "curvature": 620.3,
+      "length": 12500,
+      "bbox": {
+        "min_lon": -72.85,
+        "max_lon": -72.75,
+        "min_lat": 44.18,
+        "max_lat": 44.28
+      },
+      "highway": "secondary",
       "surface": "asphalt"
     }
-  ],
-  "is_public": false
-}
-```
-
-**Response**:
-```json
-{
-  "status": "success",
-  "route_id": 42,
-  "url_slug": "my-favorite-loop-a1b2c3d4",
-  "share_url": "/routes/my-favorite-loop-a1b2c3d4"
-}
-```
-
-#### GET /routes/list
-List all routes for a session.
-
-**Query Parameters**:
-- `session_id`: User session ID (required)
-
-**Response**:
-```json
-{
-  "routes": [
-    {
-      "route_id": 42,
-      "route_name": "My Favorite Loop",
-      "total_curvature": 2450.5,
-      "total_length_km": 45.2,
-      "total_length_mi": 28.1,
-      "segment_count": 120,
-      "url_slug": "my-favorite-loop-a1b2c3d4",
-      "created_at": "2024-01-07T14:30:00"
-    }
   ]
 }
 ```
 
-#### GET /routes/{route_identifier}
-Get route details by ID or URL slug.
+**Errors:**
+- `404` -- Segment not found
 
-**Path Parameters**:
-- `route_identifier`: Route ID (integer) or URL slug (string)
+---
 
-**Response**:
-```json
-{
-  "route_id": 42,
-  "route_name": "My Favorite Loop",
-  "description": "Great weekend ride",
-  "total_curvature": 2450.5,
-  "total_length_km": 45.2,
-  "total_length_mi": 28.1,
-  "segment_count": 120,
-  "url_slug": "my-favorite-loop-a1b2c3d4",
-  "created_at": "2024-01-07T14:30:00",
-  "is_public": false,
-  "geojson": {
-    "type": "Feature",
-    "geometry": {...},
-    "properties": {...}
-  },
-  "segments": [...]
-}
-```
+### GeoJSON Feature Properties
 
-#### PUT /routes/{route_id}
-Update route metadata.
+Every feature returned in a FeatureCollection includes these properties:
 
-**Query Parameters**:
-- `session_id`: User session ID (required)
-- `route_name`: New name (optional)
-- `description`: New description (optional)
-- `is_public`: New public status (optional)
+| Property          | Type    | Description                                |
+|-------------------|---------|--------------------------------------------|
+| `id`              | int     | Segment database ID                        |
+| `id_hash`         | string  | SHA1 hash for deduplication                |
+| `name`            | string  | Road name (or "Unnamed Road")              |
+| `curvature`       | float   | Curvature score                            |
+| `curvature_level` | string  | Category: mild, moderate, curvy, extreme   |
+| `length`          | float   | Length in meters                            |
+| `length_km`       | float   | Length in kilometers                        |
+| `length_mi`       | float   | Length in miles                             |
+| `paved`           | boolean | Whether the road is paved                  |
+| `surface`         | string  | "paved" or "unpaved"                       |
+| `source`          | string  | Data source name (e.g., "vermont")         |
 
-**Response**:
-```json
-{
-  "status": "success",
-  "message": "Route updated"
-}
-```
+**Curvature levels:**
 
-#### DELETE /routes/{route_id}
-Delete a saved route.
+| Level      | Curvature Score |
+|------------|-----------------|
+| `mild`     | < 600           |
+| `moderate` | 600 -- 999      |
+| `curvy`    | 1000 -- 1999    |
+| `extreme`  | 2000+           |
 
-**Query Parameters**:
-- `session_id`: User session ID (required for authorization)
+## Frontend Map Rendering
 
-**Response**:
-```json
-{
-  "status": "success",
-  "message": "Route deleted"
-}
-```
+The Next.js frontend renders segments on a Mapbox GL JS map with color-coded curvature:
 
-### Export Endpoints
+| Curvature Score | Color  | Hex       |
+|-----------------|--------|-----------|
+| < 600           | Yellow | `#FFC107` |
+| 600 -- 999      | Orange | `#FF9800` |
+| 1000 -- 1999    | Red    | `#F44336` |
+| 2000+           | Purple | `#9C27B0` |
 
-#### GET /routes/{route_identifier}/export/kml
-Export route as KML file for Google Earth.
+Line width scales with zoom level: z4 = 1px, z8 = 2px, z12 = 4px.
 
-**Returns**: KML file download
-
-#### GET /routes/{route_identifier}/export/gpx
-Export route as GPX file for GPS devices.
-
-**Returns**: GPX file download
-
-### Health Check
-
-#### GET /health
-Service health check.
-
-**Response**:
-```json
-{
-  "status": "healthy",
-  "data_loaded": true,
-  "collections_count": 500,
-  "database_available": true
-}
-```
-
-## Database Schema
-
-### route_sessions
-User sessions for route building.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| session_id | UUID | Primary key |
-| created_at | TIMESTAMP | Creation time |
-| last_accessed | TIMESTAMP | Last access time |
-| session_name | VARCHAR(255) | Optional name |
-
-### saved_routes
-User-created routes.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| route_id | SERIAL | Primary key |
-| session_id | UUID | FK to route_sessions |
-| route_name | VARCHAR(255) | Route name |
-| description | TEXT | Optional description |
-| created_at | TIMESTAMP | Creation time |
-| updated_at | TIMESTAMP | Last update time |
-| total_curvature | FLOAT | Sum of segment curvatures |
-| total_length | FLOAT | Total length in meters |
-| segment_count | INTEGER | Number of segments |
-| geom | GEOMETRY(LineString) | PostGIS geometry |
-| route_data | JSONB | Full segment details |
-| url_slug | VARCHAR(50) | Unique URL slug |
-| is_public | BOOLEAN | Public sharing enabled |
-
-### route_segments
-Normalized segment storage for querying.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | SERIAL | Primary key |
-| route_id | INTEGER | FK to saved_routes |
-| position | INTEGER | Order in route (1, 2, 3...) |
-| start_lat | DOUBLE PRECISION | Start latitude |
-| start_lon | DOUBLE PRECISION | Start longitude |
-| end_lat | DOUBLE PRECISION | End latitude |
-| end_lon | DOUBLE PRECISION | End longitude |
-| length | FLOAT | Segment length (meters) |
-| radius | FLOAT | Circumcircle radius (meters) |
-| curvature | FLOAT | Weighted curvature value |
-| curvature_level | INTEGER | 0-4 (0=straight, 4=sharp) |
-| source_way_id | BIGINT | OSM way ID |
-| way_name | VARCHAR(500) | Road name |
-| highway_type | VARCHAR(100) | Highway classification |
-| surface_type | VARCHAR(100) | Surface type |
+The frontend uses viewport-based loading with a 300ms debounce on map move events. In-flight requests are cancelled when the viewport changes before a response arrives.
 
 ## Usage Examples
 
 ### Command Line (curl)
 
-**Load data**:
+**Check health:**
 ```bash
-curl -X POST "http://localhost:8000/data/load?filepath=/tmp/vermont.msgpack"
+curl http://localhost:8000/health
 ```
 
-**Search for curvy roads**:
+**Get frontend config:**
 ```bash
-curl "http://localhost:8000/roads/geojson?min_curvature=1000&surface=paved&limit=50"
+curl http://localhost:8000/config
 ```
 
-**Create session**:
+**List available sources (states):**
 ```bash
-SESSION=$(curl -X POST http://localhost:8000/sessions/create | jq -r '.session_id')
+curl http://localhost:8000/curvature/sources
 ```
 
-**Save a route**:
+**Get curvy roads in a bounding box:**
 ```bash
-curl -X POST "http://localhost:8000/routes/save?session_id=$SESSION" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "route_name": "Test Route",
-    "segments": [...]
-  }'
+curl "http://localhost:8000/curvature/segments?bbox=-73.5,42.7,-71.5,45.0&min_curvature=1000&limit=50"
+```
+
+**Get all segments for Vermont:**
+```bash
+curl "http://localhost:8000/curvature/sources/vermont/segments?min_curvature=500&limit=100"
+```
+
+**Get bounds for a state:**
+```bash
+curl http://localhost:8000/curvature/sources/vermont/bounds
+```
+
+**Get segment detail:**
+```bash
+curl http://localhost:8000/curvature/segments/42
 ```
 
 ### Python
@@ -434,105 +380,175 @@ curl -X POST "http://localhost:8000/routes/save?session_id=$SESSION" \
 ```python
 import requests
 
-# Create session
-response = requests.post('http://localhost:8000/sessions/create')
-session_id = response.json()['session_id']
+BASE = "http://localhost:8000"
 
-# Load data
-requests.post('http://localhost:8000/data/load',
-              params={'filepath': '/tmp/vermont.msgpack'})
+# Check API health
+health = requests.get(f"{BASE}/health")
+print(health.json())
+# {"status": "healthy", "database_available": true}
 
-# Search for roads
-roads = requests.get('http://localhost:8000/roads/geojson',
-                     params={'min_curvature': 1000, 'limit': 50})
-print(roads.json())
+# List available sources
+sources = requests.get(f"{BASE}/curvature/sources")
+for src in sources.json():
+    print(f"  {src['name']}: {src['segment_count']} segments")
 
-# Get segments for stitching
-segments = requests.get('http://localhost:8000/roads/segments',
-                       params={'min_curvature': 500, 'limit': 1000})
+# Get curvy roads in a bounding box
+segments = requests.get(
+    f"{BASE}/curvature/segments",
+    params={
+        "bbox": "-73.5,42.7,-71.5,45.0",
+        "min_curvature": 1000,
+        "limit": 50,
+    },
+)
+geojson = segments.json()
+print(f"Found {geojson['metadata']['count']} segments")
 
-# Save a route
-route_data = {
-    'route_name': 'My Route',
-    'description': 'A great ride',
-    'segments': [...],  # Array of segment objects
-    'is_public': False
-}
-result = requests.post(f'http://localhost:8000/routes/save?session_id={session_id}',
-                      json=route_data)
-print(f"Route saved with slug: {result.json()['url_slug']}")
+for feature in geojson["features"]:
+    props = feature["properties"]
+    print(f"  {props['name']}: curvature={props['curvature']}, "
+          f"length={props['length_mi']}mi ({props['curvature_level']})")
+
+# Get segment detail with OSM ways
+detail = requests.get(f"{BASE}/curvature/segments/42")
+if detail.status_code == 200:
+    seg = detail.json()
+    print(f"\n{seg['name']} - {len(seg['ways'])} ways")
+    for way in seg["ways"]:
+        print(f"  Way {way['way_id']}: {way['highway']} / {way['surface']}")
 ```
 
-## Development
+## Database
 
-### Running Tests
-```bash
-# Install test dependencies
-pip install pytest pytest-asyncio
+### Curvature Data Tables
 
-# Run tests
-pytest
+The curvature processing pipeline (`bin/curvature-output-postgis`) loads OSM data into these PostGIS tables:
+
+| Table                  | Description                                            |
+|------------------------|--------------------------------------------------------|
+| `curvature_segments`   | Road segments with LINESTRING geometry, curvature scores, length, and paved status |
+| `sources`              | Data source metadata (state names)                     |
+| `segment_ways`         | Constituent OSM ways per segment                       |
+| `tags`                 | OSM tags (highway type, surface type, etc.)            |
+
+Performance indexes are defined in `api/schema/curvature_indexes.sql`:
+- Spatial GIST index on segment geometry
+- Curvature descending index (for "curviest first" ordering)
+- Composite source + curvature index
+- Partial indexes for high-curvature and paved-only queries
+- Hash index on `id_hash` for deduplication lookups
+
+### Saved Routes Schema (Not Currently Active)
+
+The schema at `api/schema/saved_routes.sql` defines tables for a route stitching feature (`route_sessions`, `saved_routes`, `route_segments`). This schema exists in the database but the corresponding API endpoints are **not currently mounted** in the application.
+
+## Docker Services
+
+Defined in `docker-compose.yml`:
+
+| Service    | Container Name     | Image / Build              | Port | Health Check                   |
+|------------|--------------------|----------------------------|------|--------------------------------|
+| `db`       | `b-road-db`        | `postgis/postgis:15-3.4-alpine` | 5432 | `pg_isready`                   |
+| `api`      | `b-road-api`       | `docker/api/Dockerfile`     | 8000 | `curl http://localhost:8000/health` |
+| `frontend` | `b-road-frontend`  | `docker/frontend/Dockerfile`| 3000 | `wget http://localhost:3000`   |
+
+Dependency chain: `frontend` --> `api` (healthy) --> `db` (healthy).
+
+Named volumes: `b-road-postgres-data`, `b-road-api-cache`, `b-road-next-cache`.
+
+## Makefile Commands
+
+Run `make help` for the full list. Summary:
+
+**Development:**
+```
+make up              Start development environment
+make down            Stop development environment
+make build           Build Docker images
+make rebuild         Force rebuild (no cache)
+make logs            Tail logs from all services
+make logs-api        Tail API logs only
+make logs-frontend   Tail frontend logs only
+make logs-db         Tail database logs only
 ```
 
-### Database Migrations
-For production, consider using Alembic for database migrations:
-```bash
-pip install alembic
-alembic init migrations
-alembic revision --autogenerate -m "Initial schema"
-alembic upgrade head
+**Testing:**
+```
+make test            Run API tests
+make lint            Run linters (flake8 + eslint)
+make coverage        Run tests with coverage report
 ```
 
-### Environment Variables
-- `DATABASE_URL`: PostgreSQL connection string
-- `GOOGLE_MAPS_API_KEY`: Google Maps API key (or set in config.py)
+**Debugging:**
+```
+make shell-api       Open bash shell in API container
+make shell-db        Open psql shell in database container
+make shell-frontend  Open shell in frontend container
+make health          Check health of all services
+```
+
+**Production:**
+```
+make prod-build      Build production images
+make prod-up         Start production environment
+make prod-down       Stop production environment
+```
+
+**Maintenance:**
+```
+make clean           Remove containers, volumes, and images
+make clean-volumes   Remove only Docker volumes
+```
+
+## Testing
+
+- **Framework:** pytest with pytest-asyncio
+- **Run via Docker:** `make test` or `make coverage`
+- **Test database:** `curvature_test` with PostGIS extension
+
+Coverage reports are generated in `htmlcov/` when running `make coverage`.
 
 ## Troubleshooting
 
+### Services Not Starting
+
+```bash
+# Check container status
+docker compose ps
+
+# Check logs for errors
+make logs
+
+# Verify environment variables are set
+cat .env
+```
+
 ### Database Connection Issues
+
 ```bash
-# Check if PostgreSQL is running
-pg_isready
+# Open a psql shell in the database container
+make shell-db
 
-# Test connection
-psql curvature -c "SELECT version();"
+# Check PostGIS is available
+SELECT PostGIS_Version();
 
-# Check PostGIS extension
-psql curvature -c "SELECT PostGIS_Version();"
+# Check segment count
+SELECT COUNT(*) FROM curvature_segments;
 ```
 
-### Missing Dependencies
-```bash
-# Reinstall requirements
-pip install -r requirements.txt --force-reinstall
+### Map Not Loading
 
-# Check Python version
-python --version  # Should be 3.7+
-```
+1. Verify `MAPBOX_ACCESS_TOKEN` is set in `.env`
+2. Check `GET /config` returns a valid token: `curl http://localhost:8000/config`
+3. Check the browser console for Mapbox errors
+4. Verify the token has the correct scopes at https://account.mapbox.com/
 
-### Google Maps Not Loading
-1. Check that `api/config.py` exists with a valid API key
-2. Check browser console for errors
-3. Verify API key has Maps JavaScript API enabled
-4. Check for CORS issues (API allows all origins by default)
+### No Roads Appearing on Map
 
-## Architecture
-
-### Data Flow
-1. **Browse Mode**: OSM data → msgpack → FastAPI → GeoJSON → Google Maps
-2. **Stitch Mode**: OSM data → segments endpoint → User clicks → Route builder → PostgreSQL → KML/GPX export
-
-### Session Management
-- Sessions stored in PostgreSQL with UUID primary keys
-- Session ID persisted in browser localStorage
-- Automatic session restoration on page reload
-- Routes associated with sessions for privacy
-
-### Data Preservation
-- Complete segment data (radius, curvature_level, etc.) stored in JSONB
-- Normalized segment table for efficient queries
-- PostGIS geometry for spatial operations
-- No data loss compared to original msgpack format
+1. Check that curvature data has been loaded: `curl http://localhost:8000/curvature/sources`
+2. If sources list is empty, load data using `bin/curvature-output-postgis`
+3. Try a broader bounding box or lower `min_curvature` value
+4. Check API logs: `make logs-api`
 
 ## License
 
@@ -540,8 +556,9 @@ This code extends the adamfranco/curvature project. Please refer to the main pro
 
 ## Contributing
 
-Contributions welcome! Please ensure:
-- Code follows existing style
-- Tests pass
-- Database migrations included for schema changes
-- API documentation updated
+Contributions welcome. Please ensure:
+
+- Code follows existing patterns and style
+- Tests pass (`make test`)
+- API documentation is updated for endpoint changes
+- Database schema changes include migration scripts
