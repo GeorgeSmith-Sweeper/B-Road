@@ -22,12 +22,14 @@ open htmlcov/index.html
 
 ## What Was Built
 
-**125+ tests** covering:
+**160+ tests** covering:
 - ✅ Database models and PostGIS geometry
 - ✅ Spatial queries (ST_Intersects, ST_Length, etc.)
-- ✅ All 15+ API endpoints
+- ✅ API endpoints (routes, sessions, curvature, tiles)
 - ✅ GPX and KML export formats
 - ✅ Route validation and statistics
+- ✅ Vector tile generation and tile math
+- ✅ Curvature data processing API
 
 **Target:** 70-80% code coverage
 
@@ -156,17 +158,16 @@ psql curvature_test -c "CREATE EXTENSION postgis;"
 tests/unit/test_models.py::TestRouteSession::test_route_session_creation PASSED [ 1%]
 tests/unit/test_models.py::TestSavedRoute::test_saved_route_with_geometry PASSED [ 2%]
 ...
-======================== 125 passed in 18.52s =========================
+======================== 164 passed in 22.34s =========================
 
 ---------- coverage: platform darwin, python 3.9.7 -----------
 Name                              Stmts   Miss  Cover
 -----------------------------------------------------
-models.py                           125      8    94%
-database.py                          58      6    90%
-server.py                           427     98    77%
+...
 -----------------------------------------------------
-TOTAL                               610    112    82%
+TOTAL                               xxx    xxx    xx%
 ```
+> Note: Run `pytest --cov` to see your actual coverage numbers.
 
 ### Failure Output
 ```
@@ -178,33 +179,7 @@ E   duplicate key value violates unique constraint "saved_routes_url_slug_key"
 
 ## Next Steps
 
-### 1. Fix Critical Issue (REQUIRED)
-The tests revealed missing route connectivity validation!
-
-**File:** `api/server.py` (line ~565)
-**Function:** `POST /routes/save`
-
-Add this validation before saving routes:
-```python
-# Validate segment connectivity
-for i in range(len(request.segments) - 1):
-    current_end = request.segments[i].end
-    next_start = request.segments[i + 1].start
-    if current_end != next_start:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Segments must connect end-to-end. "
-                   f"Segment {i} ends at {current_end}, "
-                   f"but segment {i+1} starts at {next_start}"
-        )
-```
-
-Then re-run tests:
-```bash
-pytest tests/integration/test_api_routes.py::TestRouteDataValidation -v
-```
-
-### 2. Review Coverage
+### 1. Review Coverage
 ```bash
 # Generate detailed coverage report
 pytest --cov --cov-report=html
@@ -216,15 +191,13 @@ open htmlcov/index.html
 # These are uncovered code paths
 ```
 
-### 3. Push to GitHub
+### 2. Push and Verify CI
 ```bash
-# Tests will run automatically on GitHub Actions
-git add .
-git commit -m "Add comprehensive test suite with 70%+ coverage"
-git push origin feature/comprehensive-testing
+# Tests run automatically on GitHub Actions for pushes to
+# main, master, feature/*, and develop branches
+git push
 
-# Check CI results at:
-# https://github.com/your-username/b-road/actions
+# CI runs the full test suite with coverage and linting
 ```
 
 ## Common Test Commands Reference
@@ -267,25 +240,29 @@ pytest --tb=short              # Shorter tracebacks
 
 ```
 api/tests/
-├── unit/               ← Fast tests (~2-5 seconds)
-│   ├── test_models.py      → Database models
-│   ├── test_database.py    → DB connections
-│   └── test_validation.py  → Validation logic
+├── conftest.py              ← Pytest configuration & fixtures
+├── unit/                    ← Fast tests (~2-5 seconds)
+│   ├── test_models.py           → Database models
+│   ├── test_database.py         → DB connections
+│   ├── test_validation.py       → Validation logic
+│   └── test_tile_math.py        → Tile coordinate calculations
 │
-├── integration/        ← Slower tests (~10-20 seconds)
+├── integration/             ← Slower tests (~10-20 seconds)
 │   ├── test_spatial_queries.py  → PostGIS functions
 │   ├── test_api_routes.py       → API endpoints
-│   └── test_export.py           → GPX/KML export
+│   ├── test_export.py           → GPX/KML export
+│   ├── test_curvature_api.py    → Curvature processing API
+│   └── test_tile_endpoint.py    → Vector tile endpoint
 │
-└── fixtures/           ← Test data
-    └── sample_segments.py  → Sample routes
+└── fixtures/                ← Test data
+    ├── sample_segments.py       → Sample routes
+    └── curvature_fixtures.py    → Curvature test data
 ```
 
 ## Getting Help
 
 ### Test Documentation
 - **Full guide:** `api/tests/README.md`
-- **Summary:** `TESTING_SUMMARY.md`
 - **This guide:** `TESTING_QUICKSTART.md`
 
 ### Resources
@@ -307,7 +284,6 @@ Before merging your changes:
 - [ ] Coverage ≥70%: `pytest --cov`
 - [ ] No linting errors: `ruff check .`
 - [ ] Code formatted: `black --check .`
-- [ ] Route connectivity validation added to `server.py`
 - [ ] CI passes on GitHub Actions
 - [ ] Documentation reviewed
 
@@ -315,8 +291,7 @@ Before merging your changes:
 
 Check:
 1. `api/tests/README.md` for detailed documentation
-2. `TESTING_SUMMARY.md` for what was built
-3. Test files for examples of test patterns
-4. GitHub Issues for known problems
+2. Test files for examples of test patterns
+3. GitHub Issues for known problems
 
 Happy testing! 🧪
