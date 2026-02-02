@@ -1,187 +1,271 @@
-# B-Road Mapbox Frontend Setup Guide
+# B-Road Setup Guide
 
-## Quick Start
+## Prerequisites
 
-```bash
-# Navigate to the frontend directory
-cd frontend
+- **Docker & Docker Compose** (recommended) OR:
+  - Python 3.11+
+  - Node.js 18+
+  - PostgreSQL 15+ with PostGIS 3.4+
+- **Mapbox account** - Free token from https://account.mapbox.com/
 
-# Install dependencies (if not already done)
-npm install
+## Option 1: Docker Setup (Recommended)
 
-# Start the development server
-npm run dev
+Docker handles the database, API, and frontend in one command.
 
-# Open http://localhost:3000 in your browser
-```
-
-## Backend Requirements
-
-Before starting the frontend, ensure your FastAPI backend is configured:
-
-### 1. Update Backend Configuration
-
-The backend must return a Mapbox API token instead of Google Maps key. Update your `/config` endpoint:
-
-**Before (Google Maps):**
-```python
-@app.get("/config")
-async def get_config():
-    return {
-        "google_maps_api_key": os.getenv("GOOGLE_MAPS_API_KEY")
-    }
-```
-
-**After (Mapbox):**
-```python
-@app.get("/config")
-async def get_config():
-    return {
-        "mapbox_api_key": os.getenv("MAPBOX_API_KEY")
-    }
-```
-
-### 2. Get a Mapbox API Token
-
-1. Create a free account at https://account.mapbox.com/
-2. Go to your account dashboard
-3. Copy your default public token (starts with `pk.`)
-4. Add it to your backend environment variables:
+### 1. Clone and Configure
 
 ```bash
-# In your backend .env file
-MAPBOX_API_KEY=pk.eyJ1...your-token-here
+git clone <repository-url>
+cd B-Road
+
+# Create environment file from template
+cp .env.example .env
 ```
 
-### 3. Start the Backend
+Edit `.env` with your values:
 
 ```bash
-cd api
-uvicorn server:app --reload
-# Backend should be running on http://localhost:8000
-```
-
-## Frontend Configuration
-
-### Environment Variables
-
-Create a `.env.local` file in the `frontend/` directory:
-
-```bash
+POSTGRES_USER=curvature
+POSTGRES_PASSWORD=your_secure_password_here
+DATABASE_URL=postgresql://curvature:your_secure_password_here@db:5432/curvature
+MAPBOX_ACCESS_TOKEN=pk.eyJ...your_token_here
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-If your backend is running on a different host/port, update accordingly.
+### 2. Start Services
 
-### Development Server
+```bash
+make up
+```
+
+This starts three containers:
+- **db** - PostgreSQL 15 with PostGIS on port 5432
+- **api** - FastAPI backend on port 8000
+- **frontend** - Next.js app on port 3000
+
+### 3. Verify Health
+
+```bash
+make health
+```
+
+All three services should report healthy. You can also check individually:
+
+```bash
+curl http://localhost:8000/health    # API health check
+curl http://localhost:8000/config    # Should return Mapbox token
+```
+
+### 4. Load Data
+
+Process OpenStreetMap data and load it into PostGIS:
+
+```bash
+# Process a state's OSM data through the curvature pipeline
+./processing_chains/adams_default.sh vermont.osm.pbf vermont | \
+  ./bin/curvature-output-postgis --source vermont
+```
+
+Verify data loaded:
+
+```bash
+curl http://localhost:8000/curvature/sources
+```
+
+### 5. Open the App
+
+Navigate to http://localhost:3000. The map should display with curvature data visible when you zoom into areas with loaded data.
+
+---
+
+## Option 2: Manual Setup (Without Docker)
+
+### 1. Database Setup
+
+Install PostgreSQL with PostGIS, then create the database:
+
+```bash
+createdb curvature
+psql curvature -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+
+# Load schema
+psql curvature < api/schema/curvature.sql
+
+# Add performance indexes
+psql curvature < api/schema/curvature_indexes.sql
+```
+
+### 2. Backend Setup
+
+```bash
+cd api
+
+# Create and activate virtual environment
+python -m venv ../venv
+source ../venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create .env file
+cat > .env <<EOF
+DATABASE_URL=postgresql://your_user:your_password@localhost:5432/curvature
+MAPBOX_ACCESS_TOKEN=pk.eyJ...your_token_here
+EOF
+
+# Start the server
+uvicorn server:app --reload
+```
+
+The API will be available at http://localhost:8000.
+
+Note: The curvature and tiles routers mount conditionally. If the database is not reachable, only the health router will be available. Check `http://localhost:8000/health` to verify database connectivity.
+
+### 3. Frontend Setup
 
 ```bash
 cd frontend
+
+# Install dependencies
+npm install
+
+# Create environment file
+echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
+
+# Start development server
 npm run dev
 ```
 
-The application will be available at http://localhost:3000
+The frontend will be available at http://localhost:3000.
 
-### Production Build
+### 4. Load Data
+
+Same as Docker setup -- process OSM data and pipe it to `curvature-output-postgis`:
 
 ```bash
-cd frontend
-npm run build
-npm start
+./processing_chains/adams_default.sh state.osm.pbf state | \
+  ./bin/curvature-output-postgis --source state
 ```
 
-## Testing the Application
+---
 
-### 1. Load Data
-- Enter the path to your curvature msgpack file (e.g., `/tmp/vermont.msgpack`)
-- Click "Load Data"
-- You should see a success message
+## Using the Application
 
-### 2. Browse Roads
-- In "Browse Roads" mode:
-  - Adjust the minimum curvature slider
-  - Select surface type (paved/unpaved)
-  - Set max results
-  - Click "Search Roads"
-- Roads should appear on the map color-coded by curvature:
-  - Yellow: 0-600 (mild curves)
-  - Orange: 600-1000 (moderate curves)
-  - Red: 1000-2000 (very curvy)
-  - Purple: 2000+ (extremely curvy)
-- Click any road to see details in a popup
+### Map Exploration
 
-### 3. Build Routes
-- Switch to "Build Route" mode
-- Search for segments (they'll load automatically)
-- Click connected segments on the map to build your route
-  - Segments must connect end-to-end
-  - If you click a non-connected segment, you'll get an error
-- Watch the route statistics update:
-  - Segment count
-  - Total distance
-  - Total curvature
-- Enter a route name and optional description
-- Click "Save Route"
+1. Open http://localhost:3000
+2. The map loads centered on the default location
+3. Pan and zoom to areas where you've loaded data
+4. Roads appear color-coded by curvature:
+   - **Yellow**: 0-600 (pleasant, flowing roads)
+   - **Orange**: 600-1000 (fun, moderately twisty)
+   - **Red**: 1000-2000 (very curvy, technical roads)
+   - **Purple**: 2000+ (extremely twisty)
 
-### 4. Manage Saved Routes
-- View your saved routes in the sidebar
-- Click "View" to display a route on the map
-- Click "GPX" or "KML" to export the route
-- Click "Delete" to remove a route
+### Sidebar Controls
 
-### 5. Session Persistence
-- Refresh the page - your session should be restored
-- Your saved routes should still be available
-- If you clear localStorage, a new session will be created
+- **State selector**: Filter by a specific data source / state
+- **Curvature filter**: Adjust the minimum curvature threshold
+
+### Viewport-Based Loading
+
+Segments load automatically based on the visible map area. The system adapts filtering to the zoom level:
+
+| Zoom Level | Min Curvature | Segment Limit |
+|------------|---------------|---------------|
+| < 8 | 1000 | 500 |
+| 8-10 | 500 | 1,000 |
+| > 10 | 300 | 2,000 |
+
+Zoom in to see more roads with lower curvature scores.
+
+---
+
+## Running Tests
+
+### With Docker
+
+```bash
+# Run full test suite
+make test
+
+# Run with coverage report
+make coverage
+
+# Run linters
+make lint
+```
+
+### Without Docker
+
+```bash
+cd api
+
+# Install test dependencies
+pip install -r requirements-dev.txt
+
+# Run tests (requires PostgreSQL with PostGIS)
+pytest
+
+# Run with coverage
+pytest --cov --cov-report=term-missing
+
+# Run specific test categories
+pytest tests/unit/
+pytest tests/integration/
+pytest -m unit
+pytest -m integration
+```
+
+The CI pipeline enforces 60% minimum code coverage.
+
+---
 
 ## Troubleshooting
 
 ### Map Not Loading
-**Problem:** Map shows "Loading map configuration..." indefinitely
+
+**Problem:** Map shows a loading state or blank screen.
 
 **Solutions:**
-1. Check that backend is running: `curl http://localhost:8000/config`
-2. Verify Mapbox token is set in backend
+1. Check the API is running: `curl http://localhost:8000/config`
+2. Verify `MAPBOX_ACCESS_TOKEN` is set and starts with `pk.`
 3. Check browser console for errors
-4. Verify CORS is enabled on backend
+4. Verify CORS is working (API allows all origins in dev mode)
 
-### Data Not Loading
-**Problem:** "Failed to load data" error
+### No Roads Appearing
 
-**Solutions:**
-1. Verify the msgpack file path exists
-2. Check backend logs for errors
-3. Ensure the file is in the correct format
-4. Try with a known-good file (e.g., `/tmp/vermont.msgpack`)
-
-### Roads Not Displaying
-**Problem:** Search completes but no roads appear
+**Problem:** Map loads but no road segments are visible.
 
 **Solutions:**
-1. Try lowering the minimum curvature threshold
-2. Change the surface filter to "All Surfaces"
-3. Increase the result limit
-4. Check browser console for GeoJSON parsing errors
-5. Verify the backend is returning valid GeoJSON
+1. Verify data is loaded: `curl http://localhost:8000/curvature/sources`
+2. Zoom into an area where data exists
+3. Lower the curvature threshold in the sidebar
+4. Check the vector tile endpoint: `curl http://localhost:8000/curvature/tiles/10/300/375.pbf`
 
-### Segments Not Connecting
-**Problem:** "Segments must connect!" error when building routes
+### Database Not Connecting
 
-**Cause:** You're trying to add a segment that doesn't touch the end of your current route
-
-**Solution:** Click only segments that connect to the end of your route. Look for roads that share an endpoint with your last selected segment.
-
-### Session Lost on Refresh
-**Problem:** Saved routes disappear after page reload
+**Problem:** `/health` reports database as unhealthy.
 
 **Solutions:**
-1. Check if localStorage is enabled in your browser
-2. Check browser console for localStorage errors
-3. Try in incognito mode to rule out extension interference
-4. Clear cache and reload
+1. Check PostgreSQL is running with PostGIS extension
+2. Verify `DATABASE_URL` in your `.env` file
+3. With Docker: `make health` and `make logs-db`
+4. Without Docker: `psql -d curvature -c "SELECT PostGIS_version();"`
 
-### Build Errors
-**Problem:** TypeScript or build errors
+### Docker Issues
+
+**Problem:** Containers failing to start.
+
+**Solutions:**
+1. Check logs: `make logs`
+2. Rebuild images: `make rebuild`
+3. Reset everything: `make clean` then `make up`
+4. Verify `.env` file exists and has required variables
+
+### Build Errors (Frontend)
+
+**Problem:** TypeScript or build errors.
 
 **Solutions:**
 1. Delete `node_modules` and `package-lock.json`
@@ -189,60 +273,54 @@ npm start
 3. Clear Next.js cache: `rm -rf .next`
 4. Run `npm run build` to see detailed errors
 
-## API Endpoints Used
+### CI Pipeline Failures
 
-The frontend communicates with these backend endpoints:
+**Problem:** GitHub Actions tests or lint failing.
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/config` | GET | Get Mapbox API token |
-| `/data/load?filepath=X` | POST | Load msgpack file |
-| `/roads/geojson?min_curvature=X&surface=Y&limit=Z` | GET | Search roads |
-| `/roads/segments?min_curvature=X&limit=Y` | GET | Load segments |
-| `/sessions/create` | POST | Create user session |
-| `/routes/save?session_id=X` | POST | Save route |
-| `/routes/list?session_id=X` | GET | List saved routes |
-| `/routes/:slug` | GET | View route |
-| `/routes/:id?session_id=X` | DELETE | Delete route |
-| `/routes/:slug/export/:format` | GET | Export route |
+**Solutions:**
+1. Run linters locally: `ruff check . --ignore E501,F401,E402` and `black --check --diff .`
+2. Run tests locally to reproduce: `pytest --cov`
+3. Check that coverage is above 60%
 
-Make sure all these endpoints are working on your backend before testing the frontend.
+---
 
-## Browser Support
+## Service Ports
 
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
+| Service | Port | URL |
+|---------|------|-----|
+| PostgreSQL | 5432 | `postgresql://localhost:5432/curvature` |
+| FastAPI | 8000 | http://localhost:8000 |
+| Frontend | 3000 | http://localhost:3000 |
+| Test DB | 5433 | (only during `make test`) |
 
-Older browsers may not support all features (particularly Mapbox GL JS).
+## Useful Makefile Commands
 
-## Performance Tips
+| Command | Description |
+|---------|-------------|
+| `make up` | Start development environment |
+| `make down` | Stop development environment |
+| `make build` | Build Docker images |
+| `make rebuild` | Force rebuild (no cache) |
+| `make logs` | View all service logs |
+| `make logs-api` | View API logs only |
+| `make logs-frontend` | View frontend logs only |
+| `make logs-db` | View database logs only |
+| `make test` | Run API tests |
+| `make lint` | Run linters |
+| `make coverage` | Run tests with coverage |
+| `make shell-api` | Shell into API container |
+| `make shell-db` | psql shell into database |
+| `make shell-frontend` | Shell into frontend container |
+| `make health` | Check all service health |
+| `make clean` | Remove containers, volumes, images |
 
-1. **Limit Results**: Start with 100 roads max, increase if needed
-2. **Filter by Surface**: Use "Paved Only" to reduce data
-3. **Higher Curvature**: Set min curvature to 500+ to filter out straight roads
-4. **Clear Old Data**: Switch modes or reload to clear previous searches
+---
 
 ## Next Steps
 
-Once everything is working:
+Once everything is running:
 
-1. Consider deploying to Vercel/Netlify
-2. Set up proper environment variables for production
-3. Configure CORS on backend for production domain
-4. Add analytics if desired
-5. Set up error tracking (Sentry, etc.)
-6. Consider adding route search functionality
-7. Add mobile-responsive improvements
-8. Implement offline support with service workers
-
-## Support
-
-If you encounter issues:
-
-1. Check browser console for errors
-2. Check backend logs
-3. Verify all API endpoints are working with curl/Postman
-4. Review the MIGRATION_SUMMARY.md for architecture details
-5. Check the backend configuration matches the requirements above
+1. Load data for the states/regions you're interested in
+2. Explore the map and verify curvature coloring
+3. Check out the API documentation in **API_README.md**
+4. See **quick_reference.md** for a condensed cheat sheet

@@ -1,18 +1,76 @@
-# B-Road Architecture Refactor - Change Summary
+# B-Road Change Summary
 
 ## Overview
 
-This document describes the major architectural changes made to B-Road in the transition from an in-memory route-building application to a scalable, database-backed curvature visualization platform.
-
-**Commit**: `6159310` - "Refactor to PostGIS-backed viewport-based curvature viewer"
-
-**Date**: January 2026
+This document tracks the major architectural changes and feature additions to B-Road, from its transition to a PostGIS-backed platform through ongoing improvements.
 
 ---
 
-## Major Changes
+## February 2026 - CI/CD Stabilization
 
-### 1. Backend API Refactor
+**PR**: #15 (`chore/stabilize-test-suite`)
+
+### CI Pipeline Upgrade
+- Upgraded GitHub Actions from Python 3.9 to Python 3.11
+- Pinned lint tool versions: Ruff 0.9.10, Black 26.1.0
+- Fixed CI lint and coverage failures
+
+### Test Suite Fixes
+- Fixed 22 failing integration tests by creating missing curvature tables in the test database
+- Skipped route endpoint tests that depend on the unmounted `/routes/save` router
+- Added `E402` to Ruff ignore list for intentional late imports in `server.py`
+
+---
+
+## January 30, 2026 - Vector Tiles & Docker Fixes
+
+**PR**: #14 (`feature/load_all_us_states`)
+
+### PostGIS Vector Tile Endpoint
+- Added `GET /curvature/tiles/{z}/{x}/{y}.pbf` endpoint in `api/routers/tiles.py`
+- Serves Mapbox Vector Tiles directly from PostGIS for scalable US-wide road rendering
+- Zoom-based curvature filtering for performant tile generation
+- Added `api/tile_math.py` for tile coordinate calculations
+- Added `api/tests/unit/test_tile_math.py` and `api/tests/integration/test_tile_endpoint.py`
+
+### Docker Fixes
+- Fixed frontend container crash by removing read-only volume mount
+- Updated TESTING_QUICKSTART.md to reflect current test suite
+
+---
+
+## January 22-29, 2026 - Docker Containerization
+
+**PR**: #13 (`feature/load_all_us_states`)
+
+### Docker Setup
+- Added multi-stage Dockerfiles for API, frontend, and database (`docker/`)
+  - API: Python 3.11, dev/prod/test stages
+  - Frontend: Node.js 22-alpine, dev/prod stages with standalone build
+  - Database: PostGIS 15-3.4 with initialization scripts
+- Added `docker-compose.yml` for development (db, api, frontend services)
+- Added `docker-compose.test.yml` for isolated test runs with tmpfs database
+- Added `Makefile` with commands for development, testing, debugging, and production
+- Added `.env.example` environment variable template
+
+### Documentation Updates
+- Updated API_README.md to reflect current architecture
+- Removed outdated testing and API markdown files
+
+### Frontend Improvements
+- Fixed error handling and race conditions in frontend components
+
+---
+
+## January 2026 - PostGIS Architecture Refactor
+
+**Commit**: `6159310` - "Refactor to PostGIS-backed viewport-based curvature viewer"
+
+**PR**: #12 (`feature/full-us-map-load`)
+
+This was the foundational change that transitioned B-Road from an in-memory route-building application to a scalable, database-backed curvature visualization platform.
+
+### Backend API Refactor
 
 #### Removed Components
 - **api/routers/data.py** - In-memory msgpack data loading
@@ -21,7 +79,7 @@ This document describes the major architectural changes made to B-Road in the tr
 - All route stitching business logic and database models
 
 #### Added Components
-- **api/routers/curvature.py** - New PostGIS-based endpoints
+- **api/routers/curvature.py** - PostGIS-based endpoints
   - `GET /curvature/segments` - Viewport-based segment queries
   - `GET /curvature/sources` - List available data sources
   - `GET /curvature/sources/{name}/segments` - Get all segments for a source
@@ -37,7 +95,7 @@ This document describes the major architectural changes made to B-Road in the tr
   - PostGIS spatial queries with ST_Intersects
   - Bounding box filtering
   - Source-based filtering
-  - Coordinate system transformations (900913 → 4326)
+  - Coordinate system transformations (900913 to 4326)
 
 - **api/schema/curvature_indexes.sql** - Performance optimization
   - Spatial indexes on curvature_segments.geom
@@ -55,7 +113,7 @@ This document describes the major architectural changes made to B-Road in the tr
 
 ---
 
-### 2. Frontend Complete Rewrite
+### Frontend Complete Rewrite
 
 #### Removed Features
 - Route stitching/building UI
@@ -74,13 +132,6 @@ This document describes the major architectural changes made to B-Road in the tr
   - Zoom > 10: min_curvature = 300, limit = 2000
 - **State Filtering**: Dropdown to filter by US state/region
 - **Simplified UI**: Focus on visualization rather than route building
-
-#### Technology Stack Changes
-- **Map Library**: Google Maps → Mapbox GL JS
-- **Framework**: Vanilla JS → Next.js 14 + React
-- **State Management**: Custom hooks → Zustand
-- **Styling**: Custom CSS → Tailwind CSS
-- **Language**: JavaScript → TypeScript
 
 #### Component Refactor
 
@@ -110,9 +161,8 @@ This document describes the major architectural changes made to B-Road in the tr
 
 ---
 
-### 3. Data Processing Updates
+### Data Processing Updates
 
-#### MessagePack Unpacker Changes
 All curvature bin scripts updated to use modern msgpack API:
 - **Before**: `msgpack.Unpacker(sys.stdin.buffer, use_list=True, encoding='utf-8')`
 - **After**: `msgpack.Unpacker(sys.stdin.buffer, use_list=True, raw=False, strict_map_key=False)`
@@ -129,11 +179,11 @@ Updated scripts:
 
 ---
 
-### 4. Infrastructure Changes
+### Infrastructure Changes
 
 #### Environment Configuration
 - Added `.env` file support using python-dotenv
-- Configuration now loaded from api/.env:
+- Configuration loaded from api/.env:
   ```
   DATABASE_URL=postgresql://...
   MAPBOX_ACCESS_TOKEN=pk.ey...
@@ -152,23 +202,22 @@ Added:
 **api/server.py** changes:
 - Added dotenv loading at startup
 - Removed route/session routers
-- Added curvature router
+- Added curvature router (conditionally mounted when database is available)
 - Updated health check to remove in-memory data status
 
 ---
 
-## Database Schema
+### Database Schema
 
-The application now uses the curvature project's native PostGIS schema:
+The application uses the curvature project's native PostGIS schema:
 
-### Core Tables
+#### Core Tables
 - **curvature_segments**: Road segments with geometry (SRID 900913)
 - **segment_ways**: OSM ways that comprise each segment
 - **sources**: Data sources (typically US states)
 - **tags**: Highway and surface type tags
 
-### Spatial Indexes
-New indexes for optimal viewport query performance:
+#### Spatial Indexes
 ```sql
 CREATE INDEX idx_curvature_segments_geom_gist
   ON curvature_segments USING GIST(geom);
@@ -180,83 +229,26 @@ CREATE INDEX idx_curvature_segments_source
 
 ---
 
-## Migration Path
+### Performance Improvements
 
-### For Existing Installations
-
-1. **Database Migration**:
-   ```bash
-   # Drop old route-building tables if they exist
-   psql curvature -c "DROP TABLE IF EXISTS route_segments, saved_routes, route_sessions CASCADE;"
-
-   # Ensure curvature schema exists
-   psql curvature < api/schema/curvature.sql
-
-   # Add performance indexes
-   psql curvature < api/schema/curvature_indexes.sql
-   ```
-
-2. **Environment Setup**:
-   ```bash
-   # Create .env file
-   cd api
-   cat > .env <<EOF
-   DATABASE_URL=postgresql://user:pass@localhost/curvature
-   MAPBOX_ACCESS_TOKEN=your_token_here
-   EOF
-   ```
-
-3. **Frontend Installation**:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
-4. **Backend Restart**:
-   ```bash
-   cd api
-   pip install -r requirements.txt
-   uvicorn server:app --reload
-   ```
-
-### Data Loading
-
-The new architecture requires data to be loaded into PostGIS:
-
-```bash
-# Process OSM data and load directly to PostGIS
-./processing_chains/adams_default.sh state.osm.pbf state | \
-  ./bin/curvature-output-postgis --source state
-```
-
----
-
-## Performance Improvements
-
-### Before (In-Memory)
+#### Before (In-Memory)
 - Entire dataset loaded into RAM
 - 100-500MB memory usage per state
 - Slow initial load times
 - Limited scalability (single dataset at a time)
 
-### After (PostGIS)
+#### After (PostGIS)
 - Data queried on-demand from database
 - Minimal memory footprint
 - Fast initial page load
 - Unlimited scalability (query across multiple states)
 - Spatial indexes enable sub-100ms query times
 
-### Benchmark Example
-Vermont data (50,000 segments):
-- **Before**: 30s initial load, 250MB RAM
-- **After**: <1s initial load, 50MB RAM, <100ms per viewport query
-
 ---
 
-## Breaking Changes
+### Breaking Changes
 
-### API Endpoints Removed
+#### API Endpoints Removed
 - `POST /data/load`
 - `POST /sessions/create`
 - `GET /roads/geojson`
@@ -270,23 +262,18 @@ Vermont data (50,000 segments):
 - `GET /routes/{id}/export/gpx`
 - `GET /routes/{id}/export/kml`
 
-### API Endpoints Added
+#### API Endpoints Added
 - `GET /curvature/segments?bbox=w,s,e,n`
 - `GET /curvature/sources`
 - `GET /curvature/sources/{name}/segments`
 - `GET /curvature/sources/{name}/bounds`
 - `GET /curvature/segments/{id}`
 
-### Frontend Changes
-- No longer supports route building/saving
-- Requires Mapbox token instead of Google Maps key
-- Different data loading model (viewport-based vs. explicit search)
-
 ---
 
 ## Future Roadmap
 
-Features removed in this refactor that may be re-implemented:
+Features removed in the PostGIS refactor that may be re-implemented:
 
 1. **Route Building**: Click segments to build custom routes
    - New implementation will use PostGIS spatial queries
@@ -300,51 +287,3 @@ Features removed in this refactor that may be re-implemented:
 3. **User Accounts**: Authentication and route sharing
    - Multi-user support with route privacy settings
    - Public route gallery
-
----
-
-## Testing
-
-New comprehensive test suite added:
-
-- **api/tests/integration/test_curvature_api.py**
-  - Tests all new endpoints
-  - Validates GeoJSON structure
-  - Tests spatial query accuracy
-  - Tests error handling
-
-Run tests:
-```bash
-cd api
-pytest tests/
-```
-
----
-
-## Documentation Updates
-
-- **README.md**: Complete rewrite reflecting new architecture
-- **API_README.md**: Updated endpoint documentation
-- **CLAUDE.md**: Updated project memory with new conventions
-
----
-
-## Acknowledgments
-
-This refactor was completed with assistance from Claude Sonnet 4.5, focusing on:
-- Clean architecture principles
-- PostGIS best practices
-- Modern React patterns
-- Comprehensive testing
-
----
-
-## Questions or Issues?
-
-If you encounter issues with this refactor, please:
-1. Check that you've run the database migrations
-2. Verify your .env configuration
-3. Ensure PostGIS data is loaded correctly
-4. Open an issue on GitHub with details
-
-For the previous route-building functionality, see commit `1975164` or earlier.

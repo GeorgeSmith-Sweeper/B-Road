@@ -1,209 +1,207 @@
-# Quick Reference: Google Maps → Mapbox Migration
+# Quick Reference: B-Road
 
-## What Changed
+## What Is B-Road?
 
-| Old (web/static) | New (frontend/) |
-|------------------|-----------------|
-| Vanilla JavaScript | React + Next.js 14 |
-| Google Maps API | Mapbox GL JS v3 |
-| Global variables | Zustand state management |
-| Inline styles | Tailwind CSS |
-| No types | Full TypeScript |
-| index.html + app.js | Component-based architecture |
+B-Road is a database-backed curvature visualization platform. It loads OpenStreetMap road data into PostGIS, scores roads by curvature, and displays them on an interactive Mapbox map with color-coded curvature levels.
 
-## File Structure Comparison
+## Architecture Overview
 
-### Old Structure
 ```
-web/static/
-├── index.html      # All HTML markup
-├── app.js          # All JavaScript logic (~900 lines)
-└── style.css       # All styles
+OSM Data (.osm.pbf)
+  → Curvature processing pipeline
+    → PostGIS database (curvature_segments table)
+      → FastAPI backend (REST + Vector Tiles)
+        → Next.js frontend (Mapbox GL JS)
 ```
 
-### New Structure
+## Project Structure
+
 ```
-frontend/
-├── app/
-│   ├── page.tsx           # Main page + state orchestration
-│   └── layout.tsx         # App layout + metadata
-├── components/
-│   ├── Map.tsx            # Mapbox map + interactions
-│   └── Sidebar.tsx        # All UI controls
-├── store/
-│   └── useAppStore.ts     # Global state management
-├── lib/
-│   └── api.ts             # API client
-└── types/
-    └── index.ts           # TypeScript definitions
+B-Road/
+├── api/                        # FastAPI backend
+│   ├── server.py               # App entry point
+│   ├── routers/
+│   │   ├── health.py           # Health check & config
+│   │   ├── curvature.py        # Curvature data endpoints
+│   │   └── tiles.py            # Mapbox Vector Tile endpoint
+│   ├── services/               # Business logic layer
+│   ├── repositories/           # PostGIS query layer
+│   ├── models/                 # SQLAlchemy ORM models
+│   ├── schema/                 # SQL schema & indexes
+│   ├── tests/                  # Unit + integration tests
+│   ├── requirements.txt        # Python dependencies
+│   └── requirements-dev.txt    # Dev/test dependencies
+├── frontend/                   # Next.js React frontend
+│   ├── app/
+│   │   ├── page.tsx            # Main page + initialization
+│   │   └── layout.tsx          # App layout + metadata
+│   ├── components/
+│   │   ├── Map.tsx             # Mapbox map + vector tiles
+│   │   └── Sidebar.tsx         # State selector + curvature filter
+│   ├── store/
+│   │   └── useAppStore.ts      # Zustand state management
+│   ├── lib/
+│   │   └── api.ts              # API client (axios)
+│   └── types/
+│       └── index.ts            # TypeScript definitions
+├── docker/                     # Dockerfiles (api, frontend, db)
+├── .github/workflows/          # CI/CD pipeline
+├── curvature/                  # Curvature processing modules
+├── processing_chains/          # OSM data processing scripts
+├── docker-compose.yml          # Development environment
+├── docker-compose.test.yml     # Test environment
+├── Makefile                    # Common Docker commands
+└── .env.example                # Environment variable template
 ```
 
 ## Key Commands
 
+### Docker (recommended)
+
 ```bash
-# Old (vanilla JS - no build step)
-# Just open web/static/index.html in browser
+# Start everything (database, API, frontend)
+make up
 
-# New (Next.js)
+# Check service health
+make health
+
+# View logs
+make logs
+
+# Stop everything
+make down
+
+# Run tests
+make test
+
+# Run linters
+make lint
+
+# Open shells
+make shell-api
+make shell-db
+make shell-frontend
+```
+
+### Manual (without Docker)
+
+```bash
+# Backend
+cd api
+pip install -r requirements.txt
+uvicorn server:app --reload        # http://localhost:8000
+
+# Frontend
 cd frontend
-npm install           # Install dependencies
-npm run dev          # Start dev server (http://localhost:3000)
-npm run build        # Build for production
-npm start            # Run production build
+npm install
+npm run dev                        # http://localhost:3000
 ```
 
-## Backend Configuration Change
+## API Endpoints
 
-**IMPORTANT:** Update your backend `/config` endpoint:
+### Health Router (always mounted)
 
-```python
-# OLD
-return {"google_maps_api_key": "..."}
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/` | GET | API info |
+| `/health` | GET | Health check (database status) |
+| `/config` | GET | Frontend config (Mapbox token, default center/zoom) |
 
-# NEW
-return {"mapbox_api_key": "pk.eyJ..."}
+### Curvature Router (requires database)
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/curvature/segments?bbox=w,s,e,n` | GET | Segments in viewport bounding box |
+| `/curvature/sources` | GET | List available data sources (states) |
+| `/curvature/sources/{name}/segments` | GET | All segments for a source |
+| `/curvature/sources/{name}/bounds` | GET | Geographic bounds of a source |
+| `/curvature/segments/{id}` | GET | Single segment details |
+
+### Tiles Router (requires database)
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/curvature/tiles/{z}/{x}/{y}.pbf` | GET | Mapbox Vector Tiles with zoom-based filtering |
+
+## Environment Variables
+
+Copy `.env.example` to `.env` and fill in values:
+
+```bash
+POSTGRES_USER=curvature
+POSTGRES_PASSWORD=your_secure_password_here
+DATABASE_URL=postgresql://curvature:your_secure_password_here@db:5432/curvature
+MAPBOX_ACCESS_TOKEN=your_mapbox_token_here    # Get from https://account.mapbox.com/
+NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
-
-Get your Mapbox token: https://account.mapbox.com/
-
-## Feature Parity Checklist
-
-All features from the original implementation are preserved:
-
-- ✅ Dual mode UI (Browse/Build Route)
-- ✅ Load msgpack data files
-- ✅ Search roads by curvature and surface
-- ✅ Display roads with color-coded curvature
-- ✅ Click roads to see details
-- ✅ Build routes by clicking connected segments
-- ✅ Validate segment connectivity
-- ✅ Display route statistics (segments, distance, curvature)
-- ✅ Save routes with name and description
-- ✅ Session management with localStorage
-- ✅ List saved routes
-- ✅ View saved routes on map
-- ✅ Export to GPX/KML
-- ✅ Delete saved routes
-- ✅ Undo last segment
-- ✅ Clear route
-- ✅ Mode switching with unsaved route warning
-
-## New Improvements
-
-1. **Better Performance**: Vector tiles load faster than Google Maps
-2. **Type Safety**: TypeScript catches errors at compile time
-3. **Modern Tooling**: Hot reload, better debugging, React DevTools
-4. **Maintainability**: Clean separation of concerns
-5. **Scalability**: Easy to add new features with component architecture
-6. **No GPX Import Issues**: Mapbox handles GPX exports better than Google Maps
-
-## API Compatibility
-
-All API endpoints remain the same except:
-- `/config` now returns `mapbox_api_key` instead of `google_maps_api_key`
-
-## Testing Checklist
-
-Quick test to verify everything works:
-
-1. ✅ Backend running on localhost:8000
-2. ✅ Frontend running on localhost:3000
-3. ✅ Map loads and displays
-4. ✅ Can load msgpack data
-5. ✅ Can search and display roads
-6. ✅ Roads are color-coded by curvature
-7. ✅ Can click roads to see details
-8. ✅ Can switch to Build Route mode
-9. ✅ Can select connected segments
-10. ✅ Can save routes
-11. ✅ Can view/export/delete saved routes
-12. ✅ Session persists on page refresh
 
 ## Curvature Color Legend
 
-Same colors as before:
+- Yellow: 0-600 (pleasant, flowing roads)
+- Orange: 600-1000 (fun, moderately twisty)
+- Red: 1000-2000 (very curvy, technical roads)
+- Purple: 2000+ (extremely twisty)
 
-- 🟡 Yellow: 0-600 (pleasant, flowing roads)
-- 🟠 Orange: 600-1000 (fun, moderately twisty)
-- 🔴 Red: 1000-2000 (very curvy, technical roads)
-- 🟣 Purple: 2000+ (extremely twisty!)
+## Zoom-Adaptive Filtering
+
+The frontend adjusts curvature filtering based on zoom level to keep the map performant:
+
+| Zoom Level | Min Curvature | Segment Limit |
+|------------|---------------|---------------|
+| < 8 | 1000 | 500 |
+| 8-10 | 500 | 1,000 |
+| > 10 | 300 | 2,000 |
+
+## Technology Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 16, React 19, TypeScript 5 |
+| Map | Mapbox GL JS v3 |
+| State Management | Zustand |
+| Styling | Tailwind CSS 4 |
+| Backend | FastAPI, Python 3.11 |
+| Database | PostgreSQL 15 + PostGIS 3.4 |
+| Containers | Docker + Docker Compose |
+| CI/CD | GitHub Actions |
+| Linting | Ruff, Black (Python); ESLint (TypeScript) |
+| Testing | pytest, pytest-cov (60% minimum coverage) |
+
+## Data Processing
+
+Load OSM data into PostGIS:
+
+```bash
+# Process OSM data through the curvature pipeline and load into PostGIS
+./processing_chains/adams_default.sh state.osm.pbf state | \
+  ./bin/curvature-output-postgis --source state
+```
 
 ## Common Issues
 
 ### Map won't load
-→ Check backend is returning `mapbox_api_key` in `/config`
+- Check backend is running: `curl http://localhost:8000/config`
+- Verify `MAPBOX_ACCESS_TOKEN` is set in `.env`
 
-### "Segments must connect" error
-→ Click only segments that touch the end of your current route
+### No roads displaying
+- Ensure PostGIS data is loaded (`curl http://localhost:8000/curvature/sources`)
+- Try zooming in (higher zoom shows lower-curvature roads)
+- Check browser console for errors
 
-### Session lost on refresh
-→ Check browser localStorage is enabled
+### Database not connecting
+- Verify PostgreSQL is running with PostGIS extension
+- Check `DATABASE_URL` in `.env`
+- Run `make health` to diagnose
 
 ### Build errors
-→ Delete `node_modules`, run `npm install` again
-
-## Environment Variables
-
-Create `frontend/.env.local`:
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
+- Delete `node_modules` and `package-lock.json`, run `npm install`
+- Clear Next.js cache: `rm -rf .next`
+- Rebuild Docker: `make rebuild`
 
 ## Documentation
 
-- **SETUP_GUIDE.md**: Detailed setup instructions
-- **MIGRATION_SUMMARY.md**: Complete technical overview
-- **frontend/README.md**: Frontend-specific documentation
-- **QUICK_REFERENCE.md**: This file
-
-## Next Steps
-
-1. **Test the Application**
-   - Load sample data
-   - Try all features
-   - Verify API integration
-
-2. **Configure Backend**
-   - Get Mapbox API token
-   - Update `/config` endpoint
-   - Test all API endpoints
-
-3. **Deploy to Production** (Optional)
-   - Build: `npm run build`
-   - Deploy to Vercel/Netlify
-   - Update API URL in environment variables
-
-4. **Mobile App** (Future)
-   - React Native with Mapbox Navigation SDK
-   - CarPlay/Android Auto integration
-   - As outlined in CLAUDE.md Sprint 1
-
-## Support
-
-Issues? Check these files:
-1. Browser console (F12)
-2. Backend logs
-3. SETUP_GUIDE.md troubleshooting section
-
-## Success Criteria
-
-Your migration is successful when:
-- ✅ All features from old version work
-- ✅ Map displays correctly with Mapbox
-- ✅ Routes can be built and saved
-- ✅ No TypeScript/build errors
-- ✅ Session persists across refreshes
-
-## Version Info
-
-- Next.js: 16.1.1
-- React: 19
-- Mapbox GL JS: v3
-- TypeScript: 5
-- Node.js: 18+
-
----
-
-**Migration Status: ✅ COMPLETE**
-
-All functionality has been migrated from Google Maps to Mapbox. The new frontend maintains feature parity while adding modern development practices, better performance, and improved maintainability.
+- **README.md**: Project overview and quick start
+- **API_README.md**: Detailed API and architecture documentation
+- **changes.md**: Change history
+- **setup_guide.md**: Detailed setup instructions
+- **quick_reference.md**: This file
