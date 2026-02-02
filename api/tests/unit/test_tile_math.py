@@ -81,13 +81,17 @@ class TestTileToBbox:
     def test_bounds_validity_across_zoom_levels(self):
         """At any zoom level, west < east and south < north."""
         for z in range(0, 15):
-            max_coord = 2 ** z
+            max_coord = 2**z
             # Test a few tiles at each zoom
             for x in [0, max_coord // 2, max_coord - 1]:
                 for y in [0, max_coord // 2, max_coord - 1]:
                     west, south, east, north = tile_to_bbox(z, x, y)
-                    assert west < east, f"Failed at z={z}, x={x}, y={y}: west={west} >= east={east}"
-                    assert south < north, f"Failed at z={z}, x={x}, y={y}: south={south} >= north={north}"
+                    assert (
+                        west < east
+                    ), f"Failed at z={z}, x={x}, y={y}: west={west} >= east={east}"
+                    assert (
+                        south < north
+                    ), f"Failed at z={z}, x={x}, y={y}: south={south} >= north={north}"
                     assert -180 <= west <= 180
                     assert -180 <= east <= 180
                     assert -90 <= south <= 90

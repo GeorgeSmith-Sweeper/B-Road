@@ -22,7 +22,7 @@ B-Road is a database-backed curvature visualization platform built on [adamfranc
 
 ### Prerequisites
 
-- Python 3.9+
+- Python 3.11+
 - PostgreSQL 12+ with PostGIS extension
 - Node.js 18+ and npm (for frontend)
 - Mapbox API token ([get one here](https://www.mapbox.com/))
@@ -153,7 +153,7 @@ API Docs: http://localhost:8000/docs
 - FastAPI - Modern async Python web framework
 - PostgreSQL 12+ with PostGIS - Spatial database with geometric operations
 - SQLAlchemy - Database ORM with spatial query support
-- Python 3.9+ - Core language
+- Python 3.11+ - Core language
 
 **Frontend**:
 - Next.js 14 - React framework with App Router
@@ -163,7 +163,7 @@ API Docs: http://localhost:8000/docs
 - Tailwind CSS - Utility-first styling
 
 **Data Processing** (from curvature project):
-- Python 3.9+
+- Python 3.11+
 - PyOsmium - OpenStreetMap data parsing
 - NumPy - Mathematical operations for curvature calculations
 - MessagePack - Binary data serialization

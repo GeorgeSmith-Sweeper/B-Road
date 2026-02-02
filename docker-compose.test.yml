@@ -39,6 +39,11 @@ services:
     container_name: b-road-api-test
     environment:
       DATABASE_URL: postgresql://curvature_test:test_password@db-test:5432/curvature_test
+      TEST_DB_HOST: db-test
+      TEST_DB_USER: curvature_test
+      TEST_DB_PASSWORD: test_password
+      TEST_DB_NAME: curvature_test
+      TEST_DB_PORT: 5432
       MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN:-test_token}
       PYTHONUNBUFFERED: 1
     volumes:

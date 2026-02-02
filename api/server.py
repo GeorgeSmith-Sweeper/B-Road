@@ -18,6 +18,7 @@ from pathlib import Path
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
+
 load_dotenv(Path(__file__).parent / ".env")
 
 from fastapi import FastAPI
