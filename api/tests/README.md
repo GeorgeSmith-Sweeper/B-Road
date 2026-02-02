@@ -225,7 +225,7 @@ The test suite runs automatically on GitHub Actions for:
 
 Located at `.github/workflows/test.yml`:
 - Runs PostgreSQL + PostGIS in Docker container
-- Installs Python 3.9 and dependencies
+- Installs Python 3.11 and dependencies
 - Runs pytest with coverage reporting
 - Uploads coverage to Codecov
 - Fails if coverage drops below 70%

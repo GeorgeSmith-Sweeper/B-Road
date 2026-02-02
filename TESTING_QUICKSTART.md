@@ -160,7 +160,7 @@ tests/unit/test_models.py::TestSavedRoute::test_saved_route_with_geometry PASSED
 ...
 ======================== 164 passed in 22.34s =========================
 
----------- coverage: platform darwin, python 3.9.7 -----------
+---------- coverage: platform darwin, python 3.11.x -----------
 Name                              Stmts   Miss  Cover
 -----------------------------------------------------
 ...
