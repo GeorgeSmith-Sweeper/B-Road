@@ -202,8 +202,12 @@ class CurvatureService:
                         "curvature": seg["curvature"],
                         "curvature_level": curvature_level,
                         "length": seg["length"],
-                        "length_km": round(seg["length"] / 1000, 2) if seg["length"] else 0,
-                        "length_mi": round(seg["length"] / 1609, 2) if seg["length"] else 0,
+                        "length_km": (
+                            round(seg["length"] / 1000, 2) if seg["length"] else 0
+                        ),
+                        "length_mi": (
+                            round(seg["length"] / 1609, 2) if seg["length"] else 0
+                        ),
                         "paved": seg["paved"],
                         "surface": "paved" if seg["paved"] else "unpaved",
                         "source": seg["source"],

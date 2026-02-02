@@ -45,7 +45,6 @@ from tests.fixtures.curvature_fixtures import (
     SAMPLE_SEGMENT_WAYS,
 )
 
-
 # Database connection configuration for tests
 TEST_DB_NAME = os.getenv("TEST_DB_NAME", "curvature_test")
 TEST_DB_USER = os.getenv("TEST_DB_USER", "postgres")
@@ -107,14 +106,12 @@ def postgresql_proc():
         cursor = conn.cursor()
 
         # Terminate connections to test database
-        cursor.execute(
-            f"""
+        cursor.execute(f"""
             SELECT pg_terminate_backend(pg_stat_activity.pid)
             FROM pg_stat_activity
             WHERE pg_stat_activity.datname = '{TEST_DB_NAME}'
             AND pid <> pg_backend_pid()
-        """
-        )
+        """)
 
         cursor.execute(f"DROP DATABASE IF EXISTS {TEST_DB_NAME}")
         cursor.close()
@@ -217,7 +214,9 @@ def seed_curvature_data(test_engine):
         # Insert tags
         for tag in SAMPLE_TAGS:
             conn.execute(
-                text("INSERT INTO tags (tag_id, tag_value) VALUES (:tag_id, :tag_value)"),
+                text(
+                    "INSERT INTO tags (tag_id, tag_value) VALUES (:tag_id, :tag_value)"
+                ),
                 {"tag_id": tag["tag_id"], "tag_value": tag["tag_value"]},
             )
 

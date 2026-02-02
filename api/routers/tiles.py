@@ -47,7 +47,7 @@ async def get_tile(
         raise HTTPException(status_code=400, detail="Zoom level must be 0-22")
 
     # Validate tile coordinates within zoom bounds
-    max_coord = 2 ** z
+    max_coord = 2**z
     if x < 0 or x >= max_coord:
         raise HTTPException(
             status_code=400,

@@ -23,7 +23,7 @@ def tile_to_bbox(z: int, x: int, y: int) -> Tuple[float, float, float, float]:
     Returns:
         Tuple of (west, south, east, north) in WGS84 degrees
     """
-    n = 2 ** z
+    n = 2**z
     west = x / n * 360.0 - 180.0
     east = (x + 1) / n * 360.0 - 180.0
     north = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * y / n))))

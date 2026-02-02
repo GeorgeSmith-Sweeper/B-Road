@@ -82,7 +82,9 @@ class TestCurvatureSegmentsEndpoint:
     def test_segments_with_source_filter(self, test_client: TestClient):
         """Should filter by source when provided"""
         bbox_str = f"{VERMONT_BBOX['west']},{VERMONT_BBOX['south']},{VERMONT_BBOX['east']},{VERMONT_BBOX['north']}"
-        response = test_client.get(f"/curvature/segments?bbox={bbox_str}&source=vermont")
+        response = test_client.get(
+            f"/curvature/segments?bbox={bbox_str}&source=vermont"
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -95,7 +97,9 @@ class TestCurvatureSegmentsEndpoint:
         """Should filter by minimum curvature"""
         bbox_str = f"{VERMONT_BBOX['west']},{VERMONT_BBOX['south']},{VERMONT_BBOX['east']},{VERMONT_BBOX['north']}"
         min_curv = 1000
-        response = test_client.get(f"/curvature/segments?bbox={bbox_str}&min_curvature={min_curv}")
+        response = test_client.get(
+            f"/curvature/segments?bbox={bbox_str}&min_curvature={min_curv}"
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -145,8 +149,16 @@ class TestCurvatureSegmentsEndpoint:
 
             props = feature["properties"]
             required_props = [
-                "id", "name", "curvature", "curvature_level",
-                "length", "length_km", "length_mi", "paved", "surface", "source"
+                "id",
+                "name",
+                "curvature",
+                "curvature_level",
+                "length",
+                "length_km",
+                "length_mi",
+                "paved",
+                "surface",
+                "source",
             ]
             for prop in required_props:
                 assert prop in props, f"Missing property: {prop}"
@@ -213,7 +225,9 @@ class TestCurvatureSourceSegmentsEndpoint:
     def test_source_segments_respects_min_curvature(self, test_client: TestClient):
         """Should filter by minimum curvature"""
         min_curv = 1500
-        response = test_client.get(f"/curvature/sources/vermont/segments?min_curvature={min_curv}")
+        response = test_client.get(
+            f"/curvature/sources/vermont/segments?min_curvature={min_curv}"
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -257,7 +271,9 @@ class TestCurvatureSegmentDetailEndpoint:
         """Should return segment detail for valid ID"""
         # First get a valid segment ID from the segments endpoint
         bbox_str = f"{VERMONT_BBOX['west']},{VERMONT_BBOX['south']},{VERMONT_BBOX['east']},{VERMONT_BBOX['north']}"
-        segments_response = test_client.get(f"/curvature/segments?bbox={bbox_str}&limit=1")
+        segments_response = test_client.get(
+            f"/curvature/segments?bbox={bbox_str}&limit=1"
+        )
 
         if segments_response.status_code == 200:
             segments = segments_response.json()

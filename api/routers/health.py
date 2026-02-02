@@ -43,6 +43,7 @@ async def get_config():
     if not mapbox_token:
         try:
             from api import config
+
             mapbox_token = getattr(config, "MAPBOX_ACCESS_TOKEN", "")
         except ImportError:
             pass

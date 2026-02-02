@@ -35,14 +35,12 @@ class TestPostGISSpatialOperations:
 
         # Check if they intersect using PostGIS
         result = test_db_session.execute(
-            text(
-                """
+            text("""
             SELECT ST_Intersects(
                 ST_GeomFromText(:seg1, 4326),
                 ST_GeomFromText(:seg2, 4326)
             )
-        """
-            ),
+        """),
             {"seg1": seg1_line.wkt, "seg2": seg2_line.wkt},
         )
 
@@ -56,14 +54,12 @@ class TestPostGISSpatialOperations:
         seg2_line = LineString([(-72.600, 44.300), (-72.605, 44.305)])  # Far away
 
         result = test_db_session.execute(
-            text(
-                """
+            text("""
             SELECT ST_Intersects(
                 ST_GeomFromText(:seg1, 4326),
                 ST_GeomFromText(:seg2, 4326)
             )
-        """
-            ),
+        """),
             {"seg1": seg1_line.wkt, "seg2": seg2_line.wkt},
         )
 
@@ -76,11 +72,9 @@ class TestPostGISSpatialOperations:
         line = LineString([(0, 0), (1, 0)])
 
         result = test_db_session.execute(
-            text(
-                """
+            text("""
             SELECT ST_Length(ST_GeomFromText(:line, 4326))
-        """
-            ),
+        """),
             {"line": line.wkt},
         )
 
@@ -94,11 +88,9 @@ class TestPostGISSpatialOperations:
         line = LineString([(0, 0), (1, 0)])
 
         result = test_db_session.execute(
-            text(
-                """
+            text("""
             SELECT ST_Length(ST_GeographyFromText(:line))
-        """
-            ),
+        """),
             {"line": line.wkt},
         )
 
@@ -151,13 +143,11 @@ class TestCoordinateTransformations:
 
         # Query SRID from database
         result = test_db_session.execute(
-            text(
-                """
+            text("""
             SELECT ST_SRID(geom)
             FROM saved_routes
             WHERE route_id = :route_id
-        """
-            ),
+        """),
             {"route_id": route.route_id},
         )
 
@@ -221,16 +211,14 @@ class TestBoundingBoxQueries:
         bbox_east, bbox_north = -72.0, 45.0
 
         result = test_db_session.execute(
-            text(
-                """
+            text("""
             SELECT route_id, route_name
             FROM saved_routes
             WHERE ST_Intersects(
                 geom,
                 ST_MakeEnvelope(:west, :south, :east, :north, 4326)
             )
-        """
-            ),
+        """),
             {
                 "west": bbox_west,
                 "south": bbox_south,
@@ -265,16 +253,14 @@ class TestBoundingBoxQueries:
         bbox_east, bbox_north = -122.0, 38.0
 
         result = test_db_session.execute(
-            text(
-                """
+            text("""
             SELECT route_id, route_name
             FROM saved_routes
             WHERE ST_Intersects(
                 geom,
                 ST_MakeEnvelope(:west, :south, :east, :north, 4326)
             )
-        """
-            ),
+        """),
             {
                 "west": bbox_west,
                 "south": bbox_south,
@@ -302,11 +288,9 @@ class TestGeometryValidation:
         )
 
         result = test_db_session.execute(
-            text(
-                """
+            text("""
             SELECT ST_IsSimple(ST_GeomFromText(:line, 4326))
-        """
-            ),
+        """),
             {"line": simple_line.wkt},
         )
 
@@ -320,11 +304,9 @@ class TestGeometryValidation:
         figure_eight = LineString([(0, 0), (1, 1), (0, 1), (1, 0)])
 
         result = test_db_session.execute(
-            text(
-                """
+            text("""
             SELECT ST_IsSimple(ST_GeomFromText(:line, 4326))
-        """
-            ),
+        """),
             {"line": figure_eight.wkt},
         )
 
@@ -336,11 +318,9 @@ class TestGeometryValidation:
         linestring = create_test_linestring(CONNECTED_SEGMENTS)
 
         result = test_db_session.execute(
-            text(
-                """
+            text("""
             SELECT ST_IsValid(ST_GeomFromText(:line, 4326))
-        """
-            ),
+        """),
             {"line": linestring.wkt},
         )
 
@@ -360,13 +340,11 @@ class TestDistanceCalculations:
 
         # Calculate length using PostGIS geography type (meters)
         result = test_db_session.execute(
-            text(
-                """
+            text("""
             SELECT ST_Length(geography(geom))
             FROM saved_routes
             WHERE route_id = :route_id
-        """
-            ),
+        """),
             {"route_id": sample_route.route_id},
         )
 
@@ -383,14 +361,12 @@ class TestDistanceCalculations:
         point2 = Point(1, 0)
 
         result = test_db_session.execute(
-            text(
-                """
+            text("""
             SELECT ST_Distance(
                 geography(ST_GeomFromText(:p1, 4326)),
                 geography(ST_GeomFromText(:p2, 4326))
             )
-        """
-            ),
+        """),
             {"p1": point1.wkt, "p2": point2.wkt},
         )
 
@@ -424,9 +400,7 @@ class TestSpatialIndexes:
         test_db_session.commit()
 
         # Query with EXPLAIN to check index usage
-        result = test_db_session.execute(
-            text(
-                """
+        result = test_db_session.execute(text("""
             EXPLAIN (FORMAT JSON)
             SELECT route_id
             FROM saved_routes
@@ -434,9 +408,7 @@ class TestSpatialIndexes:
                 geom,
                 ST_MakeEnvelope(-72.2, 43.9, -71.8, 44.2, 4326)
             )
-        """
-            )
-        )
+        """))
 
         explain_json = result.fetchone()[0]
         # Check if index scan is used (would be in explain output)
@@ -468,18 +440,14 @@ class TestSpatialIndexes:
         # Time a spatial query
         start = time.time()
 
-        test_db_session.execute(
-            text(
-                """
+        test_db_session.execute(text("""
             SELECT COUNT(*)
             FROM saved_routes
             WHERE ST_Intersects(
                 geom,
                 ST_MakeEnvelope(-72.5, 43.5, -71.5, 44.5, 4326)
             )
-        """
-            )
-        )
+        """))
 
         elapsed = time.time() - start
 
