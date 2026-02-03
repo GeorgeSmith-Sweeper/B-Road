@@ -56,7 +56,7 @@ if args.clear:
     # Add the existing segment's extent to the affected area.
         cur.execute("SELECT ST_AsGeoJSON(ST_Transform(ST_Envelope(ST_Union(ST_Envelope(geom))), 4326)) AS geojson FROM public.curvature_segments WHERE fk_source=%s", (source_id,))
         result = cur.fetchone()
-        if result is not None:
+        if result is not None and result[0] is not None:
             # sys.stderr.write("- Existing:\n\tGeom: {}\n".format(result[0]))
             affected_area.record_affected(BBox.from_geojson_string(result[0]))
     cur.execute("DELETE FROM public.curvature_segments WHERE fk_source=%s", (source_id,))
