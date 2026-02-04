@@ -6,6 +6,77 @@ This document tracks the major architectural changes and feature additions to B-
 
 ---
 
+## February 3, 2026 - Full US Data Load
+
+**Commit**: `ca826c5` - "Load all 50 US states into PostGIS (2.1M segments)"
+
+### Milestone Achievement
+
+Successfully loaded curvature data for all 50 US states into PostGIS, making the full nationwide curvy road dataset available for visualization.
+
+### Final Statistics
+
+| Metric | Value |
+|--------|-------|
+| Sources | 51 (50 US states + Monaco) |
+| Total segments | **2,135,638** |
+| Database size | **2.6 GB** |
+| Processing time | ~5 hours |
+
+### Top States by Segment Count
+
+| State | Segments |
+|-------|----------|
+| Texas | 186,103 |
+| California | 152,562 |
+| North Carolina | 106,672 |
+| Florida | 99,833 |
+| Pennsylvania | 94,306 |
+
+### Bug Fixes
+
+#### NULL Geometry Crash in curvature-output-postgis
+
+**Problem**: When using `--clear` on a source with no existing data, `ST_Union` returns `NULL`, causing a crash in `BBox.from_geojson_string()`.
+
+**Fix** (`bin/curvature-output-postgis:59`):
+```python
+# Before
+if result is not None:
+
+# After
+if result is not None and result[0] is not None:
+```
+
+### Infrastructure Improvements
+
+#### Docker Shared Memory for PostgreSQL
+
+**Problem**: `VACUUM ANALYZE` failed on 2.1M row table with "No space left on device" error due to Docker's default 64MB shared memory limit.
+
+**Fix** (`docker-compose.yml`):
+```yaml
+db:
+  image: postgis/postgis:15-3.4-alpine
+  shm_size: 256m  # Added for large table operations
+```
+
+### Data Processing Notes
+
+- Downloads sourced from Geofabrik OSM extracts
+- Two network interruptions required resume with `-r` flag
+- Resume correctly picked up failed downloads and continued
+- Cross-border road duplicates handled correctly (`ON CONFLICT DO NOTHING`)
+- Processing script: `scripts/process_us_states.sh`
+
+### Verification Steps Completed
+
+1. VACUUM ANALYZE on all tables
+2. API sources endpoint returns all 51 sources
+3. Frontend map displays segments across entire US
+
+---
+
 ## February 2026 - CI/CD Stabilization
 
 **PR**: #15 (`chore/stabilize-test-suite`)
