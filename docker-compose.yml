@@ -12,6 +12,7 @@ services:
     image: postgis/postgis:15-3.4-alpine
     container_name: b-road-db
     restart: unless-stopped
+    shm_size: 256m
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-curvature}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}

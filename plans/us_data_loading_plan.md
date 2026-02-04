@@ -2,14 +2,23 @@
 
 ## Status
 
-**Updated: Feb 3, 2026**
+**Updated: Feb 3, 2026 @ 18:07**
 
 - **Phase 1**: COMPLETE - Download failures were transient network issues (Jan 20). Downloads work fine now.
 - **Phase 2**: COMPLETE - Delaware processed successfully (5,908 segments).
 - **Phase 3**: COMPLETE - Virginia processed successfully (81,289 segments). Scaling estimates updated.
-- **Phase 4**: READY - Full batch run can proceed.
+- **Phase 4**: COMPLETE - All 50 US states loaded successfully.
+- **Phase 5**: READY - Verification and optimization.
 
-**Current DB state**: Monaco (57), Delaware (5,908), Virginia (81,289) = 87,254 total segments, 172 MB
+**Final DB state**:
+| Metric | Value |
+|--------|-------|
+| Sources | 51 (50 US states + Monaco) |
+| Total segments | **2,135,638** |
+| Database size | **2.6 GB** |
+| Processing time | ~5 hours (with network interruptions) |
+
+**Progress**: 50/50 states complete (100%)
 
 ---
 
@@ -150,31 +159,25 @@ Delaware processed: 5,908 segments, 65 seconds total.
 
 Virginia processed: 81,289 segments, 9 minutes total. Extrapolation shows local PostgreSQL is sufficient.
 
-### Phase 4: Full batch run ⏳ READY
+### Phase 4: Full batch run ✅ COMPLETE
 
-**Prerequisites**:
-1. Stop local PostgreSQL: `brew services stop postgresql@17`
-2. Ensure Docker DB is running: `docker compose ps`
-3. Reset status file: `rm data/osm/processing_status.txt`
-4. Activate venv: `source venv/bin/activate`
+**Started**: Feb 3, 2026 @ 13:20
+**Finished**: Feb 3, 2026 @ 18:07
 
-**Command**:
+**Command used**:
 ```bash
-./scripts/process_us_states.sh -v -k \
+./scripts/process_us_states.sh -v \
   -H localhost \
-  -D curvature \
+  -d curvature \
   -u curvature \
   -p curvature_dev_password
 ```
 
-Options:
-- `-v`: Verbose output
-- `-k`: Keep `.pbf` files (optional, for debugging)
-- `-r`: Resume from last failure (if interrupted)
-
-**Monitoring**:
-- Logs: `tail -f data/osm/processing.log`
-- Status: `cat data/osm/processing_status.txt`
+**Notes**:
+- Two network interruptions required resume with `-r` flag
+- Resume correctly picked up failed downloads and continued
+- All 50 states completed with 0 failures
+- Cross-border road duplicates handled correctly (ON CONFLICT DO NOTHING)
 
 ### Phase 5: Verify and optimize
 
@@ -204,5 +207,5 @@ After batch completes:
 
 | File | Change | Status |
 |------|--------|--------|
-| `bin/curvature-output-postgis:59` | Fix NULL geometry crash | Applied, needs commit |
+| `bin/curvature-output-postgis:59` | Fix NULL geometry crash | Committed (9d901b6) |
 | `api/schema/curvature_indexes.sql` | Performance indexes | Applied to Docker DB |
