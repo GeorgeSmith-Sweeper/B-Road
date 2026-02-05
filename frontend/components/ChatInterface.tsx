@@ -1,14 +1,20 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { sendChatMessage, ChatSearchResult } from '@/lib/chat-api';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  results?: ChatSearchResult['results'];
 }
 
-export default function ChatInterface() {
+interface ChatInterfaceProps {
+  onResultsReceived?: (results: ChatSearchResult['results']) => void;
+}
+
+export default function ChatInterface({ onResultsReceived }: ChatInterfaceProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -26,6 +32,44 @@ export default function ChatInterface() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const formatResults = (data: ChatSearchResult): string => {
+    const { results, filters } = data;
+    const count = results.metadata?.count || 0;
+
+    if (count === 0) {
+      return 'No roads found matching your criteria. Try broadening your search or checking a different state.';
+    }
+
+    // Build response text
+    let response = `Found ${count} road${count !== 1 ? 's' : ''}`;
+
+    // Add filter info
+    const filterParts: string[] = [];
+    if (filters.min_curvature) filterParts.push(`curvature >= ${filters.min_curvature}`);
+    if (filters.sources && Array.isArray(filters.sources)) {
+      filterParts.push(`in ${(filters.sources as string[]).join(', ')}`);
+    }
+    if (filterParts.length > 0) {
+      response += ` (${filterParts.join(', ')})`;
+    }
+    response += ':\n\n';
+
+    // List top roads
+    const topRoads = results.features.slice(0, 5);
+    topRoads.forEach((road, i) => {
+      const props = road.properties;
+      const name = props.name || 'Unnamed Road';
+      response += `${i + 1}. ${name}\n`;
+      response += `   Curvature: ${props.curvature.toLocaleString()} | ${props.length_mi.toFixed(1)} mi\n`;
+    });
+
+    if (count > 5) {
+      response += `\n...and ${count - 5} more roads highlighted on the map.`;
+    }
+
+    return response;
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -35,19 +79,38 @@ export default function ChatInterface() {
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, userMessage]);
+    const query = input;
     setInput('');
     setIsLoading(true);
 
-    // Mock response for now - will be replaced with real API call
-    setTimeout(() => {
+    try {
+      const data = await sendChatMessage(query, 10);
+
+      // Format response text
+      const responseText = formatResults(data);
+
       const botMessage: Message = {
         role: 'assistant',
-        content: `I'll search for roads matching: "${userMessage.content}"\n\nConnecting to search API...`,
+        content: responseText,
         timestamp: new Date(),
+        results: data.results,
       };
       setMessages((prev) => [...prev, botMessage]);
+
+      // Notify parent of results for map highlighting
+      if (onResultsReceived && data.results.features.length > 0) {
+        onResultsReceived(data.results);
+      }
+    } catch (error) {
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: `Sorry, there was an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
