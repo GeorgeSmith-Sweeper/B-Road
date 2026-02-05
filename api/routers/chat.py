@@ -8,9 +8,12 @@ to interpret user queries and find matching roads.
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
+from sqlalchemy.orm import Session
 
+from api.database import get_db_session
 from api.services.claude_service import ClaudeService
+from api.services.curvature_service import CurvatureService
 from api.services.query_builder import CurvatureQueryBuilder
 
 logger = logging.getLogger(__name__)
@@ -124,4 +127,69 @@ async def extract_filters(
         logger.error(f"Error extracting filters: {e}")
         raise HTTPException(
             status_code=500, detail=f"Error extracting filters: {str(e)}"
+        )
+
+
+@router.post("/search")
+async def chat_search(
+    query: str = Query(
+        ...,
+        description="Natural language query about finding roads",
+        example="Find super twisty roads in Vermont",
+    ),
+    limit: int = Query(
+        10,
+        ge=1,
+        le=50,
+        description="Maximum number of results to return",
+    ),
+    db: Session = Depends(get_db_session),
+):
+    """
+    Natural language road search.
+
+    This endpoint:
+    1. Uses Claude AI to extract search filters from natural language
+    2. Queries the curvature database with those filters
+    3. Returns matching road segments as GeoJSON
+
+    Example queries:
+    - "Find super twisty roads in Vermont"
+    - "Show me epic paved mountain roads"
+    - "What are the curviest roads over 10 miles long?"
+    """
+    try:
+        # Extract filters from natural language
+        claude_service = get_claude_service()
+        extracted_filters = await claude_service.extract_filters(query)
+
+        # Build the database-ready filters
+        builder = CurvatureQueryBuilder()
+        db_filters = builder.build_filters(
+            min_curvature=extracted_filters.get("min_curvature"),
+            max_curvature=extracted_filters.get("max_curvature"),
+            min_length=extracted_filters.get("min_length"),
+            max_length=extracted_filters.get("max_length"),
+            surface_types=extracted_filters.get("surface_types"),
+            sources=extracted_filters.get("sources"),
+            location=extracted_filters.get("location"),
+        )
+
+        # Query the database
+        curvature_service = CurvatureService(db)
+        results = curvature_service.search_by_filters(db_filters, limit)
+
+        return {
+            "query": query,
+            "filters": extracted_filters,
+            "results": results,
+            "count": results.get("metadata", {}).get("count", 0),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in chat search: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Search error: {str(e)}"
         )
