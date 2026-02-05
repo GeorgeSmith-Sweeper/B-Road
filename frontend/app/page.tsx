@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Map from '@/components/Map';
 import Sidebar from '@/components/Sidebar';
+import ChatInterface from '@/components/ChatInterface';
 import { useAppStore } from '@/store/useAppStore';
 import { apiClient } from '@/lib/api';
 import { ApiError } from '@/types';
@@ -97,6 +98,7 @@ export default function Home() {
       <div className="flex-1 relative">
         <Map />
       </div>
+      <ChatInterface />
     </div>
   );
 }
