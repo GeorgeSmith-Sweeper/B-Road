@@ -18,8 +18,8 @@ shapely>=2.0.4
 gpxpy==1.6.2
 httpx==0.25.2  # For elevation API calls
 
-# Optional: Claude AI integration (for future LLM features)
-# anthropic==0.7.0
+# Claude AI integration for conversational search
+anthropic>=0.39.0
 
 # Existing curvature dependencies (already in parent project)
 # osmium - already installed
