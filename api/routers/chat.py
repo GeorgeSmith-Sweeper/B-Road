@@ -100,3 +100,28 @@ async def build_query(
         raise HTTPException(status_code=400, detail={"errors": errors})
 
     return {"filters": filters}
+
+
+@router.post("/extract-filters")
+async def extract_filters(
+    query: str = Query(
+        ...,
+        description="Natural language query about finding roads",
+        example="Find super twisty roads in Vermont",
+    ),
+):
+    """
+    Extract search filters from natural language query.
+
+    Uses Claude AI to parse the user's query and extract
+    structured search parameters.
+    """
+    try:
+        service = get_claude_service()
+        filters = await service.extract_filters(query)
+        return {"query": query, "extracted_filters": filters}
+    except Exception as e:
+        logger.error(f"Error extracting filters: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Error extracting filters: {str(e)}"
+        )
