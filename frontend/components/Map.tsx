@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import { useAppStore } from '@/store/useAppStore';
+import { useChatStore } from '@/store/useChatStore';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -23,6 +24,7 @@ export default function Map() {
   const mapboxToken = useAppStore((state) => state.mapboxToken);
   const selectedSource = useAppStore((state) => state.selectedSource);
   const searchFilters = useAppStore((state) => state.searchFilters);
+  const searchResults = useChatStore((state) => state.searchResults);
 
   // Initialize map
   useEffect(() => {
@@ -134,6 +136,92 @@ export default function Map() {
       searchFilters.min_curvature,
     ]);
   }, [searchFilters.min_curvature]);
+
+  // Handle chat search results - highlight on map
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !sourceAddedRef.current) return;
+
+    // Remove existing chat results layer and source
+    if (map.getLayer('chat-results-layer')) {
+      map.removeLayer('chat-results-layer');
+    }
+    if (map.getSource('chat-results')) {
+      map.removeSource('chat-results');
+    }
+
+    // If no results, we're done
+    if (!searchResults || searchResults.features.length === 0) return;
+
+    // Add source for chat results
+    map.addSource('chat-results', {
+      type: 'geojson',
+      data: searchResults,
+    });
+
+    // Add layer for chat results (highlighted in red/cyan)
+    map.addLayer({
+      id: 'chat-results-layer',
+      type: 'line',
+      source: 'chat-results',
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round',
+      },
+      paint: {
+        'line-color': '#00FFFF', // Cyan for visibility
+        'line-width': 6,
+        'line-opacity': 0.9,
+      },
+    });
+
+    // Calculate bounds and fit map
+    const bounds = new mapboxgl.LngLatBounds();
+    searchResults.features.forEach((feature) => {
+      if (feature.geometry.type === 'LineString') {
+        feature.geometry.coordinates.forEach((coord) => {
+          bounds.extend(coord as [number, number]);
+        });
+      }
+    });
+
+    if (!bounds.isEmpty()) {
+      map.fitBounds(bounds, {
+        padding: 100,
+        maxZoom: 12,
+        duration: 1000,
+      });
+    }
+
+    // Add click handler for chat results
+    map.on('click', 'chat-results-layer', (e: mapboxgl.MapLayerMouseEvent) => {
+      if (!e.features?.length) return;
+      const props = e.features[0].properties;
+      if (!props) return;
+
+      new mapboxgl.Popup()
+        .setLngLat(e.lngLat)
+        .setHTML(`
+          <div style="padding: 8px;">
+            <strong style="color: #00BFBF;">${props.name || 'Unnamed Road'}</strong><br/>
+            <span style="font-size: 12px; color: #666;">Chat Search Result</span><br/><br/>
+            Curvature: <strong>${props.curvature?.toLocaleString()}</strong><br/>
+            Length: ${props.length_mi?.toFixed(1) || '?'} mi<br/>
+            Surface: ${props.surface || (props.paved ? 'paved' : 'unpaved')}
+          </div>
+        `)
+        .addTo(map);
+    });
+
+    map.on('mouseenter', 'chat-results-layer', () => {
+      map.getCanvas().style.cursor = 'pointer';
+    });
+
+    map.on('mouseleave', 'chat-results-layer', () => {
+      map.getCanvas().style.cursor = '';
+    });
+
+  }, [searchResults]);
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>

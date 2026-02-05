@@ -5,11 +5,13 @@ import Map from '@/components/Map';
 import Sidebar from '@/components/Sidebar';
 import ChatInterface from '@/components/ChatInterface';
 import { useAppStore } from '@/store/useAppStore';
+import { useChatStore } from '@/store/useChatStore';
 import { apiClient } from '@/lib/api';
 import { ApiError } from '@/types';
 
 export default function Home() {
   const { setMapboxToken, initError, setInitError } = useAppStore();
+  const { setSearchResults } = useChatStore();
   const [loading, setLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
 
@@ -98,7 +100,7 @@ export default function Home() {
       <div className="flex-1 relative">
         <Map />
       </div>
-      <ChatInterface />
+      <ChatInterface onResultsReceived={setSearchResults} />
     </div>
   );
 }
