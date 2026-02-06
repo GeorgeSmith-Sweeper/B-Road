@@ -67,6 +67,8 @@ async def test_chat(
         service = get_claude_service()
         response = await service.send_message(message)
         return {"message": message, "response": response}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error in chat test: {e}")
         raise HTTPException(status_code=500, detail=f"Claude API error: {str(e)}")
@@ -123,6 +125,8 @@ async def extract_filters(
         service = get_claude_service()
         filters = await service.extract_filters(query)
         return {"query": query, "extracted_filters": filters}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error extracting filters: {e}")
         raise HTTPException(
