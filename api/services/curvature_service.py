@@ -227,6 +227,24 @@ class CurvatureService:
             },
         }
 
+    def search_by_filters(
+        self,
+        filters: Dict[str, Any],
+        limit: int = 20,
+    ) -> Dict[str, Any]:
+        """
+        Search segments using flexible filters from natural language queries.
+
+        Args:
+            filters: Dictionary of filter parameters
+            limit: Maximum number of segments to return
+
+        Returns:
+            GeoJSON FeatureCollection with segment features
+        """
+        segments = self.curvature_repo.search_by_filters(filters, limit)
+        return self._build_feature_collection(segments)
+
     def _get_curvature_level(self, curvature: int) -> str:
         """
         Get curvature level category for styling.

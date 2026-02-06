@@ -362,6 +362,104 @@ class CurvatureRepository:
 
         return bytes(row.tile)
 
+    def search_by_filters(
+        self,
+        filters: Dict[str, Any],
+        limit: int = 20,
+    ) -> List[Dict[str, Any]]:
+        """
+        Search segments using flexible filters from natural language queries.
+
+        Args:
+            filters: Dictionary of filter parameters:
+                - min_curvature: Minimum curvature score
+                - max_curvature: Maximum curvature score
+                - min_length_meters: Minimum length in meters
+                - max_length_meters: Maximum length in meters
+                - surface_types: List of surface types ("paved", "unpaved")
+                - sources: List of source names (state names)
+            limit: Maximum number of segments to return
+
+        Returns:
+            List of segment dictionaries with geometry as GeoJSON
+        """
+        # Build dynamic WHERE clauses
+        where_clauses = []
+        params: Dict[str, Any] = {"limit": limit}
+
+        # Curvature filters
+        if "min_curvature" in filters:
+            where_clauses.append("cs.curvature >= :min_curvature")
+            params["min_curvature"] = filters["min_curvature"]
+        else:
+            # Default minimum curvature
+            where_clauses.append("cs.curvature >= 300")
+
+        if "max_curvature" in filters:
+            where_clauses.append("cs.curvature <= :max_curvature")
+            params["max_curvature"] = filters["max_curvature"]
+
+        # Length filters
+        if "min_length_meters" in filters:
+            where_clauses.append("cs.length >= :min_length_meters")
+            params["min_length_meters"] = filters["min_length_meters"]
+
+        if "max_length_meters" in filters:
+            where_clauses.append("cs.length <= :max_length_meters")
+            params["max_length_meters"] = filters["max_length_meters"]
+
+        # Surface type filter
+        if "surface_types" in filters and filters["surface_types"]:
+            surface_types = filters["surface_types"]
+            if "paved" in surface_types and "unpaved" not in surface_types:
+                where_clauses.append("cs.paved = true")
+            elif "unpaved" in surface_types and "paved" not in surface_types:
+                where_clauses.append("cs.paved = false")
+            # If both are present, no filter needed
+
+        # Source filter (state names)
+        if "sources" in filters and filters["sources"]:
+            # Use ANY for array matching
+            where_clauses.append("s.source = ANY(:sources)")
+            params["sources"] = filters["sources"]
+
+        # Build the query
+        where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+
+        query = text(f"""
+            SELECT
+                cs.id,
+                cs.id_hash,
+                cs.name,
+                cs.curvature,
+                cs.length,
+                cs.paved,
+                s.source as source_name,
+                ST_AsGeoJSON(cs.geom) as geometry
+            FROM curvature_segments cs
+            LEFT JOIN sources s ON cs.fk_source = s.id
+            WHERE {where_sql}
+            ORDER BY cs.curvature DESC
+            LIMIT :limit
+        """)
+
+        result = self.db.execute(query, params)
+        rows = result.fetchall()
+
+        return [
+            {
+                "id": row.id,
+                "id_hash": row.id_hash,
+                "name": row.name,
+                "curvature": row.curvature,
+                "length": row.length,
+                "paved": row.paved,
+                "source": row.source_name,
+                "geometry": row.geometry,
+            }
+            for row in rows
+        ]
+
     def get_source_bounds(self, source_name: str) -> Optional[Dict[str, float]]:
         """
         Get the bounding box for all segments from a source.
