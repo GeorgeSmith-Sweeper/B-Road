@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { apiClient } from '@/lib/api';
 import { ApiError } from '@/types';
+import RouteBuilderPanel from './RouteBuilderPanel';
 
 export default function Sidebar() {
   const {
@@ -127,6 +128,9 @@ export default function Sidebar() {
           Filters visible roads instantly
         </p>
       </div>
+
+      {/* Route Builder */}
+      <RouteBuilderPanel />
 
       {/* Color Legend */}
       <div className="bg-white p-4 rounded-lg shadow-sm mb-5">
