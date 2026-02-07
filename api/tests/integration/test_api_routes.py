@@ -9,13 +9,11 @@ Tests all API routes including:
 """
 
 import pytest
-import json
 import uuid
 from fastapi.testclient import TestClient
 
 from tests.fixtures.sample_segments import (
     CONNECTED_SEGMENTS,
-    DISCONNECTED_SEGMENTS,
     SAMPLE_ROUTE_METADATA,
     SAMPLE_PUBLIC_ROUTE_METADATA,
 )
@@ -46,14 +44,13 @@ class TestRootAndHealthEndpoints:
         assert "database_available" in data
 
 
-@pytest.mark.skip(reason="Route/session endpoints not currently mounted")
 @pytest.mark.integration
 class TestSessionManagement:
     """Tests for session creation and management."""
 
     def test_create_session(self, test_client):
-        """Test POST /sessions/create."""
-        response = test_client.post("/sessions/create")
+        """Test POST /sessions creates a new anonymous session."""
+        response = test_client.post("/sessions")
 
         assert response.status_code == 200
         data = response.json()
@@ -64,22 +61,30 @@ class TestSessionManagement:
         session_id = data["session_id"]
         uuid.UUID(session_id)  # Will raise if invalid
 
-    def test_create_session_with_name(self, test_client):
-        """Test POST /sessions/create with session_name parameter."""
-        response = test_client.post("/sessions/create?session_name=My+Test+Session")
+    def test_create_multiple_sessions(self, test_client):
+        """Test that each POST /sessions creates a unique session."""
+        response1 = test_client.post("/sessions")
+        response2 = test_client.post("/sessions")
 
-        assert response.status_code == 200
-        data = response.json()
-        assert "session_id" in data
+        assert response1.status_code == 200
+        assert response2.status_code == 200
+
+        id1 = response1.json()["session_id"]
+        id2 = response2.json()["session_id"]
+        assert id1 != id2
 
 
-@pytest.mark.skip(reason="Route/session endpoints not currently mounted")
 @pytest.mark.integration
 class TestRouteCRUDOperations:
     """Tests for route create, read, update, delete operations."""
 
+    def _create_session(self, test_client):
+        """Helper to create a session and return its ID."""
+        response = test_client.post("/sessions")
+        return response.json()["session_id"]
+
     def test_save_route(self, test_client, sample_session):
-        """Test POST /routes/save with valid segments."""
+        """Test POST /routes with valid segments."""
         payload = {
             "route_name": SAMPLE_ROUTE_METADATA["route_name"],
             "description": SAMPLE_ROUTE_METADATA["description"],
@@ -88,7 +93,9 @@ class TestRouteCRUDOperations:
         }
 
         response = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}", json=payload
+            "/routes",
+            json=payload,
+            headers={"X-Session-Id": str(sample_session.session_id)},
         )
 
         assert response.status_code == 200
@@ -99,7 +106,7 @@ class TestRouteCRUDOperations:
         assert "share_url" in data
 
     def test_save_route_invalid_session(self, test_client):
-        """Test POST /routes/save with invalid session ID returns 404."""
+        """Test POST /routes with invalid session ID returns 404."""
         fake_session_id = str(uuid.uuid4())
         payload = {
             "route_name": "Test Route",
@@ -108,22 +115,25 @@ class TestRouteCRUDOperations:
         }
 
         response = test_client.post(
-            f"/routes/save?session_id={fake_session_id}", json=payload
+            "/routes",
+            json=payload,
+            headers={"X-Session-Id": fake_session_id},
         )
 
         assert response.status_code == 404
         assert "Session not found" in response.json()["detail"]
 
-    def test_get_route_by_slug(self, test_client, sample_route):
-        """Test GET /routes/{slug} returns route details."""
-        response = test_client.get(f"/routes/{sample_route.url_slug}")
+    def test_save_route_missing_session_header(self, test_client):
+        """Test POST /routes without X-Session-Id header returns 422."""
+        payload = {
+            "route_name": "Test Route",
+            "segments": CONNECTED_SEGMENTS,
+            "is_public": False,
+        }
 
-        assert response.status_code == 200
-        data = response.json()
-        assert data["route_id"] == sample_route.route_id
-        assert data["route_name"] == sample_route.route_name
-        assert "geojson" in data
-        assert "segments" in data
+        response = test_client.post("/routes", json=payload)
+
+        assert response.status_code == 422
 
     def test_get_route_by_id(self, test_client, sample_route):
         """Test GET /routes/{id} returns route details."""
@@ -132,18 +142,22 @@ class TestRouteCRUDOperations:
         assert response.status_code == 200
         data = response.json()
         assert data["route_id"] == sample_route.route_id
+        assert data["route_name"] == sample_route.route_name
+        assert "geojson" in data
+        assert "segments" in data
 
     def test_get_route_not_found(self, test_client):
-        """Test GET /routes/{slug} with nonexistent route returns 404."""
-        response = test_client.get("/routes/nonexistent-route")
+        """Test GET /routes/{id} with nonexistent route returns 404."""
+        response = test_client.get("/routes/999999")
 
         assert response.status_code == 404
         assert "Route not found" in response.json()["detail"]
 
     def test_list_routes(self, test_client, sample_session, sample_route):
-        """Test GET /routes/list returns user's routes."""
+        """Test GET /routes returns user's routes."""
         response = test_client.get(
-            f"/routes/list?session_id={sample_session.session_id}"
+            "/routes",
+            headers={"X-Session-Id": str(sample_session.session_id)},
         )
 
         assert response.status_code == 200
@@ -159,6 +173,19 @@ class TestRouteCRUDOperations:
         assert "total_length_km" in route
         assert "segment_count" in route
 
+    def test_list_routes_empty_session(self, test_client):
+        """Test GET /routes for session with no routes returns empty list."""
+        session_id = self._create_session(test_client)
+
+        response = test_client.get(
+            "/routes",
+            headers={"X-Session-Id": session_id},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["routes"] == []
+
     def test_update_route(self, test_client, sample_session, sample_route):
         """Test PUT /routes/{id} updates route metadata."""
         new_name = "Updated Route Name"
@@ -166,7 +193,7 @@ class TestRouteCRUDOperations:
 
         response = test_client.put(
             f"/routes/{sample_route.route_id}",
-            params={"session_id": str(sample_session.session_id)},
+            headers={"X-Session-Id": str(sample_session.session_id)},
             json={
                 "route_name": new_name,
                 "description": new_description,
@@ -191,7 +218,7 @@ class TestRouteCRUDOperations:
 
         response = test_client.put(
             f"/routes/{sample_route.route_id}",
-            params={"session_id": wrong_session_id},
+            headers={"X-Session-Id": wrong_session_id},
             json={"route_name": "Hacked Name"},
         )
 
@@ -202,7 +229,8 @@ class TestRouteCRUDOperations:
         route_id = sample_route.route_id
 
         response = test_client.delete(
-            f"/routes/{route_id}", params={"session_id": str(sample_session.session_id)}
+            f"/routes/{route_id}",
+            headers={"X-Session-Id": str(sample_session.session_id)},
         )
 
         assert response.status_code == 200
@@ -218,13 +246,13 @@ class TestRouteCRUDOperations:
         wrong_session_id = str(uuid.uuid4())
 
         response = test_client.delete(
-            f"/routes/{sample_route.route_id}", params={"session_id": wrong_session_id}
+            f"/routes/{sample_route.route_id}",
+            headers={"X-Session-Id": wrong_session_id},
         )
 
         assert response.status_code == 404
 
 
-@pytest.mark.skip(reason="Route/session endpoints not currently mounted")
 @pytest.mark.integration
 class TestRouteDataValidation:
     """Tests for route data validation."""
@@ -238,7 +266,9 @@ class TestRouteDataValidation:
         }
 
         response = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}", json=payload
+            "/routes",
+            json=payload,
+            headers={"X-Session-Id": str(sample_session.session_id)},
         )
 
         assert response.status_code == 200
@@ -267,7 +297,9 @@ class TestRouteDataValidation:
         }
 
         response = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}", json=payload
+            "/routes",
+            json=payload,
+            headers={"X-Session-Id": str(sample_session.session_id)},
         )
 
         route_id = response.json()["route_id"]
@@ -295,7 +327,9 @@ class TestRouteDataValidation:
         }
 
         response = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}", json=payload
+            "/routes",
+            json=payload,
+            headers={"X-Session-Id": str(sample_session.session_id)},
         )
 
         route_id = response.json()["route_id"]
@@ -316,47 +350,37 @@ class TestRouteDataValidation:
         # Longitude should be negative (Vermont is west)
         assert first_coord[0] < 0
 
-
-@pytest.mark.integration
-class TestErrorHandling:
-    """Tests for API error handling."""
-
-    def test_invalid_route_id_format(self, test_client):
-        """Test that invalid route ID format returns 404."""
-        response = test_client.get("/routes/not-a-valid-id-or-slug")
-
-        assert response.status_code == 404
-
-    @pytest.mark.skip(reason="Route/session endpoints not currently mounted")
     def test_missing_required_fields(self, test_client, sample_session):
         """Test that missing required fields returns validation error."""
         # Missing route_name
         payload = {"segments": CONNECTED_SEGMENTS}
 
         response = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}", json=payload
+            "/routes",
+            json=payload,
+            headers={"X-Session-Id": str(sample_session.session_id)},
         )
 
         assert response.status_code == 422  # Validation error
 
-    @pytest.mark.skip(reason="Route/session endpoints not currently mounted")
-    def test_invalid_session_uuid_format(self, test_client):
-        """Test that invalid UUID format returns error."""
-        payload = {"route_name": "Test", "segments": CONNECTED_SEGMENTS}
 
-        response = test_client.post("/routes/save?session_id=not-a-uuid", json=payload)
+@pytest.mark.integration
+class TestErrorHandling:
+    """Tests for API error handling."""
 
-        # Should return 422 (validation error) or 404
-        assert response.status_code in [404, 422]
+    def test_invalid_route_id_format(self, test_client):
+        """Test that invalid route ID format returns 422."""
+        response = test_client.get("/routes/not-a-number")
+
+        assert response.status_code == 422
 
 
-@pytest.mark.skip(reason="Route/session endpoints not currently mounted")
 @pytest.mark.integration
 class TestPublicRoutes:
-    """Tests for public route functionality."""
+    """Tests for public route sharing."""
 
-    def test_save_public_route(self, test_client, sample_session):
-        """Test saving a route as public."""
+    def test_shared_route_accessible(self, test_client, sample_session):
+        """Test that a public route is accessible via shared slug."""
         payload = {
             "route_name": SAMPLE_PUBLIC_ROUTE_METADATA["route_name"],
             "description": SAMPLE_PUBLIC_ROUTE_METADATA["description"],
@@ -365,36 +389,34 @@ class TestPublicRoutes:
         }
 
         response = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}", json=payload
+            "/routes",
+            json=payload,
+            headers={"X-Session-Id": str(sample_session.session_id)},
         )
 
         assert response.status_code == 200
-        route_id = response.json()["route_id"]
+        url_slug = response.json()["url_slug"]
 
-        # Verify it's public
-        get_response = test_client.get(f"/routes/{route_id}")
-        assert get_response.json()["is_public"] is True
+        # Access via shared endpoint
+        shared_response = test_client.get(f"/routes/shared/{url_slug}")
+        assert shared_response.status_code == 200
+        data = shared_response.json()
+        assert data["is_public"] is True
+        assert data["route_name"] == SAMPLE_PUBLIC_ROUTE_METADATA["route_name"]
 
-    def test_toggle_route_visibility(self, test_client, sample_session, sample_route):
-        """Test changing route from private to public."""
-        # Initially private
-        assert sample_route.is_public is False
+    def test_private_route_not_shared(self, test_client, sample_route):
+        """Test that a private route returns 404 on shared endpoint."""
+        response = test_client.get(f"/routes/shared/{sample_route.url_slug}")
 
-        # Update to public
-        response = test_client.put(
-            f"/routes/{sample_route.route_id}",
-            params={"session_id": str(sample_session.session_id)},
-            json={"is_public": True},
-        )
+        assert response.status_code == 404
 
-        assert response.status_code == 200
+    def test_shared_nonexistent_slug(self, test_client):
+        """Test that a nonexistent slug returns 404."""
+        response = test_client.get("/routes/shared/does-not-exist")
 
-        # Verify change
-        get_response = test_client.get(f"/routes/{sample_route.route_id}")
-        assert get_response.json()["is_public"] is True
+        assert response.status_code == 404
 
 
-@pytest.mark.skip(reason="Route/session endpoints not currently mounted")
 @pytest.mark.integration
 class TestURLSlugGeneration:
     """Tests for URL slug generation and uniqueness."""
@@ -408,7 +430,9 @@ class TestURLSlugGeneration:
         }
 
         response = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}", json=payload
+            "/routes",
+            json=payload,
+            headers={"X-Session-Id": str(sample_session.session_id)},
         )
 
         data = response.json()
@@ -428,43 +452,33 @@ class TestURLSlugGeneration:
 
         # Create first route
         response1 = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}", json=payload
+            "/routes",
+            json=payload,
+            headers={"X-Session-Id": str(sample_session.session_id)},
         )
         slug1 = response1.json()["url_slug"]
 
         # Create second route with same name
         response2 = test_client.post(
-            f"/routes/save?session_id={sample_session.session_id}", json=payload
+            "/routes",
+            json=payload,
+            headers={"X-Session-Id": str(sample_session.session_id)},
         )
         slug2 = response2.json()["url_slug"]
 
         # Slugs should be different (due to hash)
         assert slug1 != slug2
 
-    def test_route_accessible_by_slug(self, test_client, sample_route):
-        """Test that route can be accessed by URL slug."""
-        response = test_client.get(f"/routes/{sample_route.url_slug}")
 
-        assert response.status_code == 200
-        data = response.json()
-        assert data["route_id"] == sample_route.route_id
-        assert data["url_slug"] == sample_route.url_slug
-
-
-@pytest.mark.skip(reason="Route/session endpoints not currently mounted")
 @pytest.mark.integration
-class TestConcurrentOperations:
-    """Tests for handling concurrent operations."""
+class TestSessionIsolation:
+    """Tests for session-based route isolation."""
 
-    def test_multiple_sessions_isolated(self, test_client, test_db_session):
+    def test_multiple_sessions_isolated(self, test_client):
         """Test that routes from different sessions are isolated."""
-        from models import RouteSession
-
         # Create two sessions
-        session1 = RouteSession(session_name="Session 1")
-        session2 = RouteSession(session_name="Session 2")
-        test_db_session.add_all([session1, session2])
-        test_db_session.commit()
+        session1_id = test_client.post("/sessions").json()["session_id"]
+        session2_id = test_client.post("/sessions").json()["session_id"]
 
         # Create route for session1
         payload = {
@@ -472,14 +486,24 @@ class TestConcurrentOperations:
             "segments": CONNECTED_SEGMENTS,
             "is_public": False,
         }
-        test_client.post(f"/routes/save?session_id={session1.session_id}", json=payload)
+        test_client.post(
+            "/routes",
+            json=payload,
+            headers={"X-Session-Id": session1_id},
+        )
 
         # List routes for session2 (should be empty)
-        response = test_client.get(f"/routes/list?session_id={session2.session_id}")
+        response = test_client.get(
+            "/routes",
+            headers={"X-Session-Id": session2_id},
+        )
         data = response.json()
         assert len(data["routes"]) == 0
 
         # List routes for session1 (should have 1)
-        response = test_client.get(f"/routes/list?session_id={session1.session_id}")
+        response = test_client.get(
+            "/routes",
+            headers={"X-Session-Id": session1_id},
+        )
         data = response.json()
         assert len(data["routes"]) == 1
