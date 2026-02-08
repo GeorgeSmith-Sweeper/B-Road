@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from sqlalchemy.orm import Session
 
 from api.database import get_db_session
+from api.models.schemas import ChatSearchRequest
 from api.services.claude_service import ClaudeService
 from api.services.curvature_service import CurvatureService
 from api.services.query_builder import CurvatureQueryBuilder
@@ -136,26 +137,20 @@ async def extract_filters(
 
 @router.post("/search")
 async def chat_search(
-    query: str = Query(
-        ...,
-        description="Natural language query about finding roads",
-        example="Find super twisty roads in Vermont",
-    ),
-    limit: int = Query(
-        10,
-        ge=1,
-        le=50,
-        description="Maximum number of results to return",
-    ),
+    request: ChatSearchRequest,
     db: Session = Depends(get_db_session),
 ):
     """
-    Natural language road search.
+    Natural language road search with conversational responses.
 
     This endpoint:
     1. Uses Claude AI to extract search filters from natural language
     2. Queries the curvature database with those filters
-    3. Returns matching road segments as GeoJSON
+    3. Generates a conversational response describing the results
+    4. Returns matching road segments as GeoJSON with the response
+
+    Supports conversation history for follow-up queries like
+    "show me shorter ones" or "any in New Hampshire?".
 
     Example queries:
     - "Find super twisty roads in Vermont"
@@ -163,9 +158,17 @@ async def chat_search(
     - "What are the curviest roads over 10 miles long?"
     """
     try:
-        # Extract filters from natural language
+        # Convert history to list of dicts for the service
+        history = [
+            {"role": msg.role, "content": msg.content}
+            for msg in request.history
+        ]
+
+        # Extract filters from natural language (with history for context)
         claude_service = get_claude_service()
-        extracted_filters = await claude_service.extract_filters(query)
+        extracted_filters = await claude_service.extract_filters(
+            request.query, history=history if history else None
+        )
 
         # Build the database-ready filters
         builder = CurvatureQueryBuilder()
@@ -181,13 +184,24 @@ async def chat_search(
 
         # Query the database
         curvature_service = CurvatureService(db)
-        results = curvature_service.search_by_filters(db_filters, limit)
+        results = curvature_service.search_by_filters(db_filters, request.limit)
+
+        # Generate conversational response
+        response_text = ""
+        try:
+            response_text = await claude_service.generate_response(
+                request.query, results, history=history if history else None
+            )
+        except Exception as e:
+            logger.warning(f"Response generation failed, using fallback: {e}")
+            response_text = ""
 
         return {
-            "query": query,
+            "query": request.query,
             "filters": extracted_filters,
             "results": results,
             "count": results.get("metadata", {}).get("count", 0),
+            "response": response_text,
         }
 
     except HTTPException:

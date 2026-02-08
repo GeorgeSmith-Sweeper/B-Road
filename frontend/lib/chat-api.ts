@@ -4,9 +4,15 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+export interface ChatMessagePayload {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export interface ChatSearchResult {
   query: string;
   filters: Record<string, unknown>;
+  response: string;
   results: {
     type: 'FeatureCollection';
     features: Array<{
@@ -42,18 +48,15 @@ export interface ChatSearchResult {
  */
 export async function sendChatMessage(
   query: string,
-  limit: number = 10
+  limit: number = 10,
+  history: ChatMessagePayload[] = []
 ): Promise<ChatSearchResult> {
-  const params = new URLSearchParams({
-    query,
-    limit: limit.toString(),
-  });
-
-  const response = await fetch(`${API_BASE_URL}/chat/search?${params}`, {
+  const response = await fetch(`${API_BASE_URL}/chat/search`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
+    body: JSON.stringify({ query, limit, history }),
   });
 
   if (!response.ok) {

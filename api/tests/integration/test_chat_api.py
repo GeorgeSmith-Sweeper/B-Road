@@ -205,15 +205,19 @@ class TestChatSearchEndpoint:
 
     @patch("api.routers.chat.ClaudeService")
     def test_full_search_flow(self, mock_service_cls, test_client: TestClient):
-        """Should extract filters, query DB, and return GeoJSON results."""
+        """Should extract filters, query DB, and return GeoJSON results with response."""
         mock_instance = MagicMock()
         mock_instance.extract_filters = AsyncMock(
             return_value={"min_curvature": 1000, "sources": ["vermont"]}
         )
+        mock_instance.generate_response = AsyncMock(
+            return_value="Found some great curvy roads in Vermont!"
+        )
         mock_service_cls.return_value = mock_instance
 
         response = test_client.post(
-            "/chat/search?query=Find%20curvy%20roads%20in%20Vermont&limit=10"
+            "/chat/search",
+            json={"query": "Find curvy roads in Vermont", "limit": 10},
         )
         assert response.status_code == 200
         data = response.json()
@@ -222,7 +226,9 @@ class TestChatSearchEndpoint:
         assert "filters" in data
         assert "results" in data
         assert "count" in data
+        assert "response" in data
         assert data["results"]["type"] == "FeatureCollection"
+        assert data["response"] == "Found some great curvy roads in Vermont!"
 
     @patch("api.routers.chat.ClaudeService")
     def test_search_returns_matching_segments(
@@ -233,10 +239,12 @@ class TestChatSearchEndpoint:
         mock_instance.extract_filters = AsyncMock(
             return_value={"min_curvature": 2000, "sources": ["vermont"]}
         )
+        mock_instance.generate_response = AsyncMock(return_value="Great roads!")
         mock_service_cls.return_value = mock_instance
 
         response = test_client.post(
-            "/chat/search?query=Find%20very%20curvy%20roads%20in%20Vermont"
+            "/chat/search",
+            json={"query": "Find very curvy roads in Vermont"},
         )
         assert response.status_code == 200
         data = response.json()
@@ -254,9 +262,13 @@ class TestChatSearchEndpoint:
         mock_instance.extract_filters = AsyncMock(
             return_value={"min_curvature": 300}
         )
+        mock_instance.generate_response = AsyncMock(return_value="Here are roads!")
         mock_service_cls.return_value = mock_instance
 
-        response = test_client.post("/chat/search?query=Find%20roads&limit=2")
+        response = test_client.post(
+            "/chat/search",
+            json={"query": "Find roads", "limit": 2},
+        )
         assert response.status_code == 200
         data = response.json()
         assert len(data["results"]["features"]) <= 2
@@ -270,10 +282,14 @@ class TestChatSearchEndpoint:
         mock_instance.extract_filters = AsyncMock(
             return_value={"min_curvature": 999999}
         )
+        mock_instance.generate_response = AsyncMock(
+            return_value="No roads found. Try broadening your search."
+        )
         mock_service_cls.return_value = mock_instance
 
         response = test_client.post(
-            "/chat/search?query=Find%20impossibly%20curvy%20roads"
+            "/chat/search",
+            json={"query": "Find impossibly curvy roads"},
         )
         assert response.status_code == 200
         data = response.json()
@@ -282,7 +298,7 @@ class TestChatSearchEndpoint:
         assert data["count"] == 0
 
     def test_search_requires_query(self, test_client: TestClient):
-        """Should return 422 when query param is missing."""
+        """Should return 422 when request body is missing."""
         response = test_client.post("/chat/search")
         assert response.status_code == 422
 
@@ -294,21 +310,24 @@ class TestChatSearchEndpoint:
         mock_service_cls.side_effect = ValueError("ANTHROPIC_API_KEY not set")
 
         response = test_client.post(
-            "/chat/search?query=Find%20roads"
+            "/chat/search",
+            json={"query": "Find roads"},
         )
         assert response.status_code == 503
 
     def test_search_validates_limit_min(self, test_client: TestClient):
         """Should reject limit below 1."""
         response = test_client.post(
-            "/chat/search?query=Find%20roads&limit=0"
+            "/chat/search",
+            json={"query": "Find roads", "limit": 0},
         )
         assert response.status_code == 422
 
     def test_search_validates_limit_max(self, test_client: TestClient):
         """Should reject limit above 50."""
         response = test_client.post(
-            "/chat/search?query=Find%20roads&limit=100"
+            "/chat/search",
+            json={"query": "Find roads", "limit": 100},
         )
         assert response.status_code == 422
 
@@ -321,10 +340,12 @@ class TestChatSearchEndpoint:
         mock_instance.extract_filters = AsyncMock(
             return_value={"min_curvature": 1000, "sources": ["vermont"]}
         )
+        mock_instance.generate_response = AsyncMock(return_value="Nice roads!")
         mock_service_cls.return_value = mock_instance
 
         response = test_client.post(
-            "/chat/search?query=Find%20curvy%20roads%20in%20Vermont&limit=1"
+            "/chat/search",
+            json={"query": "Find curvy roads in Vermont", "limit": 1},
         )
         assert response.status_code == 200
         data = response.json()
@@ -344,3 +365,80 @@ class TestChatSearchEndpoint:
                 "source",
             ]:
                 assert key in props, f"Missing property: {key}"
+
+    @patch("api.routers.chat.ClaudeService")
+    def test_search_passes_history(self, mock_service_cls, test_client: TestClient):
+        """Should pass conversation history to extract_filters and generate_response."""
+        mock_instance = MagicMock()
+        mock_instance.extract_filters = AsyncMock(
+            return_value={"min_curvature": 1000, "max_length": 5}
+        )
+        mock_instance.generate_response = AsyncMock(
+            return_value="Here are shorter curvy roads!"
+        )
+        mock_service_cls.return_value = mock_instance
+
+        history = [
+            {"role": "user", "content": "Find curvy roads in Vermont"},
+            {"role": "assistant", "content": "Found 5 great roads!"},
+        ]
+
+        response = test_client.post(
+            "/chat/search",
+            json={
+                "query": "Show me shorter ones",
+                "history": history,
+            },
+        )
+        assert response.status_code == 200
+
+        # Verify history was passed to extract_filters
+        extract_call = mock_instance.extract_filters.call_args
+        assert extract_call[1]["history"] == history
+
+        # Verify history was passed to generate_response
+        gen_call = mock_instance.generate_response.call_args
+        assert gen_call[1]["history"] == history
+
+    @patch("api.routers.chat.ClaudeService")
+    def test_search_response_field_present(
+        self, mock_service_cls, test_client: TestClient
+    ):
+        """Should always include response field in the return data."""
+        mock_instance = MagicMock()
+        mock_instance.extract_filters = AsyncMock(return_value={"min_curvature": 1000})
+        mock_instance.generate_response = AsyncMock(return_value="Exciting roads!")
+        mock_service_cls.return_value = mock_instance
+
+        response = test_client.post(
+            "/chat/search",
+            json={"query": "Find curvy roads"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "response" in data
+        assert data["response"] == "Exciting roads!"
+
+    @patch("api.routers.chat.ClaudeService")
+    def test_search_fallback_on_generation_failure(
+        self, mock_service_cls, test_client: TestClient
+    ):
+        """Should return empty response string when generate_response fails."""
+        mock_instance = MagicMock()
+        mock_instance.extract_filters = AsyncMock(
+            return_value={"min_curvature": 1000, "sources": ["vermont"]}
+        )
+        mock_instance.generate_response = AsyncMock(
+            side_effect=RuntimeError("API error")
+        )
+        mock_service_cls.return_value = mock_instance
+
+        response = test_client.post(
+            "/chat/search",
+            json={"query": "Find curvy roads in Vermont"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        # Search still works, response falls back to empty string
+        assert data["response"] == ""
+        assert "results" in data

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { sendChatMessage, ChatSearchResult } from '@/lib/chat-api';
+import { sendChatMessage, ChatSearchResult, ChatMessagePayload } from '@/lib/chat-api';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -84,10 +84,15 @@ export default function ChatInterface({ onResultsReceived }: ChatInterfaceProps)
     setIsLoading(true);
 
     try {
-      const data = await sendChatMessage(query, 10);
+      // Build history from existing messages (skip the initial welcome message)
+      const history: ChatMessagePayload[] = messages
+        .slice(1)
+        .map((msg) => ({ role: msg.role, content: msg.content }));
 
-      // Format response text
-      const responseText = formatResults(data);
+      const data = await sendChatMessage(query, 10, history);
+
+      // Use Claude's conversational response, falling back to formatted results
+      const responseText = data.response || formatResults(data);
 
       const botMessage: Message = {
         role: 'assistant',

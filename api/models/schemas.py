@@ -85,3 +85,21 @@ class RouteListResponse(BaseModel):
     """Response for listing routes"""
 
     routes: List[RouteResponse]
+
+
+# Chat Models
+
+
+class ChatMessage(BaseModel):
+    """A single message in a chat conversation."""
+
+    role: str = Field(..., pattern="^(user|assistant)$")
+    content: str
+
+
+class ChatSearchRequest(BaseModel):
+    """Request body for natural language road search."""
+
+    query: str = Field(..., min_length=1)
+    limit: int = Field(10, ge=1, le=50)
+    history: List[ChatMessage] = Field(default_factory=list)
