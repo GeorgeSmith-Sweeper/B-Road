@@ -2,6 +2,8 @@
 *.kmz
 *.osm
 *.pbf
+*.osrm
+*.osrm.*
 *.bz2
 *.pyc
 images/*

@@ -121,7 +121,16 @@ cd api
 uvicorn server:app --reload --host 0.0.0.0 --port 8000
 ```
 
-8. **Open the application**:
+8. **Set up OSRM routing engine** (optional, for waypoint routing):
+```bash
+# Prepare OSRM data for a US state (e.g., north-carolina)
+./scripts/prepare-osrm.sh north-carolina
+
+# Start all services including OSRM
+docker compose --profile routing up -d
+```
+
+9. **Open the application**:
 ```
 Frontend: http://localhost:3000
 API Docs: http://localhost:8000/docs
@@ -281,6 +290,10 @@ This project inherits the license from [adamfranco/curvature](https://github.com
 - `PUT /routes/{route_id}` - Update route
 - `DELETE /routes/{route_id}` - Delete route
 
+### Routing Endpoints (requires OSRM)
+- `POST /routing/calculate` - Calculate route between waypoints via OSRM
+- `GET /routing/health` - OSRM routing engine health check
+
 ### Health & Configuration
 - `GET /health` - API health check
 - `GET /config` - Get frontend configuration (Mapbox token, etc.)
@@ -299,6 +312,7 @@ Future enhancements being considered:
 - [x] Route building and saving (click segments to build custom routes)
 - [x] AI-powered natural language search
 - [x] Google Maps and Street View integration
+- [ ] Waypoint routing with OSRM (drag-to-modify routes connected via road network)
 - [ ] GPX/KML export for saved routes
 - [ ] Elevation profiles using SRTM data
 - [ ] Additional map layers (satellite, terrain)
