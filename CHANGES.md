@@ -6,6 +6,149 @@ This document tracks the major architectural changes and feature additions to B-
 
 ---
 
+## February 2026 - Google Maps & Street View Integration
+
+**PR**: #18 (`feature/google-maps-integration`)
+**Commit**: `44c845b` - "feat: add Google Maps and Street View integration to map popups and route builder"
+
+### Overview
+
+Added Google Maps and Street View links throughout the application, allowing users to view any road segment or navigate a full route using Google Maps — no API key required.
+
+### Files Added
+- **frontend/lib/google-maps.ts** - Utility functions for generating Google Maps URLs
+
+### Files Modified
+- **frontend/components/Map.tsx** - Added Google Maps and Street View buttons to map popups
+- **frontend/components/RouteBuilderPanel.tsx** - Added per-segment Google links and route-wide "Get Directions" button
+
+### Features
+- **Map Popups**: Every road segment popup includes "Google Maps" and "Street View" buttons
+- **Route Builder Segments**: Hover over a segment to see Google Maps and Street View icon links
+- **Route Directions**: "Get Directions in Google Maps" button exports multi-waypoint routes for navigation
+- **Smart Midpoints**: Uses segment coordinate midpoints for optimal Street View positioning
+
+### URL Generation Utilities (`google-maps.ts`)
+- `getGoogleMapsUrl(lat, lon)` - Opens location in Google Maps
+- `getStreetViewUrl(lat, lon)` - Opens Google Street View panorama
+- `getDirectionsUrl(waypoints)` - Creates multi-stop directions URL
+- `getMidpoint(coordinates)` - Calculates midpoint from GeoJSON coordinates
+
+### No New Dependencies
+Uses Google's public URL schemes — no API key or additional packages required.
+
+---
+
+## February 2026 - Route Builder
+
+**PR**: #17 (`feature/route-builder`)
+**Commit**: `c3bbf0a` - "feat: add route builder with click-to-add, save, and map visualization"
+
+### Overview
+
+Interactive route builder that allows users to click road segments on the map to create custom driving routes, save them to the database, and share them via public URLs.
+
+### Backend Files Added
+- **api/routers/routes.py** - CRUD endpoints for saved routes
+- **api/routers/sessions.py** - Anonymous session management
+- **api/services/route_service.py** - Business logic for route operations
+- **api/models/orm.py** - ORM models (`RouteSession`, `SavedRoute`, `RouteSegment`)
+- **api/models/schemas.py** - Pydantic request/response schemas
+- **api/schema/saved_routes.sql** - PostgreSQL schema for routes
+
+### Frontend Files Added
+- **frontend/components/RouteBuilderPanel.tsx** - Main route builder panel UI
+- **frontend/components/SaveRouteDialog.tsx** - Save/share dialog
+- **frontend/components/SavedRoutesList.tsx** - List of saved routes
+- **frontend/components/ToasterProvider.tsx** - Toast notification provider
+- **frontend/lib/routes-api.ts** - Route API client
+- **frontend/store/useRouteStore.ts** - Zustand store for route state
+
+### API Endpoints Added
+- `POST /sessions` - Create anonymous session
+- `POST /routes` - Save a route (requires `X-Session-Id` header)
+- `GET /routes` - List all routes for session
+- `GET /routes/{route_id}` - Get route details
+- `GET /routes/shared/{slug}` - Get public route by URL slug
+- `PUT /routes/{route_id}` - Update route metadata
+- `DELETE /routes/{route_id}` - Delete a route
+
+### Database Schema (`saved_routes.sql`)
+- **route_sessions** - Anonymous user sessions (UUID primary key)
+- **saved_routes** - Route metadata with PostGIS `LINESTRING` geometry
+- **route_segments** - Normalized segment data with position ordering
+
+### Key Features
+- Click-to-add segments with duplicate prevention (by `way_id`)
+- Reorder segments (move up/down) and remove individual segments
+- Live route stats: total distance, curvature, and segment count
+- Save with name, description, and public/private toggle
+- Public routes get unique URL slugs for sharing
+- Purple route overlay and numbered stop markers on map
+- Session-based storage using `localStorage` (no auth required)
+
+### Dependencies Added
+- **Frontend**: `react-hot-toast@^2.6.0`
+
+---
+
+## February 2026 - LLM Chat Integration
+
+**PR**: #16 (`feature/llm-chat-integration`)
+
+### Overview
+
+Added AI-powered natural language search using Anthropic's Claude, enabling users to find roads with conversational queries like "Find super twisty roads in Vermont" or "Show me epic curvy mountain roads in Colorado."
+
+### Backend Files Added
+- **api/routers/chat.py** - Chat API endpoints
+- **api/services/claude_service.py** - Claude AI integration service
+- **api/services/query_builder.py** - Natural language to database filter conversion
+
+### Frontend Files Added
+- **frontend/components/ChatInterface.tsx** - Floating chat UI component
+- **frontend/lib/chat-api.ts** - Chat API client
+- **frontend/store/useChatStore.ts** - Zustand store for chat state
+
+### API Endpoints Added
+- `POST /chat/search` - Main natural language road search with conversation history
+- `POST /chat/extract-filters` - Extract structured filters from natural language
+- `POST /chat/test` - Test Claude API connectivity
+- `GET /chat/health` - Claude service health check
+
+### Key Features
+- **Natural Language Processing**: Claude interprets queries into structured database filters
+  - Curvature terms: "twisty" (1000), "very curvy" (2000), "epic" (8000)
+  - Length terms: "short" (<5 mi), "long" (>20 mi)
+  - Surface filtering: paved, unpaved, gravel
+  - Multi-state queries: "Colorado and Utah"
+- **Conversation History**: Follow-up queries maintain context (e.g., "now show shorter ones")
+- **Conversational Responses**: Claude generates friendly descriptions of search results
+- **Map Highlighting**: Search results displayed in cyan on the map for visual distinction
+- **State Name Normalization**: Handles "New York" → "new_york" conversion
+
+### Environment Variables Added
+- `ANTHROPIC_API_KEY` - Required for Claude AI service
+
+### Dependencies Added
+- **Backend**: `anthropic>=0.39.0`
+
+### Tests Added
+- **api/tests/integration/test_chat_api.py** - Integration tests for chat endpoints
+- **api/tests/unit/test_claude_service.py** - Unit tests for Claude service
+
+---
+
+## February 2026 - Context-Aware Chat Responses
+
+**Commit**: `508fb15` - "feat: add context-aware responses and conversation history to chat"
+
+### Overview
+
+Enhanced the chat search feature with conversation history support and context-aware responses, allowing Claude to generate more helpful, conversational replies based on prior interactions.
+
+---
+
 ## February 3, 2026 - Full US Data Load
 
 **Commit**: `ca826c5` - "Load all 50 US states into PostGIS (2.1M segments)"
@@ -344,17 +487,16 @@ CREATE INDEX idx_curvature_segments_source
 
 ## Future Roadmap
 
-Features removed in the PostGIS refactor that may be re-implemented:
+### Completed (previously planned)
+- ~~**Route Building**~~: Implemented in PR #17 with click-to-add, save, and share functionality
+- ~~**AI-Powered Search**~~: Implemented in PR #16 with Claude-powered natural language search
+- ~~**Google Maps Integration**~~: Implemented in PR #18 with Street View and directions export
 
-1. **Route Building**: Click segments to build custom routes
-   - New implementation will use PostGIS spatial queries
-   - Better connection validation using ST_Touches/ST_Intersects
-   - Stored in new saved_routes table
-
-2. **Export Functionality**: GPX/KML export of built routes
+### Remaining
+1. **Export Functionality**: GPX/KML export of built routes
    - Generate from PostGIS geometry
    - Include elevation data from SRTM
 
-3. **User Accounts**: Authentication and route sharing
+2. **User Accounts**: Authentication and route sharing
    - Multi-user support with route privacy settings
    - Public route gallery

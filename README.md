@@ -4,10 +4,27 @@ B-Road is a database-backed curvature visualization platform built on [adamfranc
 
 ## 🎯 What's New in B-Road
 
+### AI-Powered Natural Language Search
+- **Chat Interface**: Ask questions like "Find super twisty roads in Vermont" or "Show me epic curvy mountain roads"
+- **Claude AI Integration**: Powered by Anthropic's Claude to interpret natural language into structured database queries
+- **Conversation History**: Follow-up queries maintain context (e.g., "now show me shorter ones")
+- **Map Highlighting**: Search results are highlighted on the map in cyan for easy identification
+
+### Route Builder
+- **Click-to-Add**: Click road segments on the map to build custom driving routes
+- **Route Management**: Reorder, remove, and clear segments with live stats (distance, curvature, segment count)
+- **Save & Share**: Save routes with names and descriptions; share public routes via unique URL slugs
+- **Google Maps Directions**: Export full routes to Google Maps for turn-by-turn navigation
+
+### Google Maps & Street View Integration
+- **Map Popups**: View any road segment in Google Maps or Street View directly from the map popup
+- **Route Builder Links**: Each segment in a route includes Google Maps and Street View shortcuts
+- **No API Key Required**: Uses Google's public URL schemes for seamless access
+
 ### PostGIS Spatial Database
 - **Scalable Storage**: Curvature data stored in PostgreSQL/PostGIS with spatial indexes
 - **Viewport-Based Loading**: Efficiently loads only segments visible in the current map view
-- **Multi-State Support**: Query and visualize curvature data across multiple regions
+- **Multi-State Support**: Query and visualize curvature data across all 50 US states (2.1M+ segments)
 - **Optimized Queries**: Spatial indexes and zoom-based filtering for fast performance
 - **Source Filtering**: Filter by state/region to explore specific areas
 
@@ -25,7 +42,9 @@ B-Road is a database-backed curvature visualization platform built on [adamfranc
 - Python 3.11+
 - PostgreSQL 12+ with PostGIS extension
 - Node.js 18+ and npm (for frontend)
+- Docker and Docker Compose (recommended)
 - Mapbox API token ([get one here](https://www.mapbox.com/))
+- Anthropic API key ([get one here](https://console.anthropic.com/)) - for AI chat search
 - OpenStreetMap data in PBF or XML format
 
 ### Installation
@@ -69,6 +88,7 @@ cd api
 cat > .env <<EOF
 DATABASE_URL=postgresql://user:password@localhost:5432/curvature
 MAPBOX_ACCESS_TOKEN=your_mapbox_token_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
 EOF
 ```
 
@@ -122,10 +142,26 @@ API Docs: http://localhost:8000/docs
    - 1000-2000: Very curvy roads (red)
    - 2000+: Extremely twisty! (purple)
 5. **Click Roads**: Click any road segment to see details:
-   - Road name
-   - Curvature score
-   - Length in miles/kilometers
-   - Surface type
+   - Road name, curvature score, length, and surface type
+   - Google Maps and Street View links
+
+### AI Chat Search
+
+1. **Open Chat**: Click the chat icon in the bottom-right corner
+2. **Ask Questions**: Type natural language queries like:
+   - "Find twisty roads in Vermont"
+   - "Show me epic curvy mountain roads in Colorado"
+   - "Short paved roads with high curvature near California"
+3. **Follow Up**: Ask follow-up questions that maintain context (e.g., "now show shorter ones")
+4. **View Results**: Matching roads are highlighted in cyan on the map
+
+### Building Routes
+
+1. **Click Segments**: Click road segments on the map to add them to your route
+2. **Manage Route**: Use the route builder panel to reorder, remove, or clear segments
+3. **Save Route**: Give your route a name and description, optionally make it public
+4. **Share**: Copy the public URL to share your route with others
+5. **Navigate**: Click "Get Directions in Google Maps" to export your route for navigation
 
 ### Performance Tips
 
@@ -153,12 +189,14 @@ API Docs: http://localhost:8000/docs
 - FastAPI - Modern async Python web framework
 - PostgreSQL 12+ with PostGIS - Spatial database with geometric operations
 - SQLAlchemy - Database ORM with spatial query support
+- Anthropic Claude SDK - AI-powered natural language search
 - Python 3.11+ - Core language
 
 **Frontend**:
 - Next.js 14 - React framework with App Router
 - Mapbox GL JS - Interactive map rendering
 - Zustand - Lightweight state management
+- React Hot Toast - Toast notifications
 - TypeScript - Type-safe development
 - Tailwind CSS - Utility-first styling
 
@@ -229,6 +267,20 @@ This project inherits the license from [adamfranco/curvature](https://github.com
 - `GET /curvature/sources/{name}/bounds` - Get geographic bounds of a source
 - `GET /curvature/segments/{id}` - Get detailed info for a single segment
 
+### AI Chat Search Endpoints
+- `POST /chat/search` - Natural language road search with conversation history
+- `POST /chat/extract-filters` - Extract structured filters from natural language
+- `GET /chat/health` - Claude service health check
+
+### Route Builder Endpoints
+- `POST /sessions` - Create anonymous session
+- `POST /routes` - Save a route
+- `GET /routes` - List routes for session
+- `GET /routes/{route_id}` - Get route details
+- `GET /routes/shared/{slug}` - Get public route by URL slug
+- `PUT /routes/{route_id}` - Update route
+- `DELETE /routes/{route_id}` - Delete route
+
 ### Health & Configuration
 - `GET /health` - API health check
 - `GET /config` - Get frontend configuration (Mapbox token, etc.)
@@ -244,7 +296,9 @@ See [API_README.md](API_README.md) for complete endpoint documentation.
 
 Future enhancements being considered:
 
-- [ ] Route building and saving (click segments to build custom routes)
+- [x] Route building and saving (click segments to build custom routes)
+- [x] AI-powered natural language search
+- [x] Google Maps and Street View integration
 - [ ] GPX/KML export for saved routes
 - [ ] Elevation profiles using SRTM data
 - [ ] Additional map layers (satellite, terrain)
@@ -256,7 +310,7 @@ Future enhancements being considered:
 
 ## 📈 Project Status
 
-**Current Version**: 1.0.0 (Initial Release)
+**Current Version**: 1.1.0
 
 **Status**: Active development - the core features are stable and functional.
 
