@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { useAppStore } from '@/store/useAppStore';
 import { useChatStore } from '@/store/useChatStore';
 import { useRouteStore, RouteSegmentData } from '@/store/useRouteStore';
+import { getGoogleMapsUrl, getStreetViewUrl, getMidpoint } from '@/lib/google-maps';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -186,6 +187,18 @@ export default function Map() {
         const lengthMi = props.length ? (props.length / 1609).toFixed(2) : '?';
         const surface = props.paved ? 'paved' : 'unpaved';
 
+        // Compute midpoint for Google Maps links
+        let popupLat = e.lngLat.lat;
+        let popupLon = e.lngLat.lng;
+        if (feature.geometry.type === 'LineString') {
+          const coords = (feature.geometry as GeoJSON.LineString).coordinates as [number, number][];
+          if (coords.length > 0) {
+            [popupLat, popupLon] = getMidpoint(coords);
+          }
+        }
+        const mapsUrl = getGoogleMapsUrl(popupLat, popupLon);
+        const streetViewUrl = getStreetViewUrl(popupLat, popupLon);
+
         new mapboxgl.Popup()
           .setLngLat(e.lngLat)
           .setHTML(`
@@ -193,7 +206,17 @@ export default function Map() {
               <strong>${props.name || 'Unnamed Road'}</strong><br/>
               Curvature: ${props.curvature}<br/>
               Length: ${lengthMi} mi<br/>
-              Surface: ${surface}
+              Surface: ${surface}<br/>
+              <div style="margin-top: 8px; display: flex; gap: 6px;">
+                <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer"
+                   style="font-size: 12px; color: #4285F4; text-decoration: none; padding: 2px 6px; border: 1px solid #4285F4; border-radius: 4px;">
+                  Google Maps
+                </a>
+                <a href="${streetViewUrl}" target="_blank" rel="noopener noreferrer"
+                   style="font-size: 12px; color: #34A853; text-decoration: none; padding: 2px 6px; border: 1px solid #34A853; border-radius: 4px;">
+                  Street View
+                </a>
+              </div>
             </div>
           `)
           .addTo(map);
@@ -298,8 +321,21 @@ export default function Map() {
     // Add click handler for chat results
     map.on('click', 'chat-results-layer', (e: mapboxgl.MapLayerMouseEvent) => {
       if (!e.features?.length) return;
-      const props = e.features[0].properties;
+      const feature = e.features[0];
+      const props = feature.properties;
       if (!props) return;
+
+      // Compute midpoint for Google Maps links
+      let chatLat = e.lngLat.lat;
+      let chatLon = e.lngLat.lng;
+      if (feature.geometry.type === 'LineString') {
+        const coords = (feature.geometry as GeoJSON.LineString).coordinates as [number, number][];
+        if (coords.length > 0) {
+          [chatLat, chatLon] = getMidpoint(coords);
+        }
+      }
+      const chatMapsUrl = getGoogleMapsUrl(chatLat, chatLon);
+      const chatStreetViewUrl = getStreetViewUrl(chatLat, chatLon);
 
       new mapboxgl.Popup()
         .setLngLat(e.lngLat)
@@ -310,6 +346,16 @@ export default function Map() {
             Curvature: <strong>${props.curvature?.toLocaleString()}</strong><br/>
             Length: ${props.length_mi?.toFixed(1) || '?'} mi<br/>
             Surface: ${props.surface || (props.paved ? 'paved' : 'unpaved')}
+            <div style="margin-top: 8px; display: flex; gap: 6px;">
+              <a href="${chatMapsUrl}" target="_blank" rel="noopener noreferrer"
+                 style="font-size: 12px; color: #4285F4; text-decoration: none; padding: 2px 6px; border: 1px solid #4285F4; border-radius: 4px;">
+                Google Maps
+              </a>
+              <a href="${chatStreetViewUrl}" target="_blank" rel="noopener noreferrer"
+                 style="font-size: 12px; color: #34A853; text-decoration: none; padding: 2px 6px; border: 1px solid #34A853; border-radius: 4px;">
+                Street View
+              </a>
+            </div>
           </div>
         `)
         .addTo(map);

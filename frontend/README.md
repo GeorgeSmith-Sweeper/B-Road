@@ -11,6 +11,7 @@ Modern Next.js 14 frontend for the B-Road Curvature project, replacing the vanil
 - **Route Building**: Click connected segments to build custom twisty routes
 - **Session Persistence**: Routes saved to your session with localStorage
 - **Export Support**: Export routes to GPX/KML formats
+- **Google Maps Integration**: Street View previews and Google Maps navigation links from map popups and route builder
 
 ## Tech Stack
 
@@ -72,7 +73,8 @@ frontend/
 ├── store/
 │   └── useAppStore.ts      # Zustand store for state management
 ├── lib/
-│   └── api.ts              # API client for FastAPI backend
+│   ├── api.ts              # API client for FastAPI backend
+│   └── google-maps.ts      # Google Maps/Street View URL helpers
 └── types/
     └── index.ts            # TypeScript type definitions
 ```
