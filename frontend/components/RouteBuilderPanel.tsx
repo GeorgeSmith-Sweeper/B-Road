@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouteStore, RouteSegmentData } from '@/store/useRouteStore';
+import { getGoogleMapsUrl, getStreetViewUrl, getDirectionsUrl, getMidpoint } from '@/lib/google-maps';
 import SaveRouteDialog from './SaveRouteDialog';
 import SavedRoutesList from './SavedRoutesList';
 
@@ -93,19 +94,37 @@ export default function RouteBuilderPanel() {
 
           {/* Action Buttons */}
           {segmentCount > 0 && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowSaveDialog(true)}
-                className="flex-1 bg-purple-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-purple-700 transition-colors"
-              >
-                Save Route
-              </button>
-              <button
-                onClick={clearRoute}
-                className="px-3 py-2 border border-gray-300 text-gray-600 rounded text-sm hover:bg-gray-50 transition-colors"
-              >
-                Clear
-              </button>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowSaveDialog(true)}
+                  className="flex-1 bg-purple-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-purple-700 transition-colors"
+                >
+                  Save Route
+                </button>
+                <button
+                  onClick={clearRoute}
+                  className="px-3 py-2 border border-gray-300 text-gray-600 rounded text-sm hover:bg-gray-50 transition-colors"
+                >
+                  Clear
+                </button>
+              </div>
+              {segmentCount >= 2 && (
+                <a
+                  href={getDirectionsUrl(
+                    routeSegments.map((seg) =>
+                      seg.coordinates.length > 0
+                        ? getMidpoint(seg.coordinates)
+                        : [seg.start[0], seg.start[1]]
+                    )
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-center bg-blue-600 text-white px-3 py-2 rounded text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Get Directions in Google Maps
+                </a>
+              )}
             </div>
           )}
         </>
@@ -154,6 +173,39 @@ function SegmentItem({
 
       {/* Controls */}
       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        {(() => {
+          const [lat, lon] = segment.coordinates.length > 0
+            ? getMidpoint(segment.coordinates)
+            : [segment.start[0], segment.start[1]];
+          return (
+            <>
+              <a
+                href={getGoogleMapsUrl(lat, lon)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1 text-gray-400 hover:text-blue-500"
+                title="Open in Google Maps"
+              >
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+              </a>
+              <a
+                href={getStreetViewUrl(lat, lon)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1 text-gray-400 hover:text-green-500"
+                title="Open in Street View"
+              >
+                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12.56 14.33c-.34.27-.56.7-.56 1.17V21h7c1.1 0 2-.9 2-2v-5.98c-.94-.33-1.95-.52-3-.52-2.03 0-3.93.7-5.44 1.83z"/>
+                  <circle cx="18" cy="6" r="5"/>
+                  <path d="M11.5 6c0-1.08.27-2.1.74-3H5c-1.1 0-2 .9-2 2v14c0 .55.23 1.05.59 1.41l9.82-9.82C12.23 9.42 11.5 7.8 11.5 6z"/>
+                </svg>
+              </a>
+            </>
+          );
+        })()}
         <button
           onClick={onMoveUp}
           disabled={index === 0}
