@@ -27,7 +27,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from server import app
-from models import Base, RouteSession, SavedRoute, RouteSegment
+from models import Base, RouteSession, SavedRoute, RouteSegment, RouteWaypoint
 from database import get_db
 
 # Import test data fixtures
@@ -465,6 +465,7 @@ def clean_database(test_engine):
     db = TestSessionLocal()
     try:
         # Delete in reverse order to respect foreign key constraints
+        db.query(RouteWaypoint).delete()
         db.query(RouteSegment).delete()
         db.query(SavedRoute).delete()
         db.query(RouteSession).delete()
@@ -473,6 +474,7 @@ def clean_database(test_engine):
         yield
 
         # Cleanup: delete again after test
+        db.query(RouteWaypoint).delete()
         db.query(RouteSegment).delete()
         db.query(SavedRoute).delete()
         db.query(RouteSession).delete()
