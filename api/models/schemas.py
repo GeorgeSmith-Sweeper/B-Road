@@ -2,7 +2,7 @@
 Pydantic models for API request/response validation.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import Optional, List
 
 # Request Models
@@ -23,13 +23,38 @@ class SegmentData(BaseModel):
     surface: Optional[str] = None
 
 
+class WaypointData(BaseModel):
+    """Waypoint data for saving waypoint-based routes"""
+
+    lng: float = Field(..., ge=-180, le=180)
+    lat: float = Field(..., ge=-90, le=90)
+    order: int = Field(..., ge=0)
+    segment_id: Optional[str] = None
+    is_user_modified: bool = False
+
+
 class SaveRouteRequest(BaseModel):
-    """Request body for saving a route"""
+    """Request body for saving a route (segment-list or waypoint-based)"""
 
     route_name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
-    segments: List[SegmentData] = Field(..., min_length=1)
+    segments: Optional[List[SegmentData]] = None
+    waypoints: Optional[List[WaypointData]] = None
+    connecting_geometry: Optional[dict] = None
+    route_type: str = Field(default="segment_list", pattern="^(segment_list|waypoint)$")
     is_public: bool = False
+
+    @model_validator(mode="after")
+    def validate_route_data(self):
+        if self.route_type == "segment_list":
+            if not self.segments or len(self.segments) == 0:
+                raise ValueError("segments required for segment_list routes")
+        elif self.route_type == "waypoint":
+            if not self.waypoints or len(self.waypoints) < 2:
+                raise ValueError("at least 2 waypoints required for waypoint routes")
+            if not self.connecting_geometry:
+                raise ValueError("connecting_geometry required for waypoint routes")
+        return self
 
 
 class UpdateRouteRequest(BaseModel):
@@ -41,6 +66,16 @@ class UpdateRouteRequest(BaseModel):
 
 
 # Response Models
+
+
+class WaypointResponse(BaseModel):
+    """Waypoint in a route response"""
+
+    lng: float
+    lat: float
+    order: int
+    segment_id: Optional[str] = None
+    is_user_modified: bool = False
 
 
 class RouteResponse(BaseModel):
@@ -56,6 +91,7 @@ class RouteResponse(BaseModel):
     url_slug: str
     created_at: str
     is_public: bool
+    route_type: str = "segment_list"
 
 
 class RouteDetailResponse(RouteResponse):
@@ -63,6 +99,8 @@ class RouteDetailResponse(RouteResponse):
 
     geojson: dict
     segments: List[dict]
+    waypoints: Optional[List[WaypointResponse]] = None
+    connecting_geometry: Optional[dict] = None
 
 
 class SaveRouteResponse(BaseModel):

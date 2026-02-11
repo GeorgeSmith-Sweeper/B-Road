@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from shapely.geometry import LineString
 from geoalchemy2.shape import from_shape
 
-from api.models.orm import SavedRoute, RouteSegment
+from api.models.orm import SavedRoute, RouteSegment, RouteWaypoint
 from api.models.schemas import (
     SaveRouteRequest,
     UpdateRouteRequest,
@@ -20,6 +20,7 @@ from api.models.schemas import (
     RouteDetailResponse,
     RouteListResponse,
     SaveRouteResponse,
+    WaypointResponse,
 )
 from api.repositories.route_repository import RouteRepository
 from api.repositories.session_repository import SessionRepository
@@ -39,14 +40,14 @@ class RouteService:
         self, request: SaveRouteRequest, session_id: str
     ) -> SaveRouteResponse:
         """
-        Save a stitched route to the database.
+        Save a route to the database (segment-list or waypoint-based).
 
         Business logic:
         - Validates session exists
         - Calculates route statistics
         - Builds PostGIS LineString geometry
         - Generates unique URL slug
-        - Creates route and segments in transaction
+        - Creates route and segments/waypoints in transaction
         """
         # Validate session
         session_uuid = uuid.UUID(session_id)
@@ -54,6 +55,18 @@ class RouteService:
         if not session:
             raise ValueError("Session not found")
 
+        # Generate URL slug
+        url_slug = self._generate_url_slug(request.route_name, session_id)
+
+        if request.route_type == "waypoint":
+            return self._save_waypoint_route(request, session_uuid, url_slug)
+        else:
+            return self._save_segment_route(request, session_uuid, url_slug)
+
+    def _save_segment_route(
+        self, request: SaveRouteRequest, session_uuid: uuid.UUID, url_slug: str
+    ) -> SaveRouteResponse:
+        """Save a segment-list route."""
         # Calculate statistics
         total_curvature = sum(seg.curvature for seg in request.segments)
         total_length = sum(seg.length for seg in request.segments)
@@ -68,9 +81,6 @@ class RouteService:
 
         linestring = LineString(coords)
 
-        # Generate URL slug
-        url_slug = self._generate_url_slug(request.route_name, session_id)
-
         # Create route
         route = SavedRoute(
             session_id=session_uuid,
@@ -83,6 +93,7 @@ class RouteService:
             route_data={"segments": [seg.model_dump() for seg in request.segments]},
             url_slug=url_slug,
             is_public=request.is_public,
+            route_type="segment_list",
         )
 
         route = self.route_repo.create_route(route)
@@ -114,13 +125,81 @@ class RouteService:
             route_id=route.route_id, url_slug=url_slug, share_url=f"/routes/{url_slug}"
         )
 
+    def _save_waypoint_route(
+        self, request: SaveRouteRequest, session_uuid: uuid.UUID, url_slug: str
+    ) -> SaveRouteResponse:
+        """Save a waypoint-based route with OSRM connecting geometry."""
+        geom_coords = request.connecting_geometry.get("coordinates", [])
+        total_length = 0
+        # Approximate length from geometry coordinates (haversine would be better,
+        # but the distance from OSRM is already in the connecting_geometry properties
+        # or was displayed client-side; we store 0 and let the client pass it)
+        if len(geom_coords) >= 2:
+            linestring = LineString(geom_coords)
+            connecting_geom = from_shape(linestring, srid=4326)
+        else:
+            linestring = LineString(
+                [(wp.lng, wp.lat) for wp in request.waypoints]
+            )
+            connecting_geom = from_shape(linestring, srid=4326)
+
+        # Build basic geometry from waypoints for the geom column
+        waypoint_linestring = LineString(
+            [(wp.lng, wp.lat) for wp in request.waypoints]
+        )
+
+        route = SavedRoute(
+            session_id=session_uuid,
+            route_name=request.route_name,
+            description=request.description,
+            total_curvature=0,
+            total_length=total_length,
+            segment_count=len(request.waypoints),
+            geom=from_shape(waypoint_linestring, srid=4326),
+            route_data={
+                "waypoints": [wp.model_dump() for wp in request.waypoints],
+                "connecting_geometry": request.connecting_geometry,
+            },
+            url_slug=url_slug,
+            is_public=request.is_public,
+            route_type="waypoint",
+            connecting_geometry=connecting_geom,
+        )
+
+        route = self.route_repo.create_route(route)
+
+        # Create waypoint records
+        for wp in request.waypoints:
+            waypoint = RouteWaypoint(
+                route_id=route.route_id,
+                waypoint_order=wp.order,
+                lng=wp.lng,
+                lat=wp.lat,
+                segment_id=wp.segment_id,
+                is_user_modified=wp.is_user_modified,
+            )
+            self.db.add(waypoint)
+        self.db.flush()
+
+        return SaveRouteResponse(
+            route_id=route.route_id, url_slug=url_slug, share_url=f"/routes/{url_slug}"
+        )
+
     def get_route(self, identifier: str) -> RouteDetailResponse:
         """Get route details by ID or slug"""
         route = self.route_repo.get_by_id_or_slug(identifier)
         if not route:
             raise ValueError("Route not found")
 
-        # Build GeoJSON
+        route_type = route.route_type or "segment_list"
+
+        if route_type == "waypoint":
+            return self._get_waypoint_route_detail(route)
+        else:
+            return self._get_segment_route_detail(route)
+
+    def _get_segment_route_detail(self, route: SavedRoute) -> RouteDetailResponse:
+        """Build detail response for segment-list route."""
         coords = []
         for seg in sorted(route.segments, key=lambda s: s.position):
             if len(coords) == 0:
@@ -138,6 +217,7 @@ class RouteService:
             url_slug=route.url_slug,
             created_at=route.created_at.isoformat(),
             is_public=route.is_public,
+            route_type="segment_list",
             geojson={
                 "type": "Feature",
                 "geometry": {"type": "LineString", "coordinates": coords},
@@ -147,7 +227,50 @@ class RouteService:
                     "length_mi": route.total_length / 1609.34,
                 },
             },
-            segments=route.route_data["segments"],
+            segments=route.route_data.get("segments", []),
+        )
+
+    def _get_waypoint_route_detail(self, route: SavedRoute) -> RouteDetailResponse:
+        """Build detail response for waypoint route."""
+        # Use connecting geometry from route_data for GeoJSON
+        connecting_geo = route.route_data.get("connecting_geometry", {})
+        coords = connecting_geo.get("coordinates", [])
+
+        waypoint_responses = [
+            WaypointResponse(
+                lng=wp.lng,
+                lat=wp.lat,
+                order=wp.waypoint_order,
+                segment_id=wp.segment_id,
+                is_user_modified=wp.is_user_modified,
+            )
+            for wp in sorted(route.waypoints, key=lambda w: w.waypoint_order)
+        ]
+
+        return RouteDetailResponse(
+            route_id=route.route_id,
+            route_name=route.route_name,
+            description=route.description,
+            total_curvature=route.total_curvature or 0,
+            total_length_km=(route.total_length or 0) / 1000,
+            total_length_mi=(route.total_length or 0) / 1609.34,
+            segment_count=route.segment_count,
+            url_slug=route.url_slug,
+            created_at=route.created_at.isoformat(),
+            is_public=route.is_public,
+            route_type="waypoint",
+            geojson={
+                "type": "Feature",
+                "geometry": {"type": "LineString", "coordinates": coords},
+                "properties": {
+                    "name": route.route_name,
+                    "curvature": route.total_curvature or 0,
+                    "length_mi": (route.total_length or 0) / 1609.34,
+                },
+            },
+            segments=[],
+            waypoints=waypoint_responses,
+            connecting_geometry=connecting_geo,
         )
 
     def list_routes(self, session_id: str) -> RouteListResponse:
@@ -160,13 +283,14 @@ class RouteService:
                 route_id=r.route_id,
                 route_name=r.route_name,
                 description=r.description,
-                total_curvature=r.total_curvature,
-                total_length_km=r.total_length / 1000,
-                total_length_mi=r.total_length / 1609.34,
+                total_curvature=r.total_curvature or 0,
+                total_length_km=(r.total_length or 0) / 1000,
+                total_length_mi=(r.total_length or 0) / 1609.34,
                 segment_count=r.segment_count,
                 url_slug=r.url_slug,
                 created_at=r.created_at.isoformat(),
                 is_public=r.is_public,
+                route_type=r.route_type or "segment_list",
             )
             for r in routes
         ]

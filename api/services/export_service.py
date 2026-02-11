@@ -16,6 +16,33 @@ class ExportService:
         self.db = db
         self.route_repo = RouteRepository(db)
 
+    def _get_route_coordinates(self, route) -> list[tuple[float, float]]:
+        """
+        Get route coordinates as list of (lon, lat) tuples.
+
+        For waypoint routes, uses the connecting geometry (full OSRM road-snapped path).
+        For segment-list routes, uses segment start/end points.
+        """
+        route_type = getattr(route, "route_type", None) or "segment_list"
+
+        if route_type == "waypoint":
+            connecting_geo = (route.route_data or {}).get("connecting_geometry", {})
+            coords = connecting_geo.get("coordinates", [])
+            if coords:
+                return [(c[0], c[1]) for c in coords]
+            # Fallback to waypoint positions
+            return [
+                (wp.lng, wp.lat)
+                for wp in sorted(route.waypoints, key=lambda w: w.waypoint_order)
+            ]
+        else:
+            coords = []
+            for seg in sorted(route.segments, key=lambda s: s.position):
+                if seg.position == 1:
+                    coords.append((seg.start_lon, seg.start_lat))
+                coords.append((seg.end_lon, seg.end_lat))
+            return coords
+
     def export_gpx(self, identifier: str) -> tuple[str, str]:
         """
         Export route as GPX file.
@@ -40,13 +67,9 @@ class ExportService:
         gpx_segment = gpxpy.gpx.GPXTrackSegment()
         gpx_track.segments.append(gpx_segment)
 
-        # Add points
-        for seg in sorted(route.segments, key=lambda s: s.position):
-            if seg.position == 1:
-                gpx_segment.points.append(
-                    gpxpy.gpx.GPXTrackPoint(seg.start_lat, seg.start_lon)
-                )
-            gpx_segment.points.append(gpxpy.gpx.GPXTrackPoint(seg.end_lat, seg.end_lon))
+        # Add points from coordinates (lon, lat) -> GPXTrackPoint(lat, lon)
+        for lon, lat in self._get_route_coordinates(route):
+            gpx_segment.points.append(gpxpy.gpx.GPXTrackPoint(lat, lon))
 
         gpx_xml = gpx.to_xml()
         filename = f"{route.url_slug}.gpx"
@@ -64,6 +87,9 @@ class ExportService:
         if not route:
             raise ValueError("Route not found")
 
+        total_curvature = route.total_curvature or 0
+        total_length = route.total_length or 0
+
         # Build KML
         kml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
@@ -79,8 +105,8 @@ class ExportService:
     <Placemark>
       <name>{route.route_name}</name>
       <description>
-Curvature: {route.total_curvature:.0f}
-Distance: {route.total_length / 1609.34:.1f} mi ({route.total_length / 1000:.1f} km)
+Curvature: {total_curvature:.0f}
+Distance: {total_length / 1609.34:.1f} mi ({total_length / 1000:.1f} km)
 Segments: {route.segment_count}
       </description>
       <styleUrl>#route-style</styleUrl>
@@ -89,10 +115,8 @@ Segments: {route.segment_count}
 """
 
         # Add coordinates
-        for seg in sorted(route.segments, key=lambda s: s.position):
-            if seg.position == 1:
-                kml += f"{seg.start_lon},{seg.start_lat},0\n"
-            kml += f"{seg.end_lon},{seg.end_lat},0\n"
+        for lon, lat in self._get_route_coordinates(route):
+            kml += f"{lon},{lat},0\n"
 
         kml += """        </coordinates>
       </LineString>

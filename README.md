@@ -15,6 +15,12 @@ B-Road is a database-backed curvature visualization platform built on [adamfranc
 - **Route Management**: Reorder, remove, and clear segments with live stats (distance, curvature, segment count)
 - **Save & Share**: Save routes with names and descriptions; share public routes via unique URL slugs
 - **Google Maps Directions**: Export full routes to Google Maps for turn-by-turn navigation
+- **GPX/KML Export**: Download saved routes as GPX or KML files for use in GPS devices and mapping apps
+
+### Waypoint Router (OSRM)
+- **Click-to-Route**: Click curvature segments to add waypoints; OSRM calculates road-snapped routes between them
+- **Draggable Waypoints**: Drag markers on the map to adjust routes in real-time with debounced recalculation
+- **Save & Export**: Save waypoint routes with full OSRM road-snapped geometry; export as GPX or KML
 
 ### Google Maps & Street View Integration
 - **Map Popups**: View any road segment in Google Maps or Street View directly from the map popup
@@ -283,10 +289,12 @@ This project inherits the license from [adamfranco/curvature](https://github.com
 
 ### Route Builder Endpoints
 - `POST /sessions` - Create anonymous session
-- `POST /routes` - Save a route
+- `POST /routes` - Save a route (segment-list or waypoint-based)
 - `GET /routes` - List routes for session
 - `GET /routes/{route_id}` - Get route details
 - `GET /routes/shared/{slug}` - Get public route by URL slug
+- `GET /routes/shared/{slug}/export/gpx` - Export route as GPX file
+- `GET /routes/shared/{slug}/export/kml` - Export route as KML file
 - `PUT /routes/{route_id}` - Update route
 - `DELETE /routes/{route_id}` - Delete route
 
@@ -312,8 +320,8 @@ Future enhancements being considered:
 - [x] Route building and saving (click segments to build custom routes)
 - [x] AI-powered natural language search
 - [x] Google Maps and Street View integration
-- [ ] Waypoint routing with OSRM (drag-to-modify routes connected via road network)
-- [ ] GPX/KML export for saved routes
+- [x] Waypoint routing with OSRM (drag-to-modify routes connected via road network)
+- [x] GPX/KML export for saved routes
 - [ ] Elevation profiles using SRTM data
 - [ ] Additional map layers (satellite, terrain)
 - [ ] Mobile app with offline support

@@ -7,7 +7,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 export interface SaveRouteRequest {
   route_name: string;
   description?: string;
-  segments: Array<{
+  segments?: Array<{
     way_id: number;
     start: [number, number];
     end: [number, number];
@@ -19,6 +19,18 @@ export interface SaveRouteRequest {
     highway?: string | null;
     surface?: string | null;
   }>;
+  waypoints?: Array<{
+    lng: number;
+    lat: number;
+    order: number;
+    segment_id?: string | null;
+    is_user_modified?: boolean;
+  }>;
+  connecting_geometry?: {
+    type: string;
+    coordinates: [number, number][];
+  };
+  route_type?: 'segment_list' | 'waypoint';
   is_public: boolean;
 }
 
@@ -40,6 +52,15 @@ export interface RouteResponse {
   url_slug: string;
   created_at: string;
   is_public: boolean;
+  route_type: 'segment_list' | 'waypoint';
+}
+
+export interface WaypointResponse {
+  lng: number;
+  lat: number;
+  order: number;
+  segment_id?: string | null;
+  is_user_modified: boolean;
 }
 
 export interface RouteDetailResponse extends RouteResponse {
@@ -52,6 +73,11 @@ export interface RouteDetailResponse extends RouteResponse {
     properties: Record<string, unknown>;
   };
   segments: Array<Record<string, unknown>>;
+  waypoints?: WaypointResponse[];
+  connecting_geometry?: {
+    type: string;
+    coordinates: [number, number][];
+  };
 }
 
 export interface SessionResponse {
@@ -149,4 +175,18 @@ export async function deleteRoute(
     const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
     throw new Error(error.detail || `Failed to delete route: ${response.status}`);
   }
+}
+
+/**
+ * Get the GPX export URL for a route.
+ */
+export function getGpxExportUrl(slug: string): string {
+  return `${API_BASE_URL}/routes/shared/${slug}/export/gpx`;
+}
+
+/**
+ * Get the KML export URL for a route.
+ */
+export function getKmlExportUrl(slug: string): string {
+  return `${API_BASE_URL}/routes/shared/${slug}/export/kml`;
 }

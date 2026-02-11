@@ -7,10 +7,12 @@ identified by X-Session-Id header.
 """
 
 from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from api.database import get_db_session
 from api.services.route_service import RouteService
+from api.services.export_service import ExportService
 from api.models.schemas import (
     SaveRouteRequest,
     UpdateRouteRequest,
@@ -25,6 +27,11 @@ router = APIRouter(prefix="/routes", tags=["routes"])
 def get_route_service(db: Session = Depends(get_db_session)) -> RouteService:
     """Dependency injection for route service."""
     return RouteService(db)
+
+
+def get_export_service(db: Session = Depends(get_db_session)) -> ExportService:
+    """Dependency injection for export service."""
+    return ExportService(db)
 
 
 def require_session_id(x_session_id: str = Header(...)) -> str:
@@ -167,3 +174,41 @@ async def delete_route(
             status_code=500,
             detail=f"Failed to delete route: {str(e)}",
         )
+
+
+@router.get("/shared/{slug}/export/gpx")
+async def export_shared_route_gpx(
+    slug: str,
+    service: ExportService = Depends(get_export_service),
+):
+    """Export a public route as GPX file."""
+    try:
+        gpx_content, filename = service.export_gpx(slug)
+        return Response(
+            content=gpx_content,
+            media_type="application/gpx+xml",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
+
+
+@router.get("/shared/{slug}/export/kml")
+async def export_shared_route_kml(
+    slug: str,
+    service: ExportService = Depends(get_export_service),
+):
+    """Export a public route as KML file."""
+    try:
+        kml_content, filename = service.export_kml(slug)
+        return Response(
+            content=kml_content,
+            media_type="application/vnd.google-earth.kml+xml",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")

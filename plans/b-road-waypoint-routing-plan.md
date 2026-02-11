@@ -227,10 +227,10 @@ The following already exists and **must not be modified** unless extending:
 6. Add export buttons to UI
 
 **Acceptance Criteria**:
-- [ ] Existing saved routes still load correctly (backward compatible)
-- [ ] New routes save with waypoints and connecting geometry
-- [ ] GPX export includes full road-snapped route
-- [ ] KML export includes full road-snapped route
+- [x] Existing saved routes still load correctly (backward compatible)
+- [x] New routes save with waypoints and connecting geometry
+- [x] GPX export includes full road-snapped route
+- [x] KML export includes full road-snapped route
 - [ ] Full lifecycle: click → drag → save → load → export → delete
 
 ---

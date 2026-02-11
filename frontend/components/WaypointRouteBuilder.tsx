@@ -1,6 +1,10 @@
 'use client';
 
+import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useWaypointRouteStore } from '@/store/useWaypointRouteStore';
+import { useRouteStore } from '@/store/useRouteStore';
+import { createSession, saveRoute, getGpxExportUrl, getKmlExportUrl } from '@/lib/routes-api';
 import type { Waypoint } from '@/types/routing';
 
 export default function WaypointRouteBuilder() {
@@ -15,10 +19,58 @@ export default function WaypointRouteBuilder() {
     getTotalDuration,
     getWaypointCount,
   } = useWaypointRouteStore();
+  const { sessionId, setSessionId } = useRouteStore();
+
+  const [saving, setSaving] = useState(false);
+  const [showSaveForm, setShowSaveForm] = useState(false);
+  const [routeName, setRouteName] = useState('');
+  const [description, setDescription] = useState('');
+  const [isPublic, setIsPublic] = useState(false);
+  const [savedSlug, setSavedSlug] = useState<string | null>(null);
 
   const totalDistance = getTotalDistance();
   const totalDuration = getTotalDuration();
   const waypointCount = getWaypointCount();
+
+  const handleSave = async () => {
+    if (!routeName.trim() || !calculatedRoute) return;
+
+    setSaving(true);
+    try {
+      let currentSessionId = sessionId;
+      if (!currentSessionId) {
+        const session = await createSession();
+        currentSessionId = session.session_id;
+        setSessionId(currentSessionId);
+      }
+
+      const result = await saveRoute(currentSessionId, {
+        route_name: routeName.trim(),
+        description: description.trim() || undefined,
+        route_type: 'waypoint',
+        waypoints: waypoints.map((wp) => ({
+          lng: wp.lng,
+          lat: wp.lat,
+          order: wp.order,
+          segment_id: wp.segmentId || null,
+          is_user_modified: wp.isUserModified,
+        })),
+        connecting_geometry: calculatedRoute.geometry,
+        is_public: isPublic,
+      });
+
+      toast.success(`Route "${routeName}" saved!`);
+      setSavedSlug(result.url_slug);
+      setShowSaveForm(false);
+      setRouteName('');
+      setDescription('');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save route';
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm mb-5">
@@ -94,11 +146,91 @@ export default function WaypointRouteBuilder() {
         </div>
       )}
 
+      {/* Save Form */}
+      {showSaveForm && (
+        <div className="mb-3 p-3 bg-gray-50 rounded border space-y-2">
+          <input
+            type="text"
+            value={routeName}
+            onChange={(e) => setRouteName(e.target.value)}
+            placeholder="Route name *"
+            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            maxLength={255}
+          />
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Description (optional)"
+            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm resize-none focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            rows={2}
+          />
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isPublic}
+              onChange={(e) => setIsPublic(e.target.checked)}
+              className="w-3.5 h-3.5 text-emerald-600 rounded"
+            />
+            <span className="text-xs text-gray-600">Make public (shareable)</span>
+          </label>
+          <div className="flex gap-2">
+            <button
+              onClick={handleSave}
+              disabled={!routeName.trim() || saving}
+              className="flex-1 px-3 py-1.5 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              onClick={() => setShowSaveForm(false)}
+              className="px-3 py-1.5 border border-gray-300 text-gray-600 rounded text-sm hover:bg-gray-100 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Export buttons for saved routes */}
+      {savedSlug && (
+        <div className="mb-3 flex gap-2">
+          <a
+            href={getGpxExportUrl(savedSlug)}
+            download
+            className="flex-1 text-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded text-xs font-medium hover:bg-blue-100 transition-colors"
+          >
+            Export GPX
+          </a>
+          <a
+            href={getKmlExportUrl(savedSlug)}
+            download
+            className="flex-1 text-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded text-xs font-medium hover:bg-blue-100 transition-colors"
+          >
+            Export KML
+          </a>
+        </div>
+      )}
+
       {/* Actions */}
       {waypointCount > 0 && (
         <div className="space-y-2">
+          {calculatedRoute && !showSaveForm && (
+            <button
+              onClick={() => {
+                setSavedSlug(null);
+                setShowSaveForm(true);
+              }}
+              className="w-full px-3 py-2 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700 transition-colors font-medium"
+            >
+              Save Route
+            </button>
+          )}
           <button
-            onClick={clearWaypoints}
+            onClick={() => {
+              clearWaypoints();
+              setSavedSlug(null);
+              setShowSaveForm(false);
+            }}
             className="w-full px-3 py-2 border border-gray-300 text-gray-600 rounded text-sm hover:bg-gray-50 transition-colors"
           >
             Clear All
