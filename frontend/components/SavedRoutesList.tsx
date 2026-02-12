@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useRouteStore, RouteSegmentData } from '@/store/useRouteStore';
-import { listRoutes, deleteRoute, getRoute, RouteResponse } from '@/lib/routes-api';
+import { listRoutes, deleteRoute, getRoute, getGpxExportUrl, getKmlExportUrl, RouteResponse } from '@/lib/routes-api';
 
 interface SavedRoutesListProps {
   onClose: () => void;
@@ -150,20 +150,46 @@ export default function SavedRoutesList({ onClose }: SavedRoutesListProps) {
           </div>
 
           <div className="flex gap-2 text-xs text-gray-500">
-            <span>{route.segment_count} stops</span>
+            <span>{route.segment_count} {route.route_type === 'waypoint' ? 'waypoints' : 'stops'}</span>
             <span>·</span>
             <span>{route.total_length_mi.toFixed(1)} mi</span>
-            <span>·</span>
-            <span>{Math.round(route.total_curvature).toLocaleString()} curv</span>
+            {route.route_type !== 'waypoint' && (
+              <>
+                <span>·</span>
+                <span>{Math.round(route.total_curvature).toLocaleString()} curv</span>
+              </>
+            )}
           </div>
 
           {route.description && (
             <p className="text-xs text-gray-400 mt-1 truncate">{route.description}</p>
           )}
 
-          <p className="text-xs text-gray-400 mt-1">
-            {new Date(route.created_at).toLocaleDateString()}
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-xs text-gray-400">
+              {new Date(route.created_at).toLocaleDateString()}
+            </p>
+            {route.is_public && (
+              <div className="flex gap-1">
+                <a
+                  href={getGpxExportUrl(route.url_slug)}
+                  download
+                  className="text-xs text-blue-500 hover:text-blue-700"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  GPX
+                </a>
+                <a
+                  href={getKmlExportUrl(route.url_slug)}
+                  download
+                  className="text-xs text-blue-500 hover:text-blue-700"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  KML
+                </a>
+              </div>
+            )}
+          </div>
         </div>
       ))}
     </div>

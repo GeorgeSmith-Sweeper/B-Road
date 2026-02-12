@@ -36,7 +36,7 @@ except ImportError:
     print("Warning: Database module not available")
 
 # Import routers
-from api.routers import health, curvature, tiles, chat, routes, sessions
+from api.routers import health, curvature, tiles, chat, routes, sessions, routing
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -57,6 +57,7 @@ app.add_middleware(
 # Mount routers
 app.include_router(health.router)
 app.include_router(chat.router)
+app.include_router(routing.router)
 
 # Mount database-dependent routers only if database is available
 if DATABASE_AVAILABLE:

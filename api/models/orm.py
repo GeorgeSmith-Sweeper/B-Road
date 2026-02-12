@@ -83,6 +83,10 @@ class SavedRoute(Base):
     url_slug = Column(String(50), unique=True)
     is_public = Column(Boolean, default=False)
 
+    # Waypoint routing fields
+    connecting_geometry = Column(Geometry("LINESTRING", srid=4326), nullable=True)
+    route_type = Column(String(20), default="segment_list")  # "segment_list" or "waypoint"
+
     # Relationships
     session = relationship("RouteSession", back_populates="routes")
     segments = relationship(
@@ -90,6 +94,12 @@ class SavedRoute(Base):
         back_populates="route",
         cascade="all, delete-orphan",
         order_by="RouteSegment.position",
+    )
+    waypoints = relationship(
+        "RouteWaypoint",
+        back_populates="route",
+        cascade="all, delete-orphan",
+        order_by="RouteWaypoint.waypoint_order",
     )
 
     def __repr__(self):
@@ -151,3 +161,37 @@ class RouteSegment(Base):
     def length_m(self):
         """Segment length in meters"""
         return self.length if self.length else 0
+
+
+class RouteWaypoint(Base):
+    """
+    An ordered waypoint within a waypoint-based route.
+
+    Waypoints are created when a user clicks curvature segments (snapping to
+    segment endpoints) or drags existing waypoints. OSRM uses these waypoints
+    to calculate the connecting road-snapped route geometry.
+    """
+
+    __tablename__ = "route_waypoints"
+    __table_args__ = (
+        UniqueConstraint(
+            "route_id", "waypoint_order", name="unique_route_waypoint_order"
+        ),
+    )
+
+    id = Column(Integer, primary_key=True)
+    route_id = Column(
+        Integer, ForeignKey("saved_routes.route_id", ondelete="CASCADE")
+    )
+    waypoint_order = Column(Integer, nullable=False)
+    lng = Column(Float, nullable=False)
+    lat = Column(Float, nullable=False)
+    segment_id = Column(String(255), nullable=True)
+    is_user_modified = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    route = relationship("SavedRoute", back_populates="waypoints")
+
+    def __repr__(self):
+        return f"<RouteWaypoint(id={self.id}, route={self.route_id}, order={self.waypoint_order}, lng={self.lng}, lat={self.lat})>"

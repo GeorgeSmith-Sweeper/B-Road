@@ -5,7 +5,7 @@ For backwards compatibility, this __init__.py re-exports all models.
 """
 
 # SQLAlchemy ORM models
-from api.models.orm import Base, RouteSession, SavedRoute, RouteSegment
+from api.models.orm import Base, RouteSession, SavedRoute, RouteSegment, RouteWaypoint
 
 # Pydantic schema models
 from api.models.schemas import (
@@ -25,6 +25,7 @@ __all__ = [
     "RouteSession",
     "SavedRoute",
     "RouteSegment",
+    "RouteWaypoint",
     # Schema models
     "SegmentData",
     "SaveRouteRequest",

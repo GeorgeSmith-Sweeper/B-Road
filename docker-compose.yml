@@ -60,6 +60,27 @@ services:
       start_period: 40s
 
   # ---------------------------------------------------------------------------
+  # OSRM Routing Engine
+  # ---------------------------------------------------------------------------
+  # Only starts with: docker compose --profile routing up
+  osrm:
+    image: osrm/osrm-backend:v5.27.1
+    container_name: b-road-osrm
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data/osrm:/data:ro
+    command: osrm-routed --algorithm mld /data/${OSRM_REGION:-north-carolina}-latest.osrm
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/route/v1/driving/-80.8431,35.2271;-80.7933,35.2387"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - routing
+
+  # ---------------------------------------------------------------------------
   # Next.js Frontend
   # ---------------------------------------------------------------------------
   frontend:

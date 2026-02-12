@@ -5,6 +5,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { apiClient } from '@/lib/api';
 import { ApiError } from '@/types';
 import RouteBuilderPanel from './RouteBuilderPanel';
+import WaypointRouteBuilder from './WaypointRouteBuilder';
 
 export default function Sidebar() {
   const {
@@ -128,6 +129,9 @@ export default function Sidebar() {
           Filters visible roads instantly
         </p>
       </div>
+
+      {/* Waypoint Router */}
+      <WaypointRouteBuilder />
 
       {/* Route Builder */}
       <RouteBuilderPanel />
