@@ -460,6 +460,84 @@ class CurvatureRepository:
             for row in rows
         ]
 
+    def get_segments_in_corridor(
+        self,
+        route_geojson: str,
+        buffer_meters: int = 15000,
+        min_curvature: int = 500,
+        min_length: int = 500,
+        limit: int = 200,
+    ) -> List[Dict[str, Any]]:
+        """
+        Get high-curvature paved segments within a corridor around a route line.
+
+        Uses ST_DWithin with geography cast for accurate meter-based buffering.
+        Returns segments with their position along the route (0-1 fraction)
+        for ordering as waypoints.
+
+        Args:
+            route_geojson: GeoJSON LineString string of the baseline route
+            buffer_meters: Corridor width in meters (default 15000 = 15km)
+            min_curvature: Minimum curvature score (default 500)
+            min_length: Minimum segment length in meters (default 500)
+            limit: Maximum number of segments to return (default 200)
+
+        Returns:
+            List of segment dicts with geometry, distance_from_route,
+            route_position (0-1), and centroid coordinates
+        """
+        query = text("""
+            WITH route_line AS (
+                SELECT ST_GeomFromGeoJSON(:route_geojson) AS geom,
+                       ST_GeomFromGeoJSON(:route_geojson)::geography AS geog
+            )
+            SELECT
+                cs.id,
+                cs.name,
+                cs.curvature,
+                cs.length,
+                ST_AsGeoJSON(cs.geom) as geometry,
+                ST_Distance(cs.geom::geography, rl.geog) as distance_from_route,
+                ST_LineLocatePoint(rl.geom, ST_Centroid(cs.geom)) as route_position,
+                ST_X(ST_Centroid(cs.geom)) as centroid_lng,
+                ST_Y(ST_Centroid(cs.geom)) as centroid_lat
+            FROM curvature_segments cs
+            CROSS JOIN route_line rl
+            WHERE ST_DWithin(cs.geom::geography, rl.geog, :buffer_meters)
+              AND cs.curvature >= :min_curvature
+              AND cs.paved = true
+              AND cs.length >= :min_length
+            ORDER BY cs.curvature DESC
+            LIMIT :limit
+        """)
+
+        result = self.db.execute(
+            query,
+            {
+                "route_geojson": route_geojson,
+                "buffer_meters": buffer_meters,
+                "min_curvature": min_curvature,
+                "min_length": min_length,
+                "limit": limit,
+            },
+        )
+        rows = result.fetchall()
+
+        return [
+            {
+                "id": row.id,
+                "name": row.name,
+                "curvature": row.curvature,
+                "length": row.length,
+                "geometry": row.geometry,
+                "distance_from_route": row.distance_from_route,
+                "route_position": row.route_position,
+                "centroid_lng": row.centroid_lng,
+                "centroid_lat": row.centroid_lat,
+            }
+            for row in rows
+        ]
+
     def get_source_bounds(self, source_name: str) -> Optional[Dict[str, float]]:
         """
         Get the bounding box for all segments from a source.

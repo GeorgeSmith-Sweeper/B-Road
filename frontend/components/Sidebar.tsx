@@ -4,8 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { apiClient } from '@/lib/api';
 import { ApiError } from '@/types';
-import RouteBuilderPanel from './RouteBuilderPanel';
 import WaypointRouteBuilder from './WaypointRouteBuilder';
+import CurvyRouteFinder from './CurvyRouteFinder';
 
 export default function Sidebar() {
   const {
@@ -20,6 +20,7 @@ export default function Sidebar() {
   } = useAppStore();
 
   const [sourcesLoading, setSourcesLoading] = useState(false);
+  const [routeMode, setRouteMode] = useState<'waypoints' | 'curvy'>('waypoints');
 
   // Load curvature sources
   const loadSources = useCallback(async () => {
@@ -130,11 +131,32 @@ export default function Sidebar() {
         </p>
       </div>
 
-      {/* Waypoint Router */}
-      <WaypointRouteBuilder />
+      {/* Route Mode Toggle */}
+      <div className="flex rounded-lg overflow-hidden border border-gray-300 mb-3">
+        <button
+          onClick={() => setRouteMode('waypoints')}
+          className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
+            routeMode === 'waypoints'
+              ? 'bg-emerald-600 text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          Manual Waypoints
+        </button>
+        <button
+          onClick={() => setRouteMode('curvy')}
+          className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
+            routeMode === 'curvy'
+              ? 'bg-amber-600 text-white'
+              : 'bg-white text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          Auto Curvy Route
+        </button>
+      </div>
 
-      {/* Route Builder */}
-      <RouteBuilderPanel />
+      {/* Route Panel */}
+      {routeMode === 'waypoints' ? <WaypointRouteBuilder /> : <CurvyRouteFinder onSwitchToWaypoints={() => setRouteMode('waypoints')} />}
 
       {/* Color Legend */}
       <div className="bg-white p-4 rounded-lg shadow-sm mb-5">

@@ -12,13 +12,17 @@ api/tests/
 ├── unit/                    # Unit tests (fast, isolated)
 │   ├── test_models.py       # SQLAlchemy model tests
 │   ├── test_database.py     # Database connection tests
-│   └── test_validation.py   # Route validation logic tests
+│   ├── test_validation.py   # Route validation logic tests
+│   ├── test_routing.py      # OSRM routing service tests
+│   └── test_curvy_routing.py # Curvy route finder scoring/selection tests
 ├── integration/             # Integration tests (slower, real DB)
 │   ├── test_spatial_queries.py  # PostGIS spatial operations
 │   ├── test_api_routes.py       # API endpoint tests
-│   └── test_export.py           # GPX/KML export tests
+│   ├── test_export.py           # GPX/KML export tests
+│   └── test_corridor_query.py   # Corridor spatial query tests
 └── fixtures/                # Test data
     ├── sample_segments.py   # Sample route and segment data
+    ├── curvature_fixtures.py # Curvature pipeline test data
     └── __init__.py
 ```
 
@@ -44,6 +48,15 @@ api/tests/
   - LineString construction
   - Data integrity checks
 
+- **test_curvy_routing.py**: 23 tests
+  - CurvyRouteOptions/Request/Response model validation
+  - Segment scoring algorithm (curvature/length/proximity weighting)
+  - Segment selection with spacing constraints
+  - Waypoint list construction
+  - Full route finding with mocked OSRM and repository
+  - Detour trimming when ratio exceeds threshold
+  - Short route corridor reduction
+
 ### Integration Tests (Slower, ~0.5-1s per test)
 - **test_spatial_queries.py**: 17 tests
   - ST_Intersects for segment connectivity
@@ -67,7 +80,16 @@ api/tests/
   - Special character handling
   - Format comparison
 
-**Total**: ~125 tests covering all critical paths
+- **test_corridor_query.py**: 9 tests
+  - Corridor buffer spatial query (ST_DWithin with geography)
+  - Route position ordering (ST_LineLocatePoint)
+  - Min curvature and min length filtering
+  - Paved-only filtering
+  - Empty results for distant routes
+  - Limit and sort order validation
+  - Centroid coordinate validation
+
+**Total**: ~350 tests covering all critical paths
 
 ## Setup
 

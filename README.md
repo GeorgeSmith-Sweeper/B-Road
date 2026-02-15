@@ -129,8 +129,24 @@ uvicorn server:app --reload --host 0.0.0.0 --port 8000
 
 8. **Set up OSRM routing engine** (optional, for waypoint routing):
 ```bash
-# Prepare OSRM data for a US state (e.g., north-carolina)
-./scripts/prepare-osrm.sh north-carolina
+# Option A: Single state (faster, smaller, runs locally)
+./scripts/prepare-osrm.sh california
+
+# Option B: Full US via cloud VM (recommended for cross-state routing)
+# The full US extract requires ~60-100GB peak RAM, exceeding most local machines.
+# Use a cloud VM (e.g., AWS EC2 r6i.2xlarge, 64GB RAM, ~$1-3 total cost):
+scp scripts/cloud-osrm-extract.sh ubuntu@<ec2-ip>:~/
+ssh ubuntu@<ec2-ip> './cloud-osrm-extract.sh'
+scp ubuntu@<ec2-ip>:/tmp/us-latest-osrm.tar.gz data/osrm/
+cd data/osrm && tar xzf us-latest-osrm.tar.gz && rm us-latest-osrm.tar.gz
+
+# Option C: Full US locally (only if you have 64GB+ RAM)
+brew install osrm-backend
+./scripts/prepare-osrm.sh --native us
+
+# Set the region in .env
+# OSRM_REGION=california   (single state)
+# OSRM_REGION=us            (full US)
 
 # Start all services including OSRM
 docker compose --profile routing up -d

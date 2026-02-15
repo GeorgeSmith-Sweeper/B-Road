@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useWaypointRouteStore } from '@/store/useWaypointRouteStore';
-import { useRouteStore } from '@/store/useRouteStore';
 import { createSession, saveRoute, getGpxExportUrl, getKmlExportUrl } from '@/lib/routes-api';
+import { getGoogleMapsUrl, getStreetViewUrl, getDirectionsUrl } from '@/lib/google-maps';
 import type { Waypoint } from '@/types/routing';
 
 export default function WaypointRouteBuilder() {
@@ -18,8 +18,9 @@ export default function WaypointRouteBuilder() {
     getTotalDistance,
     getTotalDuration,
     getWaypointCount,
+    sessionId,
+    setSessionId,
   } = useWaypointRouteStore();
-  const { sessionId, setSessionId } = useRouteStore();
 
   const [saving, setSaving] = useState(false);
   const [showSaveForm, setShowSaveForm] = useState(false);
@@ -104,6 +105,20 @@ export default function WaypointRouteBuilder() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* Google Maps Links */}
+      {waypointCount >= 2 && calculatedRoute && (
+        <div className="flex gap-2 mb-3">
+          <a
+            href={getDirectionsUrl(waypoints.map((wp) => [wp.lat, wp.lng]))}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 text-center px-2 py-1.5 bg-blue-50 text-blue-700 rounded text-xs font-medium hover:bg-blue-100 transition-colors"
+          >
+            Get Directions
+          </a>
         </div>
       )}
 
@@ -268,6 +283,24 @@ function WaypointItem({
             <span className="ml-1 text-amber-600">(moved)</span>
           )}
         </p>
+        <div className="flex gap-1.5 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <a
+            href={getGoogleMapsUrl(waypoint.lat, waypoint.lng)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-blue-500 hover:text-blue-700"
+          >
+            Maps
+          </a>
+          <a
+            href={getStreetViewUrl(waypoint.lat, waypoint.lng)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] text-green-500 hover:text-green-700"
+          >
+            Street View
+          </a>
+        </div>
       </div>
 
       {/* Remove */}
