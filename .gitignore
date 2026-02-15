@@ -5,6 +5,7 @@
 *.osrm
 *.osrm.*
 *.bz2
+*.pem
 *.pyc
 images/*
 kml/*

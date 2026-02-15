@@ -42,6 +42,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-curvature}:${POSTGRES_PASSWORD}@db:5432/curvature
       MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN:?MAPBOX_ACCESS_TOKEN is required}
+      OSRM_URL: http://osrm:5000
       PYTHONUNBUFFERED: 1
     ports:
       - "8000:8000"
@@ -63,17 +64,20 @@ services:
   # OSRM Routing Engine
   # ---------------------------------------------------------------------------
   # Only starts with: docker compose --profile routing up
+  # Set OSRM_REGION in .env (default: california). Use "us" for full US routing.
+  # Prepare data first: ./scripts/prepare-osrm.sh [--native] <region>
   osrm:
-    image: osrm/osrm-backend:v5.27.1
+    image: osrm/osrm-backend:latest
+    platform: linux/amd64
     container_name: b-road-osrm
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "5001:5000"
     volumes:
       - ./data/osrm:/data:ro
-    command: osrm-routed --algorithm mld /data/${OSRM_REGION:-north-carolina}-latest.osrm
+    command: osrm-routed --algorithm mld --mmap /data/${OSRM_REGION:-california}-latest.osrm
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/route/v1/driving/-80.8431,35.2271;-80.7933,35.2387"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/route/v1/driving/-118.2437,34.0522;-118.2537,34.0622"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -4,14 +4,15 @@ Modern Next.js 14 frontend for the B-Road Curvature project, replacing the vanil
 
 ## Features
 
-- **Dual Mode UI**: Browse roads or build custom routes
+- **Two Route Modes**: Manual Waypoint routing and Auto Curvy Route finder
+- **Waypoint Route Builder**: Click road segments to add waypoints, drag to adjust, save and export routes
+- **Curvy Route Finder**: Set start/end points on the map and automatically find the twistiest route between them
 - **Mapbox GL JS Integration**: Fast, modern mapping with vector tiles
 - **TypeScript**: Full type safety throughout the application
 - **Zustand State Management**: Lightweight and performant state management
-- **Route Building**: Click connected segments to build custom twisty routes
 - **Session Persistence**: Routes saved to your session with localStorage
 - **Export Support**: Export routes to GPX/KML formats
-- **Google Maps Integration**: Street View previews and Google Maps navigation links from map popups and route builder
+- **Google Maps Integration**: Street View previews, Google Maps links, and Get Directions from waypoint lists and map popups
 
 ## Tech Stack
 
@@ -64,19 +65,29 @@ npm start
 ```
 frontend/
 ├── app/
-│   ├── layout.tsx          # Root layout with metadata
-│   ├── page.tsx            # Main application page
-│   └── globals.css         # Global styles
+│   ├── layout.tsx                 # Root layout with metadata
+│   ├── page.tsx                   # Main application page
+│   └── globals.css                # Global styles
 ├── components/
-│   ├── Map.tsx             # Mapbox GL JS map component
-│   └── Sidebar.tsx         # Control panel and UI
+│   ├── Map.tsx                    # Mapbox GL JS map with route rendering
+│   ├── Sidebar.tsx                # Control panel with mode toggle
+│   ├── WaypointRouteBuilder.tsx   # Manual waypoint routing panel
+│   └── CurvyRouteFinder.tsx       # Auto curvy route finder panel
+├── hooks/
+│   └── useRouting.ts              # OSRM route calculation hook
 ├── store/
-│   └── useAppStore.ts      # Zustand store for state management
+│   ├── useAppStore.ts             # Global app state (sources, filters)
+│   ├── useChatStore.ts            # Chat/search state
+│   ├── useWaypointRouteStore.ts   # Waypoint routing state + session
+│   └── useCurvyRouteStore.ts      # Curvy route finder state
 ├── lib/
-│   ├── api.ts              # API client for FastAPI backend
-│   └── google-maps.ts      # Google Maps/Street View URL helpers
+│   ├── api.ts                     # API client for FastAPI backend
+│   ├── routing-api.ts             # OSRM + curvy route API client
+│   ├── routes-api.ts              # Route saving/loading API client
+│   └── google-maps.ts             # Google Maps/Street View URL helpers
 └── types/
-    └── index.ts            # TypeScript type definitions
+    ├── index.ts                   # General TypeScript type definitions
+    └── routing.ts                 # Routing-specific types
 ```
 
 ## API Integration
@@ -84,15 +95,18 @@ frontend/
 The frontend communicates with the FastAPI backend using the following endpoints:
 
 - `GET /config` - Get Mapbox API token
-- `POST /data/load` - Load curvature data from msgpack
-- `GET /roads/geojson` - Search roads (browse mode)
-- `GET /roads/segments` - Load segments (route building)
-- `POST /sessions/create` - Create user session
-- `POST /routes/save` - Save route
-- `GET /routes/list` - List saved routes
-- `GET /routes/:slug` - View route details
+- `GET /curvature/sources` - List available curvature data sources
+- `GET /curvature/tiles/{z}/{x}/{y}.pbf` - Vector tiles for map rendering
+- `POST /routing/calculate` - Calculate OSRM route between waypoints
+- `POST /routing/curvy-route` - Find curvy route between start/end points
+- `GET /routing/health` - Check OSRM availability
+- `POST /sessions` - Create anonymous session
+- `POST /routes` - Save route
+- `GET /routes` - List saved routes
+- `GET /routes/:id` - View route details
 - `DELETE /routes/:id` - Delete route
-- `GET /routes/:slug/export/:format` - Export route (GPX/KML)
+- `GET /routes/shared/:slug/export/gpx` - Export route as GPX
+- `GET /routes/shared/:slug/export/kml` - Export route as KML
 
 ## Environment Variables
 
