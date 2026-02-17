@@ -116,6 +116,7 @@ do
     # 2. Filter out unpaved ways and highway types we aren't interested in.
     # 3. Exclude US TIGER-imported ways that don't have names or ref tags and have not been
     #    reviewed. These are most likely driveways or forest tracks.
+    #    Also exclude unnamed service roads (typically private driveways, utility access, etc).
     # 4. Add segments and their lengths & radii.
     # 5. Calculate the curvature and filter curvature values for "deflections" (noisy data)
     # 6. Split our collections on long straight-aways (longer than 1.5 miles) to avoid
@@ -128,6 +129,7 @@ do
       | $script_path/curvature-pp filter_out_ways_with_tag --tag surface --values 'unpaved,dirt,gravel,fine_gravel,sand,grass,ground,pebblestone,mud,clay,dirt/sand,soil' \
       | $script_path/curvature-pp filter_out_ways_with_tag --tag service --values 'driveway,parking_aisle,drive-through,parking,bus,emergency_access' \
       | $script_path/curvature-pp filter_out_ways --match 'And(TagEmpty("name"), TagEmpty("ref"), TagEquals("highway", "residential"), TagEquals("tiger:reviewed", "no"))' \
+      | $script_path/curvature-pp filter_out_ways --match 'And(TagEmpty("name"), TagEmpty("ref"), TagEquals("highway", "service"))' \
       | $script_path/curvature-pp add_segments \
       | $script_path/curvature-pp add_segment_length_and_radius \
       | $script_path/curvature-pp add_segment_curvature \

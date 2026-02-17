@@ -75,6 +75,32 @@ def old_mountain_road():
               'refs': []    # Not used in this component, leaving empty for simplicity.
             }]}
 
+# An unnamed service road (private driveway, utility access, etc.)
+@pytest.fixture
+def unnamed_service_road():
+    return {
+        'join_type': 'none',
+        'ways': [
+            { 'id': 500000,
+              'tags': {   'highway': 'service'},
+              'coords': [],
+              'refs': []
+            }]}
+
+# A named service road (e.g. "Mill Access Road")
+@pytest.fixture
+def named_service_road():
+    return {
+        'join_type': 'name',
+        'join_data': 'Mill Access Road',
+        'ways': [
+            { 'id': 500001,
+              'tags': {   'highway': 'service',
+                          'name': 'Mill Access Road'},
+              'coords': [],
+              'refs': []
+            }]}
+
 def test(raymond_road, driveway, old_mountain_road):
     data = [raymond_road, driveway, old_mountain_road]
     expected_result = [copy(raymond_road), copy(old_mountain_road)]
@@ -85,3 +111,13 @@ def test(raymond_road, driveway, old_mountain_road):
     assert(len(result) == 2)
     assert(len(result[0]['ways']) == 5)
     assert(len(result[1]['ways']) == 1)
+
+def test_unnamed_service_roads(unnamed_service_road, named_service_road):
+    data = [unnamed_service_road, named_service_road]
+    expected_result = [copy(named_service_road)]
+
+    result = list(FilterOutWays('And(TagEmpty("name"), TagEmpty("ref"), TagEquals("highway", "service"))').process(data))
+
+    assert(result == expected_result)
+    assert(len(result) == 1)
+    assert(result[0]['ways'][0]['tags']['name'] == 'Mill Access Road')

@@ -403,6 +403,10 @@ as all of the driveways in the US that were incorrectly imported as unnamed 'res
 
     cat vermont.msgpack | bin/curvature-pp filter_out_ways --match 'And(TagEmpty("name"), TagEmpty("ref"), TagEquals("highway", "residential"), TagEquals("tiger:reviewed", "no"))' | bin/msgpack-reader
 
+Similarly, unnamed `highway=service` ways (typically private driveways, utility access paths, or facility roads) can be filtered out:
+
+    cat vermont.msgpack | bin/curvature-pp filter_out_ways --match 'And(TagEmpty("name"), TagEmpty("ref"), TagEquals("highway", "service"))' | bin/msgpack-reader
+
 The `filter_xxxx_ways_xxxx` and `split_collections_on_xxxx` *post processors* will break
 apart collections into multiple resulting collections, so if you ran the above example
 on an input file that had a road that started paved, became gravel, then became paved again,
