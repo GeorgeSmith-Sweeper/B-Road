@@ -161,22 +161,30 @@ export default function Sidebar() {
       {/* Color Legend */}
       <div className="bg-white p-4 rounded-lg shadow-sm mb-5">
         <h3 className="text-lg font-semibold mb-2">Curvature Legend</h3>
-        <div className="space-y-2">
+        <div
+          className="h-3 rounded-full mb-3"
+          style={{ background: 'linear-gradient(to right, #4CAF50, #8BC34A, #FFEB3B, #FF9800, #F44336, #9C27B0, #4A148C)' }}
+        />
+        <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-3 bg-yellow-400 rounded"></div>
-            <span className="text-sm text-gray-700">300-600: Pleasant curves</span>
+            <div className="w-4 h-3 rounded" style={{ backgroundColor: '#4CAF50' }} />
+            <span className="text-sm text-gray-700">300-600: Mild curves</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-3 bg-orange-500 rounded"></div>
-            <span className="text-sm text-gray-700">600-1000: Moderately twisty</span>
+            <div className="w-4 h-3 rounded" style={{ backgroundColor: '#FFEB3B' }} />
+            <span className="text-sm text-gray-700">600-1000: Moderate</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-3 bg-red-500 rounded"></div>
-            <span className="text-sm text-gray-700">1000-2000: Very curvy</span>
+            <div className="w-4 h-3 rounded" style={{ backgroundColor: '#FF9800' }} />
+            <span className="text-sm text-gray-700">1000-1500: Twisty</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-3 bg-purple-600 rounded"></div>
-            <span className="text-sm text-gray-700">2000+: Extremely twisty</span>
+            <div className="w-4 h-3 rounded" style={{ backgroundColor: '#F44336' }} />
+            <span className="text-sm text-gray-700">1500-2000: Very curvy</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-3 rounded" style={{ backgroundColor: '#9C27B0' }} />
+            <span className="text-sm text-gray-700">2000+: Extreme</span>
           </div>
         </div>
       </div>

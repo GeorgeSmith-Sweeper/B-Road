@@ -80,13 +80,23 @@ export default function Map() {
         },
         paint: {
           'line-color': [
-            'case',
-            ['<', ['get', 'curvature'], 600], '#FFC107',
-            ['<', ['get', 'curvature'], 1000], '#FF9800',
-            ['<', ['get', 'curvature'], 2000], '#F44336',
-            '#9C27B0',
+            'interpolate',
+            ['linear'],
+            ['get', 'curvature'],
+            300,  '#4CAF50',   // Green — mild curves
+            600,  '#8BC34A',   // Light green
+            1000, '#FFEB3B',   // Yellow — moderate
+            1500, '#FF9800',   // Orange
+            2000, '#F44336',   // Red — very curvy
+            3000, '#9C27B0',   // Purple
+            5000, '#4A148C',   // Deep purple — extreme
           ],
-          'line-width': ['interpolate', ['linear'], ['zoom'], 4, 1, 8, 2, 12, 4],
+          'line-width': [
+            'interpolate', ['linear'], ['zoom'],
+            4, ['interpolate', ['linear'], ['get', 'curvature'], 300, 0.5, 2000, 1, 5000, 1.5],
+            8, ['interpolate', ['linear'], ['get', 'curvature'], 300, 1, 2000, 2, 5000, 3],
+            12, ['interpolate', ['linear'], ['get', 'curvature'], 300, 1.5, 2000, 3, 5000, 4.5],
+          ],
           'line-opacity': 0.8,
         },
       });
@@ -186,12 +196,22 @@ export default function Map() {
         const mapsUrl = getGoogleMapsUrl(popupLat, popupLon);
         const streetViewUrl = getStreetViewUrl(popupLat, popupLon);
 
+        // Determine badge color based on curvature value
+        const curv = props.curvature || 0;
+        let badgeColor = '#4CAF50';
+        if (curv >= 3000) badgeColor = '#9C27B0';
+        else if (curv >= 2000) badgeColor = '#F44336';
+        else if (curv >= 1500) badgeColor = '#FF9800';
+        else if (curv >= 1000) badgeColor = '#FFEB3B';
+        else if (curv >= 600) badgeColor = '#8BC34A';
+        const badgeTextColor = (curv >= 1000 && curv < 1500) ? '#333' : '#fff';
+
         new mapboxgl.Popup()
           .setLngLat(e.lngLat)
           .setHTML(`
             <div style="padding: 8px;">
               <strong>${props.name || 'Unnamed Road'}</strong><br/>
-              Curvature: ${props.curvature}<br/>
+              Curvature: <span style="display: inline-block; background: ${badgeColor}; color: ${badgeTextColor}; padding: 1px 8px; border-radius: 10px; font-weight: bold; font-size: 12px;">${curv.toLocaleString()}</span><br/>
               Length: ${lengthMi} mi<br/>
               Surface: ${surface}<br/>
               <div style="margin-top: 8px; display: flex; gap: 6px;">
