@@ -209,8 +209,8 @@ export default function Map() {
         new mapboxgl.Popup()
           .setLngLat(e.lngLat)
           .setHTML(`
-            <div style="padding: 8px;">
-              <strong>${props.name || 'Unnamed Road'}</strong><br/>
+            <div style="padding: 8px; color: #333;">
+              <strong style="color: #222;">${props.name || 'Unnamed Road'}</strong><br/>
               Curvature: <span style="display: inline-block; background: ${badgeColor}; color: ${badgeTextColor}; padding: 1px 8px; border-radius: 10px; font-weight: bold; font-size: 12px;">${curv.toLocaleString()}</span><br/>
               Length: ${lengthMi} mi<br/>
               Surface: ${surface}<br/>
