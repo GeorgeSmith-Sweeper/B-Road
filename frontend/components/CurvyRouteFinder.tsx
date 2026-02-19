@@ -242,7 +242,7 @@ export default function CurvyRouteFinder({ onSwitchToWaypoints }: CurvyRouteFind
       {!startPoint && !endPoint && !result && (
         <div className="text-center py-4 text-gray-400">
           <p className="text-sm">
-            Click &quot;Set Start&quot; then click the map to set your start and end points
+            Click &quot;Set Start&quot;, pick a point on the map, then pick your destination
           </p>
         </div>
       )}
