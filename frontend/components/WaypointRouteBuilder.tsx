@@ -108,17 +108,18 @@ export default function WaypointRouteBuilder() {
         </div>
       )}
 
-      {/* Google Maps Links */}
-      {waypointCount >= 2 && calculatedRoute && (
+      {/* Save Route (quick access) */}
+      {waypointCount >= 2 && calculatedRoute && !showSaveForm && (
         <div className="flex gap-2 mb-3">
-          <a
-            href={getDirectionsUrl(waypoints.map((wp) => [wp.lat, wp.lng]))}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 text-center px-2 py-1.5 bg-blue-50 text-blue-700 rounded text-xs font-medium hover:bg-blue-100 transition-colors"
+          <button
+            onClick={() => {
+              setSavedSlug(null);
+              setShowSaveForm(true);
+            }}
+            className="flex-1 px-2 py-1.5 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-700 transition-colors"
           >
-            Get Directions
-          </a>
+            Save Route
+          </button>
         </div>
       )}
 
@@ -229,16 +230,15 @@ export default function WaypointRouteBuilder() {
       {/* Actions */}
       {waypointCount > 0 && (
         <div className="space-y-2">
-          {calculatedRoute && !showSaveForm && (
-            <button
-              onClick={() => {
-                setSavedSlug(null);
-                setShowSaveForm(true);
-              }}
-              className="w-full px-3 py-2 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700 transition-colors font-medium"
+          {calculatedRoute && waypointCount >= 2 && (
+            <a
+              href={getDirectionsUrl(waypoints.map((wp) => [wp.lat, wp.lng]))}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full text-center px-3 py-2 bg-blue-50 text-blue-700 rounded text-sm font-medium hover:bg-blue-100 transition-colors"
             >
-              Save Route
-            </button>
+              Get Directions
+            </a>
           )}
           <button
             onClick={() => {
