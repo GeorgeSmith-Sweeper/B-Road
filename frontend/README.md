@@ -7,6 +7,7 @@ Modern Next.js 14 frontend for the B-Road Curvature project, replacing the vanil
 - **Two Route Modes**: Manual Waypoint routing and Auto Curvy Route finder
 - **Waypoint Route Builder**: Click road segments to add waypoints, drag to adjust, save and export routes
 - **Curvy Route Finder**: Set start/end points on the map and automatically find the twistiest route between them
+- **Curvature Visualization**: Smooth green-to-purple color gradient and curvature-scaled line widths — twistier roads visually pop off the map
 - **Mapbox GL JS Integration**: Fast, modern mapping with vector tiles
 - **TypeScript**: Full type safety throughout the application
 - **Zustand State Management**: Lightweight and performant state management
@@ -69,7 +70,7 @@ frontend/
 │   ├── page.tsx                   # Main application page
 │   └── globals.css                # Global styles
 ├── components/
-│   ├── Map.tsx                    # Mapbox GL JS map with route rendering
+│   ├── Map.tsx                    # Mapbox GL JS map with curvature gradient, route rendering
 │   ├── Sidebar.tsx                # Control panel with mode toggle
 │   ├── WaypointRouteBuilder.tsx   # Manual waypoint routing panel
 │   └── CurvyRouteFinder.tsx       # Auto curvy route finder panel
