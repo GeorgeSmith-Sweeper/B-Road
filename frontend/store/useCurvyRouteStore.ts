@@ -37,7 +37,11 @@ export const useCurvyRouteStore = create<CurvyRouteState>((set) => ({
   isCalculating: false,
   error: null,
 
-  setStartPoint: (lng, lat) => set({ startPoint: { lng, lat }, pickingMode: null }),
+  setStartPoint: (lng, lat) =>
+    set((state) => ({
+      startPoint: { lng, lat },
+      pickingMode: state.endPoint ? null : 'end',
+    })),
   setEndPoint: (lng, lat) => set({ endPoint: { lng, lat }, pickingMode: null }),
   setPickingMode: (mode) => set({ pickingMode: mode }),
   setOptions: (partial) =>

@@ -76,9 +76,9 @@ export default function CurvyRouteFinder({ onSwitchToWaypoints }: CurvyRouteFind
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm mb-5">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold text-amber-800">Curvy Route Finder</h3>
+        <h3 className="text-lg font-semibold text-teal-700">Curvy Route Finder</h3>
         {isCalculating && (
-          <span className="text-xs text-amber-600 animate-pulse">Calculating...</span>
+          <span className="text-xs text-teal-600 animate-pulse">Calculating...</span>
         )}
       </div>
 
@@ -125,7 +125,7 @@ export default function CurvyRouteFinder({ onSwitchToWaypoints }: CurvyRouteFind
       </button>
 
       {showOptions && (
-        <div className="mb-3 p-3 bg-amber-50 rounded border border-amber-200 space-y-3">
+        <div className="mb-3 p-3 bg-teal-50 rounded border border-teal-200 space-y-3">
           <SliderOption
             label="Corridor Width"
             value={options.corridor_width / 1000}
@@ -167,7 +167,7 @@ export default function CurvyRouteFinder({ onSwitchToWaypoints }: CurvyRouteFind
       <button
         onClick={handleFindRoute}
         disabled={!startPoint || !endPoint || isCalculating}
-        className="w-full px-3 py-2 bg-amber-600 text-white rounded text-sm font-medium hover:bg-amber-700 disabled:opacity-50 transition-colors mb-2"
+        className="w-full px-3 py-2 bg-[#1FDDE0] text-gray-900 rounded text-sm font-medium hover:bg-[#17c5c8] disabled:opacity-50 transition-colors mb-2"
       >
         {isCalculating ? 'Finding Curvy Route...' : 'Find Curvy Route'}
       </button>
@@ -177,10 +177,10 @@ export default function CurvyRouteFinder({ onSwitchToWaypoints }: CurvyRouteFind
         <div className="mt-3 space-y-3">
           {/* Stats */}
           <div className="flex flex-wrap gap-2 text-xs">
-            <div className="bg-amber-50 px-2 py-1 rounded text-amber-700 font-medium">
+            <div className="bg-teal-50 px-2 py-1 rounded text-teal-700 font-medium">
               {(result.distance / 1609.34).toFixed(1)} mi
             </div>
-            <div className="bg-amber-50 px-2 py-1 rounded text-amber-700 font-medium">
+            <div className="bg-teal-50 px-2 py-1 rounded text-teal-700 font-medium">
               {(result.duration / 60).toFixed(0)} min
             </div>
             <div className="bg-blue-50 px-2 py-1 rounded text-blue-700 font-medium">
@@ -206,12 +206,12 @@ export default function CurvyRouteFinder({ onSwitchToWaypoints }: CurvyRouteFind
                 {result.curvy_segments.map((seg: CurvySegmentInfo) => (
                   <div
                     key={seg.id}
-                    className="flex items-center gap-2 p-1.5 bg-amber-50 rounded text-xs"
+                    className="flex items-center gap-2 p-1.5 bg-teal-50 rounded text-xs"
                   >
                     <div className="flex-1 min-w-0 truncate text-gray-700">
                       {seg.name || 'Unnamed Road'}
                     </div>
-                    <span className="text-amber-600 font-medium flex-shrink-0">
+                    <span className="text-teal-600 font-medium flex-shrink-0">
                       {seg.curvature.toLocaleString()}
                     </span>
                   </div>
@@ -242,7 +242,7 @@ export default function CurvyRouteFinder({ onSwitchToWaypoints }: CurvyRouteFind
       {!startPoint && !endPoint && !result && (
         <div className="text-center py-4 text-gray-400">
           <p className="text-sm">
-            Click &quot;Set Start&quot; then click the map to set your start and end points
+            Click &quot;Set Start&quot;, pick a point on the map, then pick your destination
           </p>
         </div>
       )}
@@ -323,7 +323,7 @@ function SliderOption({
     <div>
       <div className="flex justify-between text-xs mb-0.5">
         <span className="text-gray-600">{label}</span>
-        <span className="font-medium text-amber-700">
+        <span className="font-medium text-teal-700">
           {step < 1 ? value.toFixed(1) : value}{unit ? ` ${unit}` : ''}
         </span>
       </div>
@@ -334,7 +334,7 @@ function SliderOption({
         step={step}
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full h-1.5 accent-amber-600"
+        className="w-full h-1.5 accent-teal-600"
       />
     </div>
   );

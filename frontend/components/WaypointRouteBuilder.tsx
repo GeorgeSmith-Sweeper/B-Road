@@ -100,7 +100,7 @@ export default function WaypointRouteBuilder() {
               <div className="bg-blue-50 px-2 py-1 rounded text-blue-700 font-medium">
                 {totalDistance.toFixed(1)} mi
               </div>
-              <div className="bg-amber-50 px-2 py-1 rounded text-amber-700 font-medium">
+              <div className="bg-teal-50 px-2 py-1 rounded text-teal-700 font-medium">
                 {totalDuration.toFixed(0)} min
               </div>
             </>
@@ -108,17 +108,18 @@ export default function WaypointRouteBuilder() {
         </div>
       )}
 
-      {/* Google Maps Links */}
-      {waypointCount >= 2 && calculatedRoute && (
+      {/* Save Route (quick access) */}
+      {waypointCount >= 2 && calculatedRoute && !showSaveForm && (
         <div className="flex gap-2 mb-3">
-          <a
-            href={getDirectionsUrl(waypoints.map((wp) => [wp.lat, wp.lng]))}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 text-center px-2 py-1.5 bg-blue-50 text-blue-700 rounded text-xs font-medium hover:bg-blue-100 transition-colors"
+          <button
+            onClick={() => {
+              setSavedSlug(null);
+              setShowSaveForm(true);
+            }}
+            className="flex-1 px-2 py-1.5 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-700 transition-colors"
           >
-            Get Directions
-          </a>
+            Save Route
+          </button>
         </div>
       )}
 
@@ -229,16 +230,15 @@ export default function WaypointRouteBuilder() {
       {/* Actions */}
       {waypointCount > 0 && (
         <div className="space-y-2">
-          {calculatedRoute && !showSaveForm && (
-            <button
-              onClick={() => {
-                setSavedSlug(null);
-                setShowSaveForm(true);
-              }}
-              className="w-full px-3 py-2 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700 transition-colors font-medium"
+          {calculatedRoute && waypointCount >= 2 && (
+            <a
+              href={getDirectionsUrl(waypoints.map((wp) => [wp.lat, wp.lng]))}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full text-center px-3 py-2 bg-blue-50 text-blue-700 rounded text-sm font-medium hover:bg-blue-100 transition-colors"
             >
-              Save Route
-            </button>
+              Get Directions
+            </a>
           )}
           <button
             onClick={() => {
@@ -268,7 +268,7 @@ function WaypointItem({
   return (
     <div className="flex items-center gap-2 p-2 bg-gray-50 rounded hover:bg-gray-100 group">
       {/* Waypoint number */}
-      <div className="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-bold flex-shrink-0">
+      <div className="w-6 h-6 rounded-full bg-[#1FDDE0] text-gray-900 text-xs flex items-center justify-center font-bold flex-shrink-0">
         {index + 1}
       </div>
 
@@ -280,7 +280,7 @@ function WaypointItem({
         <p className="text-xs text-gray-500">
           {waypoint.lng.toFixed(4)}, {waypoint.lat.toFixed(4)}
           {waypoint.isUserModified && (
-            <span className="ml-1 text-amber-600">(moved)</span>
+            <span className="ml-1 text-teal-600">(moved)</span>
           )}
         </p>
         <div className="flex gap-1.5 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
