@@ -107,17 +107,16 @@ export default function Map() {
         data: { type: 'FeatureCollection', features: [] },
       });
 
-      // OSRM calculated route line (emerald, dashed)
+      // OSRM calculated route line
       map.addLayer({
         id: 'waypoint-route-line',
         type: 'line',
         source: 'waypoint-route',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: {
-          'line-color': '#059669',
-          'line-width': 4,
-          'line-opacity': 0.8,
-          'line-dasharray': [2, 1],
+          'line-color': '#1FDDE0',
+          'line-width': 5,
+          'line-opacity': 0.9,
         },
       });
 
@@ -133,10 +132,9 @@ export default function Map() {
         source: 'curvy-route',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
         paint: {
-          'line-color': '#D97706',
+          'line-color': '#1FDDE0',
           'line-width': 5,
-          'line-opacity': 0.85,
-          'line-dasharray': [3, 1.5],
+          'line-opacity': 0.9,
         },
       });
 
@@ -424,7 +422,7 @@ export default function Map() {
       if (!marker) {
         const el = document.createElement('div');
         el.style.cssText =
-          'width:24px;height:24px;border-radius:50%;background:#059669;color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);cursor:grab;';
+          'width:24px;height:24px;border-radius:50%;background:#1FDDE0;color:#111827;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);cursor:grab;';
         el.textContent = String(index + 1);
 
         marker = new mapboxgl.Marker({ element: el, draggable: true })

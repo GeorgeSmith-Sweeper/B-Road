@@ -137,7 +137,7 @@ export default function Sidebar() {
           onClick={() => setRouteMode('waypoints')}
           className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
             routeMode === 'waypoints'
-              ? 'bg-emerald-600 text-white'
+              ? 'bg-[#1FDDE0] text-gray-900'
               : 'bg-white text-gray-600 hover:bg-gray-50'
           }`}
         >
@@ -147,7 +147,7 @@ export default function Sidebar() {
           onClick={() => setRouteMode('curvy')}
           className={`flex-1 px-3 py-2 text-sm font-medium transition-colors ${
             routeMode === 'curvy'
-              ? 'bg-amber-600 text-white'
+              ? 'bg-[#1FDDE0] text-gray-900'
               : 'bg-white text-gray-600 hover:bg-gray-50'
           }`}
         >
