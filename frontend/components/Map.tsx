@@ -7,8 +7,10 @@ import { useAppStore } from '@/store/useAppStore';
 import { useChatStore } from '@/store/useChatStore';
 import { useWaypointRouteStore } from '@/store/useWaypointRouteStore';
 import { useCurvyRouteStore } from '@/store/useCurvyRouteStore';
+import { useGeocoderStore } from '@/store/useGeocoderStore';
 import { useRouting } from '@/hooks/useRouting';
 import { getGoogleMapsUrl, getStreetViewUrl, getMidpoint } from '@/lib/google-maps';
+import AddressSearchBar from './AddressSearchBar';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -43,6 +45,11 @@ export default function Map() {
   const curvyResult = useCurvyRouteStore((state) => state.result);
   const curvyStartMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const curvyEndMarkerRef = useRef<mapboxgl.Marker | null>(null);
+
+  // Geocoder state
+  const geocoderSelectedResult = useGeocoderStore((state) => state.selectedResult);
+  const geocoderMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const geocoderPopupRef = useRef<mapboxgl.Popup | null>(null);
 
   // Initialize map
   useEffect(() => {
@@ -139,6 +146,12 @@ export default function Map() {
       });
 
       sourceAddedRef.current = true;
+
+      // Track map center for geocoding proximity bias
+      map.on('moveend', () => {
+        const center = map.getCenter();
+        useAppStore.getState().setMapCenter([center.lng, center.lat]);
+      });
 
       // General map click handler for curvy route picking mode
       map.on('click', (e: mapboxgl.MapMouseEvent) => {
@@ -541,12 +554,95 @@ export default function Map() {
     };
   }, []);
 
+  // Handle geocoder result — fly to location, place pin with popup
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Remove previous geocoder marker and popup
+    geocoderPopupRef.current?.remove();
+    geocoderPopupRef.current = null;
+    geocoderMarkerRef.current?.remove();
+    geocoderMarkerRef.current = null;
+
+    if (!geocoderSelectedResult) return;
+
+    const [lng, lat] = geocoderSelectedResult.coordinates;
+
+    map.flyTo({ center: [lng, lat], zoom: 14, duration: 1500 });
+
+    // Create a teal pin marker
+    const el = document.createElement('div');
+    el.style.cssText =
+      'width:28px;height:28px;border-radius:50% 50% 50% 0;background:#0EA5E9;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.35);transform:rotate(-45deg);';
+
+    const marker = new mapboxgl.Marker({ element: el })
+      .setLngLat([lng, lat])
+      .addTo(map);
+
+    geocoderMarkerRef.current = marker;
+
+    // Create popup with action buttons
+    const popupContent = `
+      <div style="padding: 8px; color: #333; min-width: 180px;">
+        <strong style="color: #222;">${geocoderSelectedResult.name}</strong><br/>
+        <span style="font-size: 12px; color: #666;">${geocoderSelectedResult.full_address}</span>
+        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+          <button id="geocoder-add-waypoint"
+            style="font-size: 12px; color: #fff; background: #1FDDE0; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-weight: 500;">
+            Add as Waypoint
+          </button>
+          <div style="display: flex; gap: 6px;">
+            <button id="geocoder-set-start"
+              style="flex:1; font-size: 12px; color: #fff; background: #16A34A; border: none; border-radius: 4px; padding: 5px 8px; cursor: pointer; font-weight: 500;">
+              Set as Start
+            </button>
+            <button id="geocoder-set-end"
+              style="flex:1; font-size: 12px; color: #fff; background: #DC2626; border: none; border-radius: 4px; padding: 5px 8px; cursor: pointer; font-weight: 500;">
+              Set as End
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const popup = new mapboxgl.Popup({ offset: 20, closeButton: true })
+      .setLngLat([lng, lat])
+      .setHTML(popupContent)
+      .addTo(map);
+
+    geocoderPopupRef.current = popup;
+
+    // Attach button event handlers — DOM exists immediately after addTo()
+    document.getElementById('geocoder-add-waypoint')?.addEventListener('click', () => {
+      useWaypointRouteStore.getState().addWaypoint(lng, lat, geocoderSelectedResult.name);
+      popup.remove();
+    });
+    document.getElementById('geocoder-set-start')?.addEventListener('click', () => {
+      useCurvyRouteStore.getState().setStartPoint(lng, lat);
+      popup.remove();
+    });
+    document.getElementById('geocoder-set-end')?.addEventListener('click', () => {
+      useCurvyRouteStore.getState().setEndPoint(lng, lat);
+      popup.remove();
+    });
+  }, [geocoderSelectedResult]);
+
+  // Cleanup geocoder marker on unmount
+  useEffect(() => {
+    return () => {
+      geocoderMarkerRef.current?.remove();
+      geocoderPopupRef.current?.remove();
+    };
+  }, []);
+
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <div
         ref={mapContainerRef}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
+      <AddressSearchBar />
     </div>
   );
 }

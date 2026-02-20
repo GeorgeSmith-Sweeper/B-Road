@@ -4,6 +4,7 @@ Modern Next.js 14 frontend for the B-Road Curvature project, replacing the vanil
 
 ## Features
 
+- **Address Search**: Type an address to search via Mapbox Geocoding, fly to the result, and set it as a waypoint or route start/end point
 - **Two Route Modes**: Manual Waypoint routing and Auto Curvy Route finder
 - **Waypoint Route Builder**: Click road segments to add waypoints, drag to adjust, save and export routes
 - **Curvy Route Finder**: Set start/end points on the map and automatically find the twistiest route between them
@@ -71,18 +72,22 @@ frontend/
 │   └── globals.css                # Global styles
 ├── components/
 │   ├── Map.tsx                    # Mapbox GL JS map with curvature gradient, route rendering
+│   ├── AddressSearchBar.tsx       # Floating address search with autocomplete
 │   ├── Sidebar.tsx                # Control panel with mode toggle
 │   ├── WaypointRouteBuilder.tsx   # Manual waypoint routing panel
 │   └── CurvyRouteFinder.tsx       # Auto curvy route finder panel
 ├── hooks/
-│   └── useRouting.ts              # OSRM route calculation hook
+│   ├── useRouting.ts              # OSRM route calculation hook
+│   └── useGeocode.ts              # Debounced Mapbox geocoding hook
 ├── store/
-│   ├── useAppStore.ts             # Global app state (sources, filters)
+│   ├── useAppStore.ts             # Global app state (sources, filters, map center)
 │   ├── useChatStore.ts            # Chat/search state
+│   ├── useGeocoderStore.ts        # Address search/geocoding state
 │   ├── useWaypointRouteStore.ts   # Waypoint routing state + session
 │   └── useCurvyRouteStore.ts      # Curvy route finder state
 ├── lib/
 │   ├── api.ts                     # API client for FastAPI backend
+│   ├── geocoding-api.ts           # Mapbox Geocoding API v6 client
 │   ├── routing-api.ts             # OSRM + curvy route API client
 │   ├── routes-api.ts              # Route saving/loading API client
 │   └── google-maps.ts             # Google Maps/Street View URL helpers
