@@ -18,6 +18,10 @@ interface AppState {
   selectedSource: string | null;
   setSelectedSource: (source: string | null) => void;
 
+  // Map center (for geocoding proximity bias)
+  mapCenter: [number, number];
+  setMapCenter: (center: [number, number]) => void;
+
   // Error states
   sourcesError: ApiError | null;
   setSourcesError: (error: ApiError | null) => void;
@@ -48,6 +52,10 @@ export const useAppStore = create<AppState>((set) => ({
   // Selected source
   selectedSource: null,
   setSelectedSource: (source) => set({ selectedSource: source }),
+
+  // Map center
+  mapCenter: [-98.5, 39.8],
+  setMapCenter: (center) => set({ mapCenter: center }),
 
   // Error states
   sourcesError: null,
