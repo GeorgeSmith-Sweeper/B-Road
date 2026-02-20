@@ -13,8 +13,7 @@ api/tests/
 │   ├── test_models.py       # SQLAlchemy model tests
 │   ├── test_database.py     # Database connection tests
 │   ├── test_validation.py   # Route validation logic tests
-│   ├── test_routing.py      # OSRM routing service tests
-│   └── test_curvy_routing.py # Curvy route finder scoring/selection tests
+│   └── test_routing.py      # OSRM routing service tests
 ├── integration/             # Integration tests (slower, real DB)
 │   ├── test_spatial_queries.py  # PostGIS spatial operations
 │   ├── test_api_routes.py       # API endpoint tests
@@ -47,15 +46,6 @@ api/tests/
   - Coordinate bounds checking
   - LineString construction
   - Data integrity checks
-
-- **test_curvy_routing.py**: 23 tests
-  - CurvyRouteOptions/Request/Response model validation
-  - Segment scoring algorithm (curvature/length/proximity weighting)
-  - Segment selection with spacing constraints
-  - Waypoint list construction
-  - Full route finding with mocked OSRM and repository
-  - Detour trimming when ratio exceeds threshold
-  - Short route corridor reduction
 
 ### Integration Tests (Slower, ~0.5-1s per test)
 - **test_spatial_queries.py**: 17 tests

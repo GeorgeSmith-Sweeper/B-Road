@@ -2,7 +2,7 @@
  * API client for OSRM routing endpoints.
  */
 
-import type { CalculatedRoute, CurvyRouteOptions, CurvyRouteResult } from '@/types/routing';
+import type { CalculatedRoute } from '@/types/routing';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -27,28 +27,6 @@ export async function calculateRoute(
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
     throw new Error(error.detail || `Route calculation failed: ${response.status}`);
-  }
-
-  return response.json();
-}
-
-/**
- * Find a curvy route between two points, maximizing time on twisty roads.
- */
-export async function findCurvyRoute(request: {
-  start: { lng: number; lat: number };
-  end: { lng: number; lat: number };
-  options?: Partial<CurvyRouteOptions>;
-}): Promise<CurvyRouteResult> {
-  const response = await fetch(`${API_BASE_URL}/routing/curvy-route`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-    throw new Error(error.detail || `Curvy route calculation failed: ${response.status}`);
   }
 
   return response.json();
