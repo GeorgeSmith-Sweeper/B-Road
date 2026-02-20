@@ -6,7 +6,6 @@ import toast from 'react-hot-toast';
 import { useAppStore } from '@/store/useAppStore';
 import { useChatStore } from '@/store/useChatStore';
 import { useWaypointRouteStore } from '@/store/useWaypointRouteStore';
-import { useCurvyRouteStore } from '@/store/useCurvyRouteStore';
 import { useGeocoderStore } from '@/store/useGeocoderStore';
 import { useRouting } from '@/hooks/useRouting';
 import { getGoogleMapsUrl, getStreetViewUrl, getMidpoint } from '@/lib/google-maps';
@@ -38,13 +37,6 @@ export default function Map() {
   const waypointCalculatedRoute = useWaypointRouteStore((state) => state.calculatedRoute);
   const waypointMarkersRef = useRef(new globalThis.Map<string, mapboxgl.Marker>());
   const { recalculateRoute, previewRoute, cancelPreview } = useRouting();
-
-  // Curvy route state
-  const curvyStartPoint = useCurvyRouteStore((state) => state.startPoint);
-  const curvyEndPoint = useCurvyRouteStore((state) => state.endPoint);
-  const curvyResult = useCurvyRouteStore((state) => state.result);
-  const curvyStartMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const curvyEndMarkerRef = useRef<mapboxgl.Marker | null>(null);
 
   // Geocoder state
   const geocoderSelectedResult = useGeocoderStore((state) => state.selectedResult);
@@ -127,24 +119,6 @@ export default function Map() {
         },
       });
 
-      // Curvy route source and layer
-      map.addSource('curvy-route', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-      });
-
-      map.addLayer({
-        id: 'curvy-route-line',
-        type: 'line',
-        source: 'curvy-route',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: {
-          'line-color': '#1FDDE0',
-          'line-width': 5,
-          'line-opacity': 0.9,
-        },
-      });
-
       sourceAddedRef.current = true;
 
       // Track map center for geocoding proximity bias
@@ -153,22 +127,8 @@ export default function Map() {
         useAppStore.getState().setMapCenter([center.lng, center.lat]);
       });
 
-      // General map click handler for curvy route picking mode
-      map.on('click', (e: mapboxgl.MapMouseEvent) => {
-        const { pickingMode, setStartPoint, setEndPoint } = useCurvyRouteStore.getState();
-        if (pickingMode === 'start') {
-          setStartPoint(e.lngLat.lng, e.lngLat.lat);
-        } else if (pickingMode === 'end') {
-          setEndPoint(e.lngLat.lng, e.lngLat.lat);
-        }
-      });
-
       // Click handler for curvature segments — adds waypoint or shows popup
       map.on('click', 'curvature-layer', (e: mapboxgl.MapLayerMouseEvent) => {
-        // If in curvy route picking mode, don't add waypoints
-        const { pickingMode } = useCurvyRouteStore.getState();
-        if (pickingMode) return;
-
         if (!e.features?.length) return;
         const feature = e.features[0];
         const props = feature.properties;
@@ -482,78 +442,6 @@ export default function Map() {
     };
   }, []);
 
-  // Update curvy route visualization when result changes
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !sourceAddedRef.current) return;
-
-    const source = map.getSource('curvy-route') as mapboxgl.GeoJSONSource | undefined;
-    if (!source) return;
-
-    if (curvyResult) {
-      source.setData({
-        type: 'FeatureCollection',
-        features: [
-          {
-            type: 'Feature',
-            geometry: curvyResult.geometry,
-            properties: {},
-          },
-        ],
-      });
-    } else {
-      source.setData({ type: 'FeatureCollection', features: [] });
-    }
-  }, [curvyResult]);
-
-  // Manage curvy route start/end markers
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    // Start marker
-    if (curvyStartPoint) {
-      if (!curvyStartMarkerRef.current) {
-        const el = document.createElement('div');
-        el.style.cssText =
-          'width:20px;height:20px;border-radius:50%;background:#16A34A;border:3px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);';
-        curvyStartMarkerRef.current = new mapboxgl.Marker({ element: el })
-          .setLngLat([curvyStartPoint.lng, curvyStartPoint.lat])
-          .addTo(map);
-      } else {
-        curvyStartMarkerRef.current.setLngLat([curvyStartPoint.lng, curvyStartPoint.lat]);
-      }
-    } else {
-      curvyStartMarkerRef.current?.remove();
-      curvyStartMarkerRef.current = null;
-    }
-
-    // End marker
-    if (curvyEndPoint) {
-      if (!curvyEndMarkerRef.current) {
-        const el = document.createElement('div');
-        el.style.cssText =
-          'width:20px;height:20px;border-radius:50%;background:#DC2626;border:3px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3);';
-        curvyEndMarkerRef.current = new mapboxgl.Marker({ element: el })
-          .setLngLat([curvyEndPoint.lng, curvyEndPoint.lat])
-          .addTo(map);
-      } else {
-        curvyEndMarkerRef.current.setLngLat([curvyEndPoint.lng, curvyEndPoint.lat]);
-      }
-    } else {
-      curvyEndMarkerRef.current?.remove();
-      curvyEndMarkerRef.current = null;
-    }
-  }, [curvyStartPoint, curvyEndPoint]);
-
-  // Cleanup curvy route markers on unmount
-  useEffect(() => {
-    return () => {
-      curvyStartMarkerRef.current?.remove();
-      curvyEndMarkerRef.current?.remove();
-    };
-  }, []);
-
   // Handle geocoder result — fly to location, place pin with popup
   useEffect(() => {
     const map = mapRef.current;
@@ -592,16 +480,6 @@ export default function Map() {
             style="font-size: 12px; color: #fff; background: #1FDDE0; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-weight: 500;">
             Add as Waypoint
           </button>
-          <div style="display: flex; gap: 6px;">
-            <button id="geocoder-set-start"
-              style="flex:1; font-size: 12px; color: #fff; background: #16A34A; border: none; border-radius: 4px; padding: 5px 8px; cursor: pointer; font-weight: 500;">
-              Set as Start
-            </button>
-            <button id="geocoder-set-end"
-              style="flex:1; font-size: 12px; color: #fff; background: #DC2626; border: none; border-radius: 4px; padding: 5px 8px; cursor: pointer; font-weight: 500;">
-              Set as End
-            </button>
-          </div>
         </div>
       </div>
     `;
@@ -616,14 +494,6 @@ export default function Map() {
     // Attach button event handlers — DOM exists immediately after addTo()
     document.getElementById('geocoder-add-waypoint')?.addEventListener('click', () => {
       useWaypointRouteStore.getState().addWaypoint(lng, lat, geocoderSelectedResult.name);
-      popup.remove();
-    });
-    document.getElementById('geocoder-set-start')?.addEventListener('click', () => {
-      useCurvyRouteStore.getState().setStartPoint(lng, lat);
-      popup.remove();
-    });
-    document.getElementById('geocoder-set-end')?.addEventListener('click', () => {
-      useCurvyRouteStore.getState().setEndPoint(lng, lat);
       popup.remove();
     });
   }, [geocoderSelectedResult]);
