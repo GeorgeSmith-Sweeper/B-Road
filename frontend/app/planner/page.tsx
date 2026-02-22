@@ -21,6 +21,7 @@ import {
   GripVertical,
   MousePointerClick,
   X,
+  PanelLeft,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -53,6 +54,9 @@ export default function Planner() {
   const [loading, setLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
   const [sourcesLoading, setSourcesLoading] = useState(false);
+
+  // Sidebar toggle for mobile
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Save route state
   const [saving, setSaving] = useState(false);
@@ -201,12 +205,19 @@ export default function Planner() {
     <div className="flex flex-col h-screen bg-bg-primary overflow-hidden">
       {/* ── Top Nav ── */}
       <nav className="flex items-center justify-between h-14 px-6 bg-bg-card border-b border-border-subtle flex-shrink-0">
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-3 sm:gap-5">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="md:hidden text-text-secondary hover:text-text-primary transition-colors p-1"
+            aria-label="Toggle sidebar"
+          >
+            <PanelLeft className="w-5 h-5" />
+          </button>
           <Link href="/" className="font-bebas text-[22px] tracking-[4px] text-accent-gold hover:brightness-110 transition">
             ROADRUNNER
           </Link>
-          <div className="w-px h-6 bg-border-subtle" />
-          <span className="font-bebas text-base tracking-[3px] text-text-primary">ROUTE BUILDER</span>
+          <div className="w-px h-6 bg-border-subtle hidden sm:block" />
+          <span className="font-bebas text-base tracking-[3px] text-text-primary hidden sm:inline">ROUTE BUILDER</span>
         </div>
         <div className="flex items-center gap-4">
           {/* Save button */}
@@ -248,19 +259,40 @@ export default function Planner() {
 
       {/* ── Body ── */}
       <div className="flex flex-1 min-h-0">
+        {/* ── Mobile sidebar overlay ── */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-30 bg-black/50 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         {/* ── Sidebar ── */}
-        <aside className="w-[340px] flex-shrink-0 bg-bg-card border-r border-border-subtle flex flex-col">
+        <aside className={`
+          ${sidebarOpen ? 'fixed inset-y-0 left-0 z-40 w-[300px] sm:w-[340px] pt-14' : 'hidden'}
+          md:relative md:flex md:w-[340px] md:pt-0
+          flex-shrink-0 bg-bg-card border-r border-border-subtle flex flex-col
+        `}>
           {/* Sidebar Header */}
           <div className="px-5 pt-5 pb-4 border-b border-border-subtle flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <span className="font-bebas text-lg tracking-[3px] text-text-primary">WAYPOINTS</span>
-              <button
-                onClick={() => toast('Click on a road segment on the map to add waypoints', { icon: '\uD83D\uDCCD' })}
-                className="flex items-center gap-1.5 rounded bg-accent-gold px-3 py-1.5 font-bebas text-[11px] tracking-[2px] text-bg-primary hover:brightness-110 transition"
-              >
-                <Plus className="w-3 h-3" />
-                ADD
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => toast('Click on a road segment on the map to add waypoints', { icon: '\uD83D\uDCCD' })}
+                  className="flex items-center gap-1.5 rounded bg-accent-gold px-3 py-1.5 font-bebas text-[11px] tracking-[2px] text-bg-primary hover:brightness-110 transition"
+                >
+                  <Plus className="w-3 h-3" />
+                  ADD
+                </button>
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  className="md:hidden text-text-disabled hover:text-text-primary transition p-1"
+                  aria-label="Close sidebar"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Source filter as search-like bar */}
@@ -451,7 +483,7 @@ export default function Planner() {
       {/* Save Form Modal */}
       {showSaveForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-bg-card border border-border-subtle p-6 w-[400px] flex flex-col gap-4">
+          <div className="bg-bg-card border border-border-subtle p-6 w-[calc(100%-2rem)] sm:w-[400px] mx-4 sm:mx-0 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <span className="font-bebas text-lg tracking-[3px] text-text-primary">SAVE ROUTE</span>
               <button onClick={() => setShowSaveForm(false)} className="text-text-disabled hover:text-text-primary transition">

@@ -155,7 +155,7 @@ export default function ChatInterface({ onResultsReceived }: ChatInterfaceProps)
       {/* Chat panel */}
       <div
         className={`
-          absolute bottom-0 right-0 w-96 h-[500px]
+          absolute bottom-0 right-0 w-[calc(100vw-2rem)] sm:w-96 h-[calc(100vh-6rem)] sm:h-[500px]
           bg-white rounded-lg shadow-2xl
           flex flex-col overflow-hidden
           transition-all duration-200 origin-bottom-right
