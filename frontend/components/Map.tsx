@@ -167,6 +167,26 @@ export default function Map() {
       maxzoom: 14,
     });
 
+    // Halo layer: white outline behind colored roads for legibility
+    map.addLayer({
+      id: 'curvature-halo',
+      type: 'line',
+      source: 'curvature',
+      'source-layer': 'curvature',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-color': 'rgba(255, 255, 255, 0.6)',
+        'line-width': [
+          'interpolate', ['linear'], ['zoom'],
+          4, ['interpolate', ['linear'], ['get', 'curvature'], 300, 2.5, 2000, 3, 5000, 3.5],
+          8, ['interpolate', ['linear'], ['get', 'curvature'], 300, 3, 2000, 4, 5000, 5],
+          12, ['interpolate', ['linear'], ['get', 'curvature'], 300, 3.5, 2000, 5, 5000, 6.5],
+        ],
+        'line-opacity': 0.5,
+      },
+      filter: ['>=', ['get', 'curvature'], useAppStore.getState().searchFilters.min_curvature],
+    });
+
     map.addLayer({
       id: 'curvature-layer',
       type: 'line',
@@ -175,9 +195,13 @@ export default function Map() {
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: {
         'line-color': [
-          'interpolate', ['linear'], ['get', 'curvature'],
-          300, '#4CAF50', 600, '#8BC34A', 1000, '#FFEB3B',
-          1500, '#FF9800', 2000, '#F44336', 3000, '#9C27B0', 5000, '#4A148C',
+          'step', ['get', 'curvature'],
+          '#29B6F6',   // < 600: Relaxed (Sky Blue)
+          600, '#26C97E',   // Spirited (Emerald)
+          1000, '#FFC107',  // Engaging (Amber)
+          2000, '#FF6D2A',  // Technical (Deep Orange)
+          5000, '#E53935',  // Expert (Crimson)
+          10000, '#9C27B0', // Legendary (Electric Purple)
         ],
         'line-width': [
           'interpolate', ['linear'], ['zoom'],
@@ -185,7 +209,7 @@ export default function Map() {
           8, ['interpolate', ['linear'], ['get', 'curvature'], 300, 1, 2000, 2, 5000, 3],
           12, ['interpolate', ['linear'], ['get', 'curvature'], 300, 1.5, 2000, 3, 5000, 4.5],
         ],
-        'line-opacity': 0.8,
+        'line-opacity': 0.9,
       },
       filter: ['>=', ['get', 'curvature'], useAppStore.getState().searchFilters.min_curvature],
     });
@@ -364,7 +388,9 @@ export default function Map() {
     const map = mapRef.current;
     if (!map || !sourceAddedRef.current) return;
 
-    map.setFilter('curvature-layer', ['>=', ['get', 'curvature'], searchFilters.min_curvature]);
+    const filter: mapboxgl.FilterSpecification = ['>=', ['get', 'curvature'], searchFilters.min_curvature];
+    map.setFilter('curvature-layer', filter);
+    map.setFilter('curvature-halo', filter);
   }, [searchFilters.min_curvature]);
 
   // Handle chat search results
