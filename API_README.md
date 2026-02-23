@@ -169,7 +169,7 @@ Get road segments within a geographic bounding box. This is the primary endpoint
         "id_hash": "abc123def456",
         "name": "Route 100",
         "curvature": 1250.5,
-        "curvature_level": "curvy",
+        "curvature_level": "engaging",
         "length": 25300,
         "length_km": 25.3,
         "length_mi": 15.72,
@@ -366,7 +366,7 @@ Every feature returned in a FeatureCollection includes these properties:
 | `id_hash`         | string  | SHA1 hash for deduplication                |
 | `name`            | string  | Road name (or "Unnamed Road")              |
 | `curvature`       | float   | Curvature score                            |
-| `curvature_level` | string  | Category: mild, moderate, curvy, extreme   |
+| `curvature_level` | string  | Category: relaxed, spirited, engaging, technical, expert, legendary |
 | `length`          | float   | Length in meters                            |
 | `length_km`       | float   | Length in kilometers                        |
 | `length_mi`       | float   | Length in miles                             |
@@ -374,27 +374,31 @@ Every feature returned in a FeatureCollection includes these properties:
 | `surface`         | string  | "paved" or "unpaved"                       |
 | `source`          | string  | Data source name (e.g., "vermont")         |
 
-**Curvature levels:**
+**Road Rating levels:**
 
-| Level      | Curvature Score |
-|------------|-----------------|
-| `mild`     | < 600           |
-| `moderate` | 600 -- 999      |
-| `curvy`    | 1000 -- 1999    |
-| `extreme`  | 2000+           |
+| Level        | Curvature Score |
+|--------------|-----------------|
+| `relaxed`    | 300 -- 599      |
+| `spirited`   | 600 -- 999      |
+| `engaging`   | 1000 -- 1999    |
+| `technical`  | 2000 -- 4999    |
+| `expert`     | 5000 -- 9999    |
+| `legendary`  | 10000+          |
 
 ## Frontend Map Rendering
 
 The Next.js frontend renders segments on a Mapbox GL JS map using **vector tiles** served from PostGIS via `ST_AsMVT`. The map is centered on the US (`-98.5, 39.8`, zoom 5) and loads tiles from `/curvature/tiles/{z}/{x}/{y}.pbf`.
 
-Road segments are color-coded by curvature:
+Road segments are color-coded by road rating:
 
-| Curvature Score | Color  | Hex       |
-|-----------------|--------|-----------|
-| < 600           | Yellow | `#FFC107` |
-| 600 -- 999      | Orange | `#FF9800` |
-| 1000 -- 1999    | Red    | `#F44336` |
-| 2000+           | Purple | `#9C27B0` |
+| Curvature Score | Rating    | Color       | Hex       |
+|-----------------|-----------|-------------|-----------|
+| 300 -- 599      | Relaxed   | Green       | `#4CAF50` |
+| 600 -- 999      | Spirited  | Light Green | `#8BC34A` |
+| 1000 -- 1999    | Engaging  | Yellow      | `#FFEB3B` |
+| 2000 -- 4999    | Technical | Orange      | `#FF9800` |
+| 5000 -- 9999    | Expert    | Red         | `#F44336` |
+| 10000+          | Legendary | Purple      | `#9C27B0` |
 
 Line width scales with zoom level: z4 = 1px, z8 = 2px, z12 = 4px.
 

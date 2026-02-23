@@ -83,7 +83,7 @@ async def build_query(
     max_length: Optional[float] = Query(None, description="Maximum length in miles"),
     curvature_level: Optional[str] = Query(
         None,
-        description="Curvature level: mild, moderate, curvy, very_curvy, extreme, epic",
+        description="Curvature level: relaxed, spirited, engaging, technical, expert, legendary",
     ),
 ):
     """

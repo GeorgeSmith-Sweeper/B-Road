@@ -277,12 +277,16 @@ def make_geojson_feature(segment: dict) -> dict:
 def get_curvature_level(curvature: int) -> str:
     """Get curvature level string from numeric value."""
     if curvature < 600:
-        return "mild"
+        return "relaxed"
     if curvature < 1000:
-        return "moderate"
+        return "spirited"
     if curvature < 2000:
-        return "curvy"
-    return "extreme"
+        return "engaging"
+    if curvature < 5000:
+        return "technical"
+    if curvature < 10000:
+        return "expert"
+    return "legendary"
 
 
 def make_feature_collection(segments: list) -> dict:

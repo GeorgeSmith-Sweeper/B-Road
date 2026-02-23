@@ -47,6 +47,7 @@ export default function Planner() {
     getTotalDistance,
     getTotalDuration,
     getWaypointCount,
+    getRoadRating,
     sessionId,
     setSessionId,
   } = useWaypointRouteStore();
@@ -69,6 +70,7 @@ export default function Planner() {
   const totalDistance = getTotalDistance();
   const totalDuration = getTotalDuration();
   const waypointCount = getWaypointCount();
+  const roadRating = getRoadRating();
 
   // Format duration as Xh Xm
   const hours = Math.floor(totalDuration / 60);
@@ -315,22 +317,37 @@ export default function Planner() {
               </select>
             </div>
 
-            {/* Curvature slider */}
-            <div className="flex items-center gap-3">
-              <span className="font-bebas text-[10px] tracking-[2px] text-text-disabled whitespace-nowrap">MIN CURV</span>
-              <input
-                type="range"
-                min="0"
-                max="5000"
-                step="100"
-                value={searchFilters.min_curvature}
-                onChange={(e) => setSearchFilters({ min_curvature: parseInt(e.target.value) })}
-                className="flex-1 accent-[#C9A962] h-1"
-              />
-              <span className="font-bebas text-sm tracking-[1px] text-accent-gold w-10 text-right">
-                {searchFilters.min_curvature}
-              </span>
-            </div>
+            {/* Road Rating slider */}
+            {(() => {
+              const stops = [
+                { value: 0, label: 'ALL' },
+                { value: 300, label: 'RELAXED' },
+                { value: 600, label: 'SPIRITED' },
+                { value: 1000, label: 'ENGAGING' },
+                { value: 2000, label: 'TECHNICAL' },
+                { value: 5000, label: 'EXPERT' },
+                { value: 10000, label: 'LEGENDARY' },
+              ];
+              const currentIndex = stops.findIndex(s => s.value === searchFilters.min_curvature);
+              const idx = currentIndex >= 0 ? currentIndex : 0;
+              return (
+                <div className="flex items-center gap-3">
+                  <span className="font-bebas text-[10px] tracking-[2px] text-text-disabled whitespace-nowrap">MIN RATING</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max={stops.length - 1}
+                    step="1"
+                    value={idx}
+                    onChange={(e) => setSearchFilters({ min_curvature: stops[parseInt(e.target.value)].value })}
+                    className="flex-1 accent-[#C9A962] h-1"
+                  />
+                  <span className="font-bebas text-sm tracking-[1px] text-accent-gold text-right whitespace-nowrap">
+                    {stops[idx].label}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Waypoint List */}
@@ -406,8 +423,8 @@ export default function Planner() {
               <span className="font-bebas text-[10px] tracking-[2px] text-text-disabled">STOPS</span>
             </div>
             <div className="flex flex-col items-center gap-0.5">
-              <span className="font-bebas text-[22px] tracking-[1px] text-accent-gold">—</span>
-              <span className="font-bebas text-[10px] tracking-[2px] text-text-disabled">ELEV. FT</span>
+              <span className="font-bebas text-[22px] tracking-[1px] text-accent-gold">{roadRating}</span>
+              <span className="font-bebas text-[10px] tracking-[2px] text-text-disabled">ROAD RATING</span>
             </div>
           </div>
 

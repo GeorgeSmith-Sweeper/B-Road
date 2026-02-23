@@ -290,13 +290,17 @@ class TestServiceSearchByFilters:
             curv = feature["properties"]["curvature"]
             level = feature["properties"]["curvature_level"]
             if curv < 600:
-                assert level == "mild"
+                assert level == "relaxed"
             elif curv < 1000:
-                assert level == "moderate"
+                assert level == "spirited"
             elif curv < 2000:
-                assert level == "curvy"
+                assert level == "engaging"
+            elif curv < 5000:
+                assert level == "technical"
+            elif curv < 10000:
+                assert level == "expert"
             else:
-                assert level == "extreme"
+                assert level == "legendary"
 
     def test_respects_limit(self, curvature_service):
         """Should pass limit through to repository."""

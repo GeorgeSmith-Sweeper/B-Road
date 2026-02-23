@@ -43,11 +43,11 @@ class TestBuildFilters:
     @pytest.mark.parametrize(
         "level,expected_min,expected_max",
         [
-            ("mild", 300, 600),
-            ("moderate", 600, 1000),
-            ("curvy", 1000, 2000),
-            ("very_curvy", 2000, 5000),
-            ("extreme", 5000, 10000),
+            ("relaxed", 300, 600),
+            ("spirited", 600, 1000),
+            ("engaging", 1000, 2000),
+            ("technical", 2000, 5000),
+            ("expert", 5000, 10000),
         ],
     )
     def test_curvature_level_with_upper_bound(
@@ -58,9 +58,9 @@ class TestBuildFilters:
         assert filters["min_curvature"] == expected_min
         assert filters["max_curvature"] == expected_max
 
-    def test_curvature_level_epic_no_upper_bound(self):
-        """Epic level should have min but no max curvature."""
-        filters = CurvatureQueryBuilder.build_filters(curvature_level="epic")
+    def test_curvature_level_legendary_no_upper_bound(self):
+        """Legendary level should have min but no max curvature."""
+        filters = CurvatureQueryBuilder.build_filters(curvature_level="legendary")
         assert filters["min_curvature"] == 10000
         assert "max_curvature" not in filters
 
@@ -69,7 +69,7 @@ class TestBuildFilters:
         filters = CurvatureQueryBuilder.build_filters(
             min_curvature=100,
             max_curvature=200,
-            curvature_level="extreme",
+            curvature_level="expert",
         )
         assert filters["min_curvature"] == 5000
         assert filters["max_curvature"] == 10000

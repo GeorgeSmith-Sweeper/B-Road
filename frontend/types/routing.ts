@@ -9,6 +9,7 @@ export interface Waypoint {
   order: number;
   segmentId?: string;
   segmentName?: string;
+  curvature?: number;
   isUserModified: boolean;
 }
 
@@ -34,7 +35,7 @@ export interface WaypointRouteState {
   sessionId: string | null;
 
   // Actions
-  addWaypoint: (lng: number, lat: number, name?: string) => void;
+  addWaypoint: (lng: number, lat: number, name?: string, curvature?: number) => void;
   updateWaypoint: (id: string, lng: number, lat: number) => void;
   removeWaypoint: (id: string) => void;
   clearWaypoints: () => void;
@@ -47,5 +48,7 @@ export interface WaypointRouteState {
   getTotalDistance: () => number; // miles
   getTotalDuration: () => number; // minutes
   getWaypointCount: () => number;
+  getAverageCurvature: () => number;
+  getRoadRating: () => string;
 }
 

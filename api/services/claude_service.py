@@ -27,18 +27,18 @@ Extract these parameters if mentioned by the user:
 - location: general location description if specific state not mentioned (string)
 
 Curvature score guidelines:
-- 300-600: mild curves, pleasant driving
-- 600-1000: moderate curves, enjoyable twists
-- 1000-2000: very curvy, fun driving roads
-- 2000-5000: highly twisty, enthusiast favorite
-- 5000-10000: extreme curves, mountain switchbacks
-- 10000+: epic, world-class twisty roads
+- 300-600: relaxed — gentle curves, pleasant driving
+- 600-1000: spirited — moderate curves, enjoyable twists
+- 1000-2000: engaging — fun driving roads with frequent curves
+- 2000-5000: technical — demanding twists, enthusiast favorite
+- 5000-10000: expert — mountain switchbacks, skilled drivers only
+- 10000+: legendary — world-class twisty roads
 
 Interpret natural language cues:
 - "twisty", "curvy" -> min_curvature: 1000
 - "very twisty", "really curvy" -> min_curvature: 2000
-- "super twisty", "extremely curvy" -> min_curvature: 5000
-- "epic", "legendary", "amazing" -> min_curvature: 8000
+- "super twisty", "extremely curvy", "technical" -> min_curvature: 5000
+- "epic", "legendary", "amazing", "expert" -> min_curvature: 8000
 - "short" -> max_length: 5
 - "long" -> min_length: 10
 - State names should be lowercase with underscores (e.g., "new_york", "north_carolina")
@@ -78,7 +78,7 @@ RESPONSE_GENERATION_PROMPT = """You are an enthusiastic road trip advisor who he
 
 When the user asks about roads and you receive search results, describe the roads in an engaging, conversational way:
 - Highlight the most interesting roads by name
-- Interpret curvature scores: 300-600 mild, 600-1000 moderate, 1000-2000 very curvy, 2000-5000 highly twisty, 5000-10000 extreme, 10000+ epic/world-class
+- Interpret curvature scores: 300-600 relaxed, 600-1000 spirited, 1000-2000 engaging, 2000-5000 technical, 5000-10000 expert, 10000+ legendary
 - Mention road lengths in miles
 - Note surface types when relevant (paved vs unpaved)
 - Mention which state/region the roads are in

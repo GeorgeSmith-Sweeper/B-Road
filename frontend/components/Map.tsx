@@ -255,7 +255,7 @@ export default function Map() {
             [midLng, midLat] = coords[midIdx];
           }
         }
-        addWaypoint(midLng, midLat, props.name || undefined);
+        addWaypoint(midLng, midLat, props.name || undefined, props.curvature);
         toast.success(`Added waypoint for "${props.name || 'Unnamed Road'}"`, { icon: '\uD83D\uDCCD' });
 
         const lengthMi = props.length ? (props.length / 1609).toFixed(1) : '?';

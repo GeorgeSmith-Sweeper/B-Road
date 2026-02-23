@@ -8,7 +8,7 @@ export const useWaypointRouteStore = create<WaypointRouteState>((set, get) => ({
   error: null,
   sessionId: typeof window !== 'undefined' ? localStorage.getItem('b-road-session-id') : null,
 
-  addWaypoint: (lng, lat, name?) => {
+  addWaypoint: (lng, lat, name?, curvature?) => {
     set((state) => {
       const newWaypoint: Waypoint = {
         id: crypto.randomUUID(),
@@ -16,6 +16,7 @@ export const useWaypointRouteStore = create<WaypointRouteState>((set, get) => ({
         lat,
         order: state.waypoints.length,
         segmentName: name,
+        curvature,
         isUserModified: false,
       };
       return {
@@ -73,4 +74,22 @@ export const useWaypointRouteStore = create<WaypointRouteState>((set, get) => ({
   },
 
   getWaypointCount: () => get().waypoints.length,
+
+  getAverageCurvature: () => {
+    const withCurvature = get().waypoints.filter((wp) => wp.curvature != null);
+    if (withCurvature.length === 0) return 0;
+    const sum = withCurvature.reduce((acc, wp) => acc + (wp.curvature ?? 0), 0);
+    return sum / withCurvature.length;
+  },
+
+  getRoadRating: () => {
+    const avg = get().getAverageCurvature();
+    if (avg === 0) return '—';
+    if (avg < 600) return 'RELAXED';
+    if (avg < 1000) return 'SPIRITED';
+    if (avg < 2000) return 'ENGAGING';
+    if (avg < 5000) return 'TECHNICAL';
+    if (avg < 10000) return 'EXPERT';
+    return 'LEGENDARY';
+  },
 }));

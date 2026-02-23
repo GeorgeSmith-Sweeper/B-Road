@@ -12,12 +12,12 @@ class CurvatureQueryBuilder:
 
     # Curvature level thresholds for natural language interpretation
     CURVATURE_LEVELS = {
-        "mild": (300, 600),
-        "moderate": (600, 1000),
-        "curvy": (1000, 2000),
-        "very_curvy": (2000, 5000),
-        "extreme": (5000, 10000),
-        "epic": (10000, None),  # No upper limit
+        "relaxed": (300, 600),
+        "spirited": (600, 1000),
+        "engaging": (1000, 2000),
+        "technical": (2000, 5000),
+        "expert": (5000, 10000),
+        "legendary": (10000, None),  # No upper limit
     }
 
     @staticmethod
@@ -42,7 +42,7 @@ class CurvatureQueryBuilder:
             surface_types: List of surface types (paved, asphalt, gravel, etc.)
             sources: List of data sources (state names)
             location: General location string (for future geocoding)
-            curvature_level: Natural language level (mild, curvy, extreme, epic)
+            curvature_level: Natural language level (relaxed, spirited, engaging, technical, expert, legendary)
 
         Returns:
             Dictionary of filters for database query
