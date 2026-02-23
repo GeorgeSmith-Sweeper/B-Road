@@ -160,8 +160,7 @@ async def chat_search(
     try:
         # Convert history to list of dicts for the service
         history = [
-            {"role": msg.role, "content": msg.content}
-            for msg in request.history
+            {"role": msg.role, "content": msg.content} for msg in request.history
         ]
 
         # Extract filters from natural language (with history for context)
@@ -208,6 +207,4 @@ async def chat_search(
         raise
     except Exception as e:
         logger.error(f"Error in chat search: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Search error: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Search error: {str(e)}")

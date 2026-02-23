@@ -109,7 +109,7 @@ class TestBuildQueryEndpoint:
 
     def test_builds_with_curvature_level(self, test_client: TestClient):
         """Should accept curvature_level parameter."""
-        response = test_client.post("/chat/build-query?curvature_level=extreme")
+        response = test_client.post("/chat/build-query?curvature_level=expert")
         assert response.status_code == 200
         data = response.json()
         assert data["filters"]["min_curvature"] == 5000
@@ -117,9 +117,7 @@ class TestBuildQueryEndpoint:
 
     def test_builds_with_length_params(self, test_client: TestClient):
         """Should handle min_length and max_length."""
-        response = test_client.post(
-            "/chat/build-query?min_length=5&max_length=20"
-        )
+        response = test_client.post("/chat/build-query?min_length=5&max_length=20")
         assert response.status_code == 200
         data = response.json()
         assert "min_length_meters" in data["filters"]
@@ -178,9 +176,7 @@ class TestExtractFiltersEndpoint:
         """Should return 503 when Claude service can't initialize."""
         mock_service_cls.side_effect = ValueError("ANTHROPIC_API_KEY not set")
 
-        response = test_client.post(
-            "/chat/extract-filters?query=Find%20roads"
-        )
+        response = test_client.post("/chat/extract-filters?query=Find%20roads")
         assert response.status_code == 503
 
     @patch("api.routers.chat.ClaudeService")
@@ -194,9 +190,7 @@ class TestExtractFiltersEndpoint:
         )
         mock_service_cls.return_value = mock_instance
 
-        response = test_client.post(
-            "/chat/extract-filters?query=Find%20roads"
-        )
+        response = test_client.post("/chat/extract-filters?query=Find%20roads")
         assert response.status_code == 500
 
 
@@ -254,14 +248,10 @@ class TestChatSearchEndpoint:
             assert feature["properties"]["curvature"] >= 2000
 
     @patch("api.routers.chat.ClaudeService")
-    def test_search_respects_limit(
-        self, mock_service_cls, test_client: TestClient
-    ):
+    def test_search_respects_limit(self, mock_service_cls, test_client: TestClient):
         """Should respect the limit parameter."""
         mock_instance = MagicMock()
-        mock_instance.extract_filters = AsyncMock(
-            return_value={"min_curvature": 300}
-        )
+        mock_instance.extract_filters = AsyncMock(return_value={"min_curvature": 300})
         mock_instance.generate_response = AsyncMock(return_value="Here are roads!")
         mock_service_cls.return_value = mock_instance
 
@@ -274,9 +264,7 @@ class TestChatSearchEndpoint:
         assert len(data["results"]["features"]) <= 2
 
     @patch("api.routers.chat.ClaudeService")
-    def test_search_empty_results(
-        self, mock_service_cls, test_client: TestClient
-    ):
+    def test_search_empty_results(self, mock_service_cls, test_client: TestClient):
         """Should handle queries that return no results gracefully."""
         mock_instance = MagicMock()
         mock_instance.extract_filters = AsyncMock(

@@ -15,7 +15,6 @@ from api.models.routing import (
     WaypointRequest,
 )
 
-
 OSRM_URL = os.getenv("OSRM_URL", "http://localhost:5000")
 OSRM_TIMEOUT = int(os.getenv("OSRM_TIMEOUT", "30"))
 

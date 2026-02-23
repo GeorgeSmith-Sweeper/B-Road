@@ -50,9 +50,7 @@ class TestBuildFilters:
             ("expert", 5000, 10000),
         ],
     )
-    def test_curvature_level_with_upper_bound(
-        self, level, expected_min, expected_max
-    ):
+    def test_curvature_level_with_upper_bound(self, level, expected_min, expected_max):
         """Should map curvature level to min/max range."""
         filters = CurvatureQueryBuilder.build_filters(curvature_level=level)
         assert filters["min_curvature"] == expected_min

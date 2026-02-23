@@ -221,7 +221,7 @@ class ClaudeService:
             count = search_results.get("metadata", {}).get("count", len(features))
 
             context = (
-                f"The user asked: \"{user_query}\"\n\n"
+                f'The user asked: "{user_query}"\n\n'
                 f"Search returned {count} road(s). "
                 f"Here are the top results:\n"
                 f"{json.dumps(road_summaries, indent=2)}"

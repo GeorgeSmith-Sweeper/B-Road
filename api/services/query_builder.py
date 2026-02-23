@@ -50,7 +50,10 @@ class CurvatureQueryBuilder:
         filters: Dict[str, Any] = {}
 
         # Handle curvature level (overrides min/max if provided)
-        if curvature_level and curvature_level in CurvatureQueryBuilder.CURVATURE_LEVELS:
+        if (
+            curvature_level
+            and curvature_level in CurvatureQueryBuilder.CURVATURE_LEVELS
+        ):
             level_min, level_max = CurvatureQueryBuilder.CURVATURE_LEVELS[
                 curvature_level
             ]

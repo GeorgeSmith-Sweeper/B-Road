@@ -138,15 +138,11 @@ class RouteService:
             linestring = LineString(geom_coords)
             connecting_geom = from_shape(linestring, srid=4326)
         else:
-            linestring = LineString(
-                [(wp.lng, wp.lat) for wp in request.waypoints]
-            )
+            linestring = LineString([(wp.lng, wp.lat) for wp in request.waypoints])
             connecting_geom = from_shape(linestring, srid=4326)
 
         # Build basic geometry from waypoints for the geom column
-        waypoint_linestring = LineString(
-            [(wp.lng, wp.lat) for wp in request.waypoints]
-        )
+        waypoint_linestring = LineString([(wp.lng, wp.lat) for wp in request.waypoints])
 
         route = SavedRoute(
             session_id=session_uuid,

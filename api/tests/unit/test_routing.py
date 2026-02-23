@@ -18,7 +18,6 @@ from api.models.routing import (
     CalculateRouteResponse,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -103,7 +102,9 @@ class TestOSRMServiceCalculate:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.get = AsyncMock(return_value=mock_osrm_response)
 
-        with patch("api.services.osrm_service.httpx.AsyncClient", return_value=mock_client):
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
             result = await osrm_service.calculate_route(two_waypoints)
 
         assert isinstance(result, CalculateRouteResponse)
@@ -116,14 +117,18 @@ class TestOSRMServiceCalculate:
         assert result.waypoints[0].snapped is True
 
     @pytest.mark.asyncio
-    async def test_builds_correct_osrm_url(self, osrm_service, two_waypoints, mock_osrm_response):
+    async def test_builds_correct_osrm_url(
+        self, osrm_service, two_waypoints, mock_osrm_response
+    ):
         """OSRM URL is built with semicolon-separated lng,lat pairs."""
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.get = AsyncMock(return_value=mock_osrm_response)
 
-        with patch("api.services.osrm_service.httpx.AsyncClient", return_value=mock_client):
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
             await osrm_service.calculate_route(two_waypoints)
 
         call_args = mock_client.get.call_args
@@ -132,14 +137,18 @@ class TestOSRMServiceCalculate:
         assert url.startswith("http://test-osrm:5000/route/v1/driving/")
 
     @pytest.mark.asyncio
-    async def test_requests_geojson_geometry(self, osrm_service, two_waypoints, mock_osrm_response):
+    async def test_requests_geojson_geometry(
+        self, osrm_service, two_waypoints, mock_osrm_response
+    ):
         """OSRM request includes geojson geometry format and full overview."""
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.get = AsyncMock(return_value=mock_osrm_response)
 
-        with patch("api.services.osrm_service.httpx.AsyncClient", return_value=mock_client):
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
             await osrm_service.calculate_route(two_waypoints)
 
         params = mock_client.get.call_args[1]["params"]
@@ -152,9 +161,13 @@ class TestOSRMServiceCalculate:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client.get = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
+        mock_client.get = AsyncMock(
+            side_effect=httpx.ConnectError("Connection refused")
+        )
 
-        with patch("api.services.osrm_service.httpx.AsyncClient", return_value=mock_client):
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
             with pytest.raises(OSRMError, match="unavailable"):
                 await osrm_service.calculate_route(two_waypoints)
 
@@ -166,7 +179,9 @@ class TestOSRMServiceCalculate:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.get = AsyncMock(side_effect=httpx.TimeoutException("Timed out"))
 
-        with patch("api.services.osrm_service.httpx.AsyncClient", return_value=mock_client):
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
             with pytest.raises(OSRMError, match="timed out"):
                 await osrm_service.calculate_route(two_waypoints)
 
@@ -185,7 +200,9 @@ class TestOSRMServiceCalculate:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.get = AsyncMock(return_value=response)
 
-        with patch("api.services.osrm_service.httpx.AsyncClient", return_value=mock_client):
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
             with pytest.raises(OSRMError, match="No route found"):
                 await osrm_service.calculate_route(two_waypoints)
 
@@ -200,15 +217,15 @@ class TestOSRMServiceCalculate:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.get = AsyncMock(return_value=response)
 
-        with patch("api.services.osrm_service.httpx.AsyncClient", return_value=mock_client):
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
             with pytest.raises(OSRMError) as exc_info:
                 await osrm_service.calculate_route(two_waypoints)
             assert exc_info.value.status_code == 502
 
     @pytest.mark.asyncio
-    async def test_handles_three_waypoints(
-        self, osrm_service, three_waypoints
-    ):
+    async def test_handles_three_waypoints(self, osrm_service, three_waypoints):
         """Route calculation works with more than 2 waypoints."""
         response = MagicMock()
         response.status_code = 200
@@ -218,7 +235,11 @@ class TestOSRMServiceCalculate:
                 {
                     "geometry": {
                         "type": "LineString",
-                        "coordinates": [[-80.84, 35.22], [-80.82, 35.23], [-80.79, 35.24]],
+                        "coordinates": [
+                            [-80.84, 35.22],
+                            [-80.82, 35.23],
+                            [-80.79, 35.24],
+                        ],
                     },
                     "distance": 8000.0,
                     "duration": 600.0,
@@ -236,7 +257,9 @@ class TestOSRMServiceCalculate:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.get = AsyncMock(return_value=response)
 
-        with patch("api.services.osrm_service.httpx.AsyncClient", return_value=mock_client):
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
             result = await osrm_service.calculate_route(three_waypoints)
 
         assert len(result.waypoints) == 3
@@ -259,7 +282,9 @@ class TestOSRMServiceHealth:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.get = AsyncMock(return_value=response)
 
-        with patch("api.services.osrm_service.httpx.AsyncClient", return_value=mock_client):
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
             result = await osrm_service.health_check()
 
         assert result.osrm_available is True
@@ -271,9 +296,13 @@ class TestOSRMServiceHealth:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client.get = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
+        mock_client.get = AsyncMock(
+            side_effect=httpx.ConnectError("Connection refused")
+        )
 
-        with patch("api.services.osrm_service.httpx.AsyncClient", return_value=mock_client):
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
             result = await osrm_service.health_check()
 
         assert result.osrm_available is False
@@ -295,7 +324,9 @@ class TestCalculateEndpoint:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.get = AsyncMock(return_value=mock_osrm_response)
 
-        with patch("api.services.osrm_service.httpx.AsyncClient", return_value=mock_client):
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
             response = client.post(
                 "/routing/calculate",
                 json={
@@ -361,9 +392,13 @@ class TestCalculateEndpoint:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client.get = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
+        mock_client.get = AsyncMock(
+            side_effect=httpx.ConnectError("Connection refused")
+        )
 
-        with patch("api.services.osrm_service.httpx.AsyncClient", return_value=mock_client):
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
             response = client.post(
                 "/routing/calculate",
                 json={
@@ -384,7 +419,9 @@ class TestCalculateEndpoint:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.get = AsyncMock(return_value=mock_osrm_response)
 
-        with patch("api.services.osrm_service.httpx.AsyncClient", return_value=mock_client):
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
             response = client.post(
                 "/routing/calculate",
                 json={
@@ -411,7 +448,9 @@ class TestHealthEndpoint:
         mock_client.__aexit__ = AsyncMock(return_value=False)
         mock_client.get = AsyncMock(return_value=response_mock)
 
-        with patch("api.services.osrm_service.httpx.AsyncClient", return_value=mock_client):
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
             response = client.get("/routing/health")
 
         assert response.status_code == 200
@@ -423,9 +462,13 @@ class TestHealthEndpoint:
         mock_client = AsyncMock()
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
-        mock_client.get = AsyncMock(side_effect=httpx.ConnectError("Connection refused"))
+        mock_client.get = AsyncMock(
+            side_effect=httpx.ConnectError("Connection refused")
+        )
 
-        with patch("api.services.osrm_service.httpx.AsyncClient", return_value=mock_client):
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
             response = client.get("/routing/health")
 
         assert response.status_code == 200
@@ -461,9 +504,7 @@ class TestRoutingModels:
 
     def test_calculate_request_requires_two_waypoints(self):
         with pytest.raises(Exception):
-            CalculateRouteRequest(
-                waypoints=[WaypointRequest(lng=-80.84, lat=35.22)]
-            )
+            CalculateRouteRequest(waypoints=[WaypointRequest(lng=-80.84, lat=35.22)])
 
     def test_calculate_request_accepts_two_waypoints(self):
         req = CalculateRouteRequest(
