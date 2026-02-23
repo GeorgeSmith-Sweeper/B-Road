@@ -7,10 +7,13 @@ import { useAppStore } from '@/store/useAppStore';
 import { useChatStore } from '@/store/useChatStore';
 import { useWaypointRouteStore } from '@/store/useWaypointRouteStore';
 import { useGeocoderStore } from '@/store/useGeocoderStore';
+import { useLayerStore } from '@/store/useLayerStore';
 import { useRouting } from '@/hooks/useRouting';
 import { getGoogleMapsUrl, getStreetViewUrl, getMidpoint } from '@/lib/google-maps';
+import { fetchEVStations } from '@/lib/nrel-api';
 import { Plus, Minus, Satellite, Mountain, Map as MapIcon, Layers, Compass } from 'lucide-react';
 import AddressSearchBar from './AddressSearchBar';
+import LayerMenu from './LayerMenu';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -132,6 +135,52 @@ function buildGeocoderPopupHTML(name: string, address: string) {
   `;
 }
 
+function buildGasStationPopupHTML(name: string) {
+  return `
+    <div style="padding: 10px 14px; font-family: 'Cormorant Garamond', serif; min-width: 160px;">
+      <div style="font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 1px; color: #F5F4F2; margin-bottom: 2px;">
+        ${name}
+      </div>
+      <div style="font-size: 11px; font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; color: #34D399;">
+        GAS STATION
+      </div>
+    </div>
+  `;
+}
+
+function buildEVStationPopupHTML(props: Record<string, unknown>) {
+  const name = String(props.name || 'EV Station');
+  const network = props.network ? String(props.network) : null;
+  const address = props.address ? String(props.address) : null;
+  const city = props.city ? String(props.city) : null;
+  const state = props.state ? String(props.state) : null;
+  const l2 = props.level2Count != null ? Number(props.level2Count) : null;
+  const dcFast = props.dcFastCount != null ? Number(props.dcFastCount) : null;
+  const hours = props.hours ? String(props.hours) : null;
+
+  const locationLine = [address, [city, state].filter(Boolean).join(', ')].filter(Boolean).join(', ');
+  const plugParts: string[] = [];
+  if (l2 != null && l2 > 0) plugParts.push(`L2: ${l2}`);
+  if (dcFast != null && dcFast > 0) plugParts.push(`DC Fast: ${dcFast}`);
+
+  return `
+    <div style="padding: 10px 14px; font-family: 'Cormorant Garamond', serif; min-width: 200px; max-width: 280px;">
+      <div style="font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 1px; color: #F5F4F2; margin-bottom: 2px;">
+        ${name.toUpperCase()}
+      </div>
+      <div style="font-size: 11px; font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; color: #60A5FA; margin-bottom: 6px;">
+        EV CHARGING${network ? ` &middot; ${network.toUpperCase()}` : ''}
+      </div>
+      ${locationLine ? `<div style="font-size: 12px; font-style: italic; color: #8A8A8A; margin-bottom: 4px;">${locationLine}</div>` : ''}
+      ${plugParts.length > 0 ? `<div style="font-size: 12px; color: #8A8A8A; margin-bottom: 4px;">${plugParts.join(' &middot; ')}</div>` : ''}
+      ${hours ? `<div style="font-size: 11px; color: #5A5A5A; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${hours}</div>` : ''}
+    </div>
+  `;
+}
+
+const EV_FETCH_MIN_ZOOM = 8;
+const EV_DEBOUNCE_MS = 500;
+
 export default function Map() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -139,6 +188,9 @@ export default function Map() {
   const styleSheetInjectedRef = useRef(false);
 
   const [activeStyle, setActiveStyle] = useState<MapStyleKey>('terrain');
+  const [layerMenuOpen, setLayerMenuOpen] = useState(false);
+  const layerButtonRef = useRef<HTMLButtonElement>(null);
+  const evDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const mapboxToken = useAppStore((state) => state.mapboxToken);
   const selectedSource = useAppStore((state) => state.selectedSource);
@@ -155,6 +207,10 @@ export default function Map() {
   const geocoderSelectedResult = useGeocoderStore((state) => state.selectedResult);
   const geocoderMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const geocoderPopupRef = useRef<mapboxgl.Popup | null>(null);
+
+  // Layer visibility state
+  const gasStationsVisible = useLayerStore((s) => s.gasStationsVisible);
+  const evChargingVisible = useLayerStore((s) => s.evChargingVisible);
 
   // Add custom sources and layers to the map
   const addCustomLayers = useCallback((map: mapboxgl.Map) => {
@@ -225,6 +281,50 @@ export default function Map() {
       source: 'waypoint-route',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: { 'line-color': '#C9A962', 'line-width': 4, 'line-opacity': 0.9 },
+    });
+
+    // Gas station layer (from Mapbox Streets vector tileset)
+    map.addSource('gas-stations', {
+      type: 'vector',
+      url: 'mapbox://mapbox.mapbox-streets-v8',
+    });
+
+    map.addLayer({
+      id: 'gas-stations-layer',
+      type: 'circle',
+      source: 'gas-stations',
+      'source-layer': 'poi_label',
+      minzoom: 8,
+      filter: ['==', ['get', 'maki'], 'fuel'],
+      layout: { visibility: 'none' },
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 3, 14, 7],
+        'circle-color': '#34D399',
+        'circle-stroke-width': 1.5,
+        'circle-stroke-color': '#064E3B',
+        'circle-opacity': 0.85,
+      },
+    });
+
+    // EV charging layer (GeoJSON source, populated on moveend)
+    map.addSource('ev-stations', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
+
+    map.addLayer({
+      id: 'ev-stations-layer',
+      type: 'circle',
+      source: 'ev-stations',
+      minzoom: 8,
+      layout: { visibility: 'none' },
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 3, 14, 7],
+        'circle-color': '#60A5FA',
+        'circle-stroke-width': 1.5,
+        'circle-stroke-color': '#1E3A5F',
+        'circle-opacity': 0.85,
+      },
     });
 
     sourceAddedRef.current = true;
@@ -314,6 +414,41 @@ export default function Map() {
       map.on('mouseleave', 'curvature-layer', () => {
         map.getCanvas().style.cursor = '';
       });
+
+      // Gas station click handler
+      map.on('click', 'gas-stations-layer', (e: mapboxgl.MapLayerMouseEvent) => {
+        if (!e.features?.length) return;
+        const props = e.features[0].properties;
+        const name = props?.name || 'Gas Station';
+        new mapboxgl.Popup({ offset: 12, closeButton: true })
+          .setLngLat(e.lngLat)
+          .setHTML(buildGasStationPopupHTML(name.toUpperCase()))
+          .addTo(map);
+      });
+
+      map.on('mouseenter', 'gas-stations-layer', () => {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+      map.on('mouseleave', 'gas-stations-layer', () => {
+        map.getCanvas().style.cursor = '';
+      });
+
+      // EV station click handler
+      map.on('click', 'ev-stations-layer', (e: mapboxgl.MapLayerMouseEvent) => {
+        if (!e.features?.length) return;
+        const props = e.features[0].properties || {};
+        new mapboxgl.Popup({ offset: 12, closeButton: true })
+          .setLngLat(e.lngLat)
+          .setHTML(buildEVStationPopupHTML(props))
+          .addTo(map);
+      });
+
+      map.on('mouseenter', 'ev-stations-layer', () => {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+      map.on('mouseleave', 'ev-stations-layer', () => {
+        map.getCanvas().style.cursor = '';
+      });
     });
 
     return () => {
@@ -355,6 +490,27 @@ export default function Map() {
           type: 'FeatureCollection',
           features: [{ type: 'Feature', geometry: route.geometry, properties: {} }],
         });
+      }
+
+      // Restore POI layer visibility after style swap
+      const { gasStationsVisible: gasVis, evChargingVisible: evVis } = useLayerStore.getState();
+      if (gasVis && map.getLayer('gas-stations-layer')) {
+        map.setLayoutProperty('gas-stations-layer', 'visibility', 'visible');
+      }
+      if (evVis && map.getLayer('ev-stations-layer')) {
+        map.setLayoutProperty('ev-stations-layer', 'visibility', 'visible');
+        // Re-fetch EV data for current viewport
+        const bounds = map.getBounds();
+        if (!bounds) return;
+        fetchEVStations({
+          north: bounds.getNorth(),
+          south: bounds.getSouth(),
+          east: bounds.getEast(),
+          west: bounds.getWest(),
+        }).then((geojson) => {
+          const source = map.getSource('ev-stations') as mapboxgl.GeoJSONSource | undefined;
+          source?.setData(geojson);
+        }).catch((err) => console.error('Failed to fetch EV stations:', err));
       }
 
       // Re-add markers
@@ -597,6 +753,69 @@ export default function Map() {
     };
   }, []);
 
+  // Toggle gas station layer visibility
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !sourceAddedRef.current) return;
+    if (!map.getLayer('gas-stations-layer')) return;
+    map.setLayoutProperty('gas-stations-layer', 'visibility', gasStationsVisible ? 'visible' : 'none');
+  }, [gasStationsVisible]);
+
+  // Toggle EV charging layer visibility + fetch data
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !sourceAddedRef.current) return;
+    if (!map.getLayer('ev-stations-layer')) return;
+    map.setLayoutProperty('ev-stations-layer', 'visibility', evChargingVisible ? 'visible' : 'none');
+
+    // Fetch EV stations for current viewport immediately when toggled on
+    if (evChargingVisible && map.getZoom() >= EV_FETCH_MIN_ZOOM) {
+      const bounds = map.getBounds();
+      if (!bounds) return;
+      fetchEVStations({
+        north: bounds.getNorth(),
+        south: bounds.getSouth(),
+        east: bounds.getEast(),
+        west: bounds.getWest(),
+      }).then((geojson) => {
+        const source = map.getSource('ev-stations') as mapboxgl.GeoJSONSource | undefined;
+        source?.setData(geojson);
+      }).catch((err) => console.error('Failed to fetch EV stations:', err));
+    }
+  }, [evChargingVisible]);
+
+  // Fetch EV stations on moveend (debounced)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    function handleMoveEnd() {
+      if (!useLayerStore.getState().evChargingVisible) return;
+      if (map!.getZoom() < EV_FETCH_MIN_ZOOM) return;
+
+      if (evDebounceRef.current) clearTimeout(evDebounceRef.current);
+      evDebounceRef.current = setTimeout(() => {
+        const bounds = map!.getBounds();
+        if (!bounds) return;
+        fetchEVStations({
+          north: bounds.getNorth(),
+          south: bounds.getSouth(),
+          east: bounds.getEast(),
+          west: bounds.getWest(),
+        }).then((geojson) => {
+          const source = map!.getSource('ev-stations') as mapboxgl.GeoJSONSource | undefined;
+          source?.setData(geojson);
+        }).catch((err) => console.error('Failed to fetch EV stations:', err));
+      }, EV_DEBOUNCE_MS);
+    }
+
+    map.on('moveend', handleMoveEnd);
+    return () => {
+      map.off('moveend', handleMoveEnd);
+      if (evDebounceRef.current) clearTimeout(evDebounceRef.current);
+    };
+  }, []);
+
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <div
@@ -646,9 +865,20 @@ export default function Map() {
 
       {/* Layer & Compass Controls */}
       <div className="absolute top-[108px] right-4 z-10 flex flex-col gap-2">
-        <button className="w-9 h-9 bg-bg-card border border-border-subtle rounded flex items-center justify-center text-text-primary hover:text-accent-gold transition">
-          <Layers className="w-4 h-4" />
-        </button>
+        <div className="relative">
+          <button
+            ref={layerButtonRef}
+            onClick={() => setLayerMenuOpen((v) => !v)}
+            className={`w-9 h-9 bg-bg-card border border-border-subtle rounded flex items-center justify-center transition ${
+              gasStationsVisible || evChargingVisible
+                ? 'text-accent-gold'
+                : 'text-text-primary hover:text-accent-gold'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+          </button>
+          <LayerMenu open={layerMenuOpen} onClose={() => setLayerMenuOpen(false)} anchorRef={layerButtonRef} />
+        </div>
         <button className="w-9 h-9 bg-bg-card border border-border-subtle rounded flex items-center justify-center text-text-primary hover:text-accent-gold transition">
           <Compass className="w-4 h-4" />
         </button>
