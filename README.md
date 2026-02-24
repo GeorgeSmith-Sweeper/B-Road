@@ -46,12 +46,12 @@ Every road segment is scored by curvature and assigned a Road Rating:
 
 | Rating | Curvature | Color | Description |
 |---|---|---|---|
-| Relaxed | 0 – 300 | Green | Gentle curves, easy cruising |
-| Spirited | 300 – 600 | Yellow | Pleasant, flowing curves |
-| Engaging | 600 – 1,000 | Orange | Moderately twisty |
-| Technical | 1,000 – 2,000 | Red | Seriously curvy |
-| Expert | 2,000 – 4,000 | Purple | White-knuckle twisties |
-| Legendary | 4,000+ | Deep Purple | The twistiest roads in America |
+| Relaxed | < 600 | Sky Blue | Gentle curves, easy cruising |
+| Spirited | 600 – 1,000 | Emerald | Pleasant, flowing curves |
+| Engaging | 1,000 – 2,000 | Amber | Moderately twisty |
+| Technical | 2,000 – 5,000 | Deep Orange | Seriously curvy |
+| Expert | 5,000 – 10,000 | Crimson | White-knuckle twisties |
+| Legendary | 10,000+ | Electric Purple | The twistiest roads in America |
 
 ## Quick Start
 
