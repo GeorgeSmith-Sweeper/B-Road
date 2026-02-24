@@ -1,357 +1,128 @@
-# B-Road: Scalable Curvature Road Visualization Platform
+# B-Road
 
-B-Road is a database-backed curvature visualization platform built on [adamfranco/curvature](https://github.com/adamfranco/curvature). It provides an interactive web interface for exploring the world's twistiest roads using PostGIS spatial queries and viewport-based data loading.
+**Discover America's best driving roads. Plan your adventure. Hit the road.**
 
-## 🎯 What's New in B-Road
+B-Road is a road discovery and trip planning platform for driving enthusiasts. Built on [Adam Franco's curvature algorithm](https://github.com/adamfranco/curvature), it analyzes OpenStreetMap data to rate every road's twistiness — then lets you explore them on an interactive map, build routes, and export them for navigation.
 
-### AI-Powered Natural Language Search
-- **Chat Interface**: Ask questions like "Find super twisty roads in Vermont" or "Show me epic curvy mountain roads"
-- **Claude AI Integration**: Powered by Anthropic's Claude to interpret natural language into structured database queries
-- **Conversation History**: Follow-up queries maintain context (e.g., "now show me shorter ones")
-- **Map Highlighting**: Search results are highlighted on the map in cyan for easy identification
+<!-- TODO: Add screenshots of the /planner map view with waypoints and the landing page -->
 
-### Route Builder
-- **Click-to-Add**: Click road segments on the map to build custom driving routes
-- **Route Management**: Reorder, remove, and clear segments with live stats (distance, curvature, segment count)
-- **Save & Share**: Save routes with names and descriptions; share public routes via unique URL slugs
-- **Google Maps Directions**: Export full routes to Google Maps for turn-by-turn navigation
-- **GPX/KML Export**: Download saved routes as GPX or KML files for use in GPS devices and mapping apps
+## Features
 
-### Waypoint Router (OSRM)
-- **Click-to-Route**: Click curvature segments to add waypoints; OSRM calculates road-snapped routes between them
-- **Draggable Waypoints**: Drag markers on the map to adjust routes in real-time with debounced recalculation
-- **Save & Export**: Save waypoint routes with full OSRM road-snapped geometry; export as GPX or KML
+### Explore
 
-### Google Maps & Street View Integration
-- **Map Popups**: View any road segment in Google Maps or Street View directly from the map popup
-- **Route Builder Links**: Each segment in a route includes Google Maps and Street View shortcuts
-- **No API Key Required**: Uses Google's public URL schemes for seamless access
+- Interactive map with **2.1M+ rated road segments** across all 50 US states
+- Color-coded by Road Rating (Relaxed through Legendary)
+- Multiple base map styles, smooth viewport-based data loading
+- Click any road for details, Google Street View, and curvature stats
 
-### PostGIS Spatial Database
-- **Scalable Storage**: Curvature data stored in PostgreSQL/PostGIS with spatial indexes
-- **Viewport-Based Loading**: Efficiently loads only segments visible in the current map view
-- **Multi-State Support**: Query and visualize curvature data across all 50 US states (2.1M+ segments)
-- **Optimized Queries**: Spatial indexes and zoom-based filtering for fast performance
-- **Source Filtering**: Filter by state/region to explore specific areas
+### Plan
 
-### Modern Web Interface
-- **Interactive Map**: Mapbox GL JS with smooth panning and zooming
-- **Real-Time Data Loading**: Segments load automatically as you pan/zoom the map
-- **Curvature-Based Styling**: Color-coded roads by twistiness (yellow to purple)
-- **State Selector**: Filter data by US state or view all states at once
-- **Responsive Design**: Clean, modern UI built with Next.js and React
+- Click curvature segments to add waypoints with OSRM road-snapped routing
+- Draggable waypoint markers with real-time route recalculation
+- Live route stats (distance, curvature, segment count)
 
-## 🚀 Quick Start
+### Save and Share
+
+- Save routes with names and descriptions
+- Share via public URL slug
+- Export as GPX or KML for GPS devices
+- Open full routes in Google Maps for turn-by-turn navigation
+
+### Search
+
+- AI-powered natural language search ("find twisty mountain roads in Vermont")
+- Conversation history with follow-up context
+- Results highlighted on the map for easy identification
+
+### Discover
+
+- Gas station and EV charging station map layers
+- Google Street View integration from any road segment
+- State-by-state filtering
+
+## Road Rating System
+
+Every road segment is scored by curvature and assigned a Road Rating:
+
+| Rating | Curvature | Color | Description |
+|---|---|---|---|
+| Relaxed | 0 – 300 | Green | Gentle curves, easy cruising |
+| Spirited | 300 – 600 | Yellow | Pleasant, flowing curves |
+| Engaging | 600 – 1,000 | Orange | Moderately twisty |
+| Technical | 1,000 – 2,000 | Red | Seriously curvy |
+| Expert | 2,000 – 4,000 | Purple | White-knuckle twisties |
+| Legendary | 4,000+ | Deep Purple | The twistiest roads in America |
+
+## Quick Start
 
 ### Prerequisites
 
-- Python 3.11+
-- PostgreSQL 12+ with PostGIS extension
-- Node.js 18+ and npm (for frontend)
-- Docker and Docker Compose (recommended)
-- Mapbox API token ([get one here](https://www.mapbox.com/))
-- Anthropic API key ([get one here](https://console.anthropic.com/)) - for AI chat search
-- OpenStreetMap data in PBF or XML format
+- [Docker](https://www.docker.com/) and Docker Compose
+- [Mapbox access token](https://www.mapbox.com/)
+- [Anthropic API key](https://console.anthropic.com/) (optional — enables AI search)
 
-### Installation
+### Get running
 
-1. **Clone the repository**:
 ```bash
 git clone https://github.com/GeorgeSmith-Sweeper/B-Road.git
 cd B-Road
+cp .env.example .env
+# Edit .env — add your MAPBOX_ACCESS_TOKEN (and optionally ANTHROPIC_API_KEY)
+docker compose up -d
 ```
 
-2. **Set up the database**:
-```bash
-# Create database
-createdb curvature
+Open [http://localhost:3000](http://localhost:3000) and start exploring.
 
-# Enable PostGIS extension
-psql curvature -c "CREATE EXTENSION postgis;"
+For detailed setup — data loading, OSRM routing, manual installation — see [API_README.md](API_README.md).
 
-# Run curvature schema (this creates the required tables)
-psql curvature < api/schema/curvature.sql
+## Tech Stack
 
-# Add spatial indexes for performance
-psql curvature < api/schema/curvature_indexes.sql
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 14, Mapbox GL JS, Zustand, TypeScript, Tailwind CSS |
+| Backend | FastAPI, SQLAlchemy, Python 3.11 |
+| Database | PostgreSQL 15 + PostGIS |
+| Map | Mapbox GL JS with custom curvature tile layers |
+| AI Search | Anthropic Claude SDK |
+| Routing | OSRM (Open Source Routing Machine) |
+| Data | OpenStreetMap via curvature processing pipeline |
+
+## Architecture
+
+```
+OSM Data (.pbf)
+    |
+    v
+Curvature Pipeline (Python + NumPy)
+    |
+    v
+PostGIS (spatial segments, ways, tags)
+    |
+    v
+FastAPI (GeoJSON API + vector tiles)
+    |
+    v
+Next.js + Mapbox GL JS (interactive map, route planner, AI search)
 ```
 
-3. **Install Python dependencies**:
-```bash
-# Create and activate virtual environment (recommended)
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+## Documentation
 
-# Install dependencies
-cd api
-pip install -r requirements.txt
-```
+- **[API_README.md](API_README.md)** — Full API reference, endpoint docs, database schema, and detailed setup
+- **[CURVATURE_ORIGINAL_README.md](CURVATURE_ORIGINAL_README.md)** — Original curvature algorithm documentation
 
-4. **Configure environment variables**:
-```bash
-# Create .env file in the api/ directory
-cd api
-cat > .env <<EOF
-DATABASE_URL=postgresql://user:password@localhost:5432/curvature
-MAPBOX_ACCESS_TOKEN=your_mapbox_token_here
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
-EOF
-```
+## Built On
 
-5. **Process OpenStreetMap data and load into PostGIS**:
-```bash
-# Download OSM data (example: Vermont)
-wget https://download.geofabrik.de/north-america/us/vermont-latest.osm.pbf
+B-Road is built on [Adam Franco's curvature project](https://github.com/adamfranco/curvature), which pioneered the algorithm for analyzing OpenStreetMap way geometry and calculating road curvature scores. The original project provides the data processing pipeline and curvature calculations that power B-Road's road ratings. B-Road extends this foundation with an interactive map interface, waypoint routing, route saving and sharing, AI-powered search, and GPX/KML export.
 
-# Process with curvature and load directly into PostGIS
-./processing_chains/adams_default.sh vermont-latest.osm.pbf vermont | \
-  ./bin/curvature-output-postgis --source vermont
+## Contributing
 
-# Repeat for additional states as needed
-```
-
-6. **Install and start the frontend**:
-```bash
-# Install frontend dependencies
-cd frontend
-npm install
-
-# Start the Next.js development server
-npm run dev
-```
-
-7. **Start the backend API**:
-```bash
-# In a separate terminal, from the project root
-cd api
-uvicorn server:app --reload --host 0.0.0.0 --port 8000
-```
-
-8. **Set up OSRM routing engine** (optional, for waypoint routing):
-```bash
-# Option A: Single state (faster, smaller, runs locally)
-./scripts/prepare-osrm.sh california
-
-# Option B: Full US via cloud VM (recommended for cross-state routing)
-# The full US extract requires ~60-100GB peak RAM, exceeding most local machines.
-# Use a cloud VM (e.g., AWS EC2 r6i.2xlarge, 64GB RAM, ~$1-3 total cost):
-scp scripts/cloud-osrm-extract.sh ubuntu@<ec2-ip>:~/
-ssh ubuntu@<ec2-ip> './cloud-osrm-extract.sh'
-scp ubuntu@<ec2-ip>:/tmp/us-latest-osrm.tar.gz data/osrm/
-cd data/osrm && tar xzf us-latest-osrm.tar.gz && rm us-latest-osrm.tar.gz
-
-# Option C: Full US locally (only if you have 64GB+ RAM)
-brew install osrm-backend
-./scripts/prepare-osrm.sh --native us
-
-# Set the region in .env
-# OSRM_REGION=california   (single state)
-# OSRM_REGION=us            (full US)
-
-# Start all services including OSRM
-docker compose --profile routing up -d
-```
-
-9. **Open the application**:
-```
-Frontend: http://localhost:3000
-API Docs: http://localhost:8000/docs
-```
-
-## 📖 Usage Guide
-
-### Exploring Curvature Data
-
-1. **Initial View**: The map loads centered on Vermont with curvature segments visible
-2. **Pan and Zoom**: Move the map around to load segments for different areas
-   - Segments automatically load for the visible viewport
-   - Zoom in for more detailed segments, zoom out for major routes only
-3. **Filter by State**: Use the state dropdown in the sidebar to focus on specific regions
-4. **Adjust Curvature**: Use the minimum curvature slider to filter by road twistiness
-   - 300-600: Pleasant, flowing curves (yellow)
-   - 600-1000: Moderately twisty (orange)
-   - 1000-2000: Very curvy roads (red)
-   - 2000+: Extremely twisty! (purple)
-5. **Click Roads**: Click any road segment to see details:
-   - Road name, curvature score, length, and surface type
-   - Google Maps and Street View links
-
-### AI Chat Search
-
-1. **Open Chat**: Click the chat icon in the bottom-right corner
-2. **Ask Questions**: Type natural language queries like:
-   - "Find twisty roads in Vermont"
-   - "Show me epic curvy mountain roads in Colorado"
-   - "Short paved roads with high curvature near California"
-3. **Follow Up**: Ask follow-up questions that maintain context (e.g., "now show shorter ones")
-4. **View Results**: Matching roads are highlighted in cyan on the map
-
-### Building Routes
-
-1. **Click Segments**: Click road segments on the map to add them to your route
-2. **Manage Route**: Use the route builder panel to reorder, remove, or clear segments
-3. **Save Route**: Give your route a name and description, optionally make it public
-4. **Share**: Copy the public URL to share your route with others
-5. **Navigate**: Click "Get Directions in Google Maps" to export your route for navigation
-
-### Performance Tips
-
-- The map automatically adjusts the minimum curvature based on zoom level
-- Zoomed out (z < 8): Shows only roads with curvature > 1000
-- Medium zoom (z 8-10): Shows roads with curvature > 500
-- Zoomed in (z > 10): Shows all roads above your selected minimum
-
-## 📚 Documentation
-
-- **[API Documentation](API_README.md)**: Complete REST API reference with endpoints, examples, and troubleshooting
-- **[Original Curvature README](CURVATURE_ORIGINAL_README.md)**: Documentation for the base curvature analysis tools
-
-## 🗺️ Example Use Cases
-
-- **Motorcycle Trip Planning**: Discover the twistiest roads in your region or across multiple states
-- **Cycling Routes**: Find scenic, curvy roads perfect for road cycling adventures
-- **Driving Tours**: Explore mountainous regions and discover hidden scenic routes
-- **Data Analysis**: Query and analyze road curvature patterns across large geographic areas
-- **Travel Research**: Compare curvature profiles of different states and regions
-
-## 🛠️ Technology Stack
-
-**Backend**:
-- FastAPI - Modern async Python web framework
-- PostgreSQL 12+ with PostGIS - Spatial database with geometric operations
-- SQLAlchemy - Database ORM with spatial query support
-- Anthropic Claude SDK - AI-powered natural language search
-- Python 3.11+ - Core language
-
-**Frontend**:
-- Next.js 14 - React framework with App Router
-- Mapbox GL JS - Interactive map rendering
-- Zustand - Lightweight state management
-- React Hot Toast - Toast notifications
-- TypeScript - Type-safe development
-- Tailwind CSS - Utility-first styling
-
-**Data Processing** (from curvature project):
-- Python 3.11+
-- PyOsmium - OpenStreetMap data parsing
-- NumPy - Mathematical operations for curvature calculations
-- MessagePack - Binary data serialization
-
-## 📊 Database Schema
-
-B-Road uses the curvature project's PostGIS schema with spatial indexes:
-
-- **`curvature_segments`**: Road segments with LINESTRING geometry (SRID 900913)
-- **`segment_ways`**: Constituent OSM ways that make up each segment
-- **`sources`**: Data sources (typically US states or regions)
-- **`tags`**: Highway types, surface types, and other OSM tags
-
-Spatial indexes on `curvature_segments.geom` enable fast bounding-box queries.
-
-See [API_README.md](API_README.md) for complete schema documentation.
-
-## 🔄 Keeping Up with Upstream
-
-This project is based on adamfranco/curvature. To pull in updates from the original project:
-
-```bash
-# Add upstream remote (if not already added)
-git remote add upstream https://github.com/adamfranco/curvature.git
-
-# Fetch and merge updates
-git fetch upstream
-git merge upstream/master
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please:
+Contributions are welcome!
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes with clear messages
-4. Push to your branch
-5. Open a Pull Request
+4. Push to your branch and open a Pull Request
 
-## 📝 License
+## License
 
 This project inherits the license from [adamfranco/curvature](https://github.com/adamfranco/curvature). Please refer to the original project for license details.
-
-## 🙏 Acknowledgments
-
-- **Adam Franco** - Original [curvature](https://github.com/adamfranco/curvature) project
-- **OpenStreetMap Contributors** - Map data
-- Built with assistance from [Claude Code](https://claude.com/claude-code)
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/GeorgeSmith-Sweeper/B-Road/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/GeorgeSmith-Sweeper/B-Road/discussions)
-- **Original Project**: [adamfranco/curvature](https://github.com/adamfranco/curvature)
-
-## 🗺️ API Endpoints Overview
-
-### Curvature Data Endpoints
-- `GET /curvature/segments` - Get segments by bounding box (viewport-based)
-- `GET /curvature/sources` - List available data sources (states)
-- `GET /curvature/sources/{name}/segments` - Get all segments for a source
-- `GET /curvature/sources/{name}/bounds` - Get geographic bounds of a source
-- `GET /curvature/segments/{id}` - Get detailed info for a single segment
-
-### AI Chat Search Endpoints
-- `POST /chat/search` - Natural language road search with conversation history
-- `POST /chat/extract-filters` - Extract structured filters from natural language
-- `GET /chat/health` - Claude service health check
-
-### Route Builder Endpoints
-- `POST /sessions` - Create anonymous session
-- `POST /routes` - Save a route (segment-list or waypoint-based)
-- `GET /routes` - List routes for session
-- `GET /routes/{route_id}` - Get route details
-- `GET /routes/shared/{slug}` - Get public route by URL slug
-- `GET /routes/shared/{slug}/export/gpx` - Export route as GPX file
-- `GET /routes/shared/{slug}/export/kml` - Export route as KML file
-- `PUT /routes/{route_id}` - Update route
-- `DELETE /routes/{route_id}` - Delete route
-
-### Routing Endpoints (requires OSRM)
-- `POST /routing/calculate` - Calculate route between waypoints via OSRM
-- `GET /routing/health` - OSRM routing engine health check
-
-### Health & Configuration
-- `GET /health` - API health check
-- `GET /config` - Get frontend configuration (Mapbox token, etc.)
-- `GET /docs` - Interactive API documentation (Swagger UI)
-
-See [API_README.md](API_README.md) for complete endpoint documentation.
-
-## 🎬 Demo
-
-*(Add screenshots or GIFs here once deployed)*
-
-## 🚧 Roadmap
-
-Future enhancements being considered:
-
-- [x] Route building and saving (click segments to build custom routes)
-- [x] AI-powered natural language search
-- [x] Google Maps and Street View integration
-- [x] Waypoint routing with OSRM (drag-to-modify routes connected via road network)
-- [x] GPX/KML export for saved routes
-- [ ] Elevation profiles using SRTM data
-- [ ] Additional map layers (satellite, terrain)
-- [ ] Mobile app with offline support
-- [ ] Worldwide coverage (currently US-focused)
-- [ ] Route optimization and suggestions
-- [ ] Integration with weather and road condition APIs
-- [ ] User accounts and public route sharing
-
-## 📈 Project Status
-
-**Current Version**: 1.1.0
-
-**Status**: Active development - the core features are stable and functional.
-
----
-
-**Built on the shoulders of [adamfranco/curvature](https://github.com/adamfranco/curvature) 🏔️**
