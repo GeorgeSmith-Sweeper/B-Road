@@ -43,6 +43,8 @@ class SaveRouteRequest(BaseModel):
     connecting_geometry: Optional[dict] = None
     route_type: str = Field(default="segment_list", pattern="^(segment_list|waypoint)$")
     is_public: bool = False
+    total_distance: Optional[float] = None  # meters, from OSRM
+    total_curvature: Optional[float] = None  # sum of waypoint curvatures
 
     @model_validator(mode="after")
     def validate_route_data(self):
@@ -92,6 +94,7 @@ class RouteResponse(BaseModel):
     created_at: str
     is_public: bool
     route_type: str = "segment_list"
+    road_rating: Optional[str] = None
 
 
 class RouteDetailResponse(RouteResponse):

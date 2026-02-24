@@ -79,6 +79,9 @@ class SavedRoute(Base):
     geom = Column(Geometry("LINESTRING", srid=4326))  # PostGIS LineString
     route_data = Column(JSONB)  # Complete segment data
 
+    # Rating
+    road_rating = Column(String(20), nullable=True)
+
     # Sharing
     url_slug = Column(String(50), unique=True)
     is_public = Column(Boolean, default=False)

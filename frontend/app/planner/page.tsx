@@ -48,6 +48,7 @@ export default function Planner() {
     getTotalDuration,
     getWaypointCount,
     getRoadRating,
+    getTotalCurvature,
     sessionId,
     setSessionId,
   } = useWaypointRouteStore();
@@ -147,6 +148,8 @@ export default function Planner() {
         })),
         connecting_geometry: calculatedRoute.geometry,
         is_public: isPublic,
+        total_distance: calculatedRoute.distance,
+        total_curvature: getTotalCurvature(),
       });
       toast.success(`Route "${routeName}" saved!`);
       setSavedSlug(routeName.trim().toLowerCase().replace(/\s+/g, '-'));

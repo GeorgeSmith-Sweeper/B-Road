@@ -27,6 +27,26 @@ from api.repositories.session_repository import SessionRepository
 from api.repositories.segment_repository import SegmentRepository
 
 
+def calculate_road_rating(average_curvature: float) -> Optional[str]:
+    """Derive a road rating label from average curvature.
+
+    Uses the same buckets as the frontend store.
+    """
+    if average_curvature == 0:
+        return None
+    if average_curvature < 600:
+        return "RELAXED"
+    if average_curvature < 1000:
+        return "SPIRITED"
+    if average_curvature < 2000:
+        return "ENGAGING"
+    if average_curvature < 5000:
+        return "TECHNICAL"
+    if average_curvature < 10000:
+        return "EXPERT"
+    return "LEGENDARY"
+
+
 class RouteService:
     """Business logic for route operations."""
 
@@ -130,10 +150,6 @@ class RouteService:
     ) -> SaveRouteResponse:
         """Save a waypoint-based route with OSRM connecting geometry."""
         geom_coords = request.connecting_geometry.get("coordinates", [])
-        total_length = 0
-        # Approximate length from geometry coordinates (haversine would be better,
-        # but the distance from OSRM is already in the connecting_geometry properties
-        # or was displayed client-side; we store 0 and let the client pass it)
         if len(geom_coords) >= 2:
             linestring = LineString(geom_coords)
             connecting_geom = from_shape(linestring, srid=4326)
@@ -144,11 +160,23 @@ class RouteService:
         # Build basic geometry from waypoints for the geom column
         waypoint_linestring = LineString([(wp.lng, wp.lat) for wp in request.waypoints])
 
+        # Use OSRM distance if provided, otherwise 0
+        total_length = request.total_distance or 0
+        total_curvature = request.total_curvature or 0
+
+        # Compute road rating from average curvature
+        waypoint_count = len(request.waypoints)
+        if total_curvature > 0 and waypoint_count > 0:
+            avg_curvature = total_curvature / waypoint_count
+            road_rating = calculate_road_rating(avg_curvature)
+        else:
+            road_rating = None
+
         route = SavedRoute(
             session_id=session_uuid,
             route_name=request.route_name,
             description=request.description,
-            total_curvature=0,
+            total_curvature=total_curvature,
             total_length=total_length,
             segment_count=len(request.waypoints),
             geom=from_shape(waypoint_linestring, srid=4326),
@@ -160,6 +188,7 @@ class RouteService:
             is_public=request.is_public,
             route_type="waypoint",
             connecting_geometry=connecting_geom,
+            road_rating=road_rating,
         )
 
         route = self.route_repo.create_route(route)
@@ -214,6 +243,7 @@ class RouteService:
             created_at=route.created_at.isoformat(),
             is_public=route.is_public,
             route_type="segment_list",
+            road_rating=route.road_rating,
             geojson={
                 "type": "Feature",
                 "geometry": {"type": "LineString", "coordinates": coords},
@@ -255,6 +285,7 @@ class RouteService:
             created_at=route.created_at.isoformat(),
             is_public=route.is_public,
             route_type="waypoint",
+            road_rating=route.road_rating,
             geojson={
                 "type": "Feature",
                 "geometry": {"type": "LineString", "coordinates": coords},
@@ -287,6 +318,7 @@ class RouteService:
                 created_at=r.created_at.isoformat(),
                 is_public=r.is_public,
                 route_type=r.route_type or "segment_list",
+                road_rating=r.road_rating,
             )
             for r in routes
         ]

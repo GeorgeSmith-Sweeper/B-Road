@@ -82,6 +82,11 @@ export const useWaypointRouteStore = create<WaypointRouteState>((set, get) => ({
     return sum / withCurvature.length;
   },
 
+  getTotalCurvature: () => {
+    const withCurvature = get().waypoints.filter((wp) => wp.curvature != null);
+    return withCurvature.reduce((acc, wp) => acc + (wp.curvature ?? 0), 0);
+  },
+
   getRoadRating: () => {
     const avg = get().getAverageCurvature();
     if (avg === 0) return '—';

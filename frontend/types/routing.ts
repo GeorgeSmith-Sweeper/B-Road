@@ -49,6 +49,7 @@ export interface WaypointRouteState {
   getTotalDuration: () => number; // minutes
   getWaypointCount: () => number;
   getAverageCurvature: () => number;
+  getTotalCurvature: () => number;
   getRoadRating: () => string;
 }
 

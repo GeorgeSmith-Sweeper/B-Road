@@ -32,6 +32,8 @@ export interface SaveRouteRequest {
   };
   route_type?: 'segment_list' | 'waypoint';
   is_public: boolean;
+  total_distance?: number;  // meters, from OSRM
+  total_curvature?: number; // sum of waypoint curvatures
 }
 
 export interface SaveRouteResponse {
@@ -53,6 +55,7 @@ export interface RouteResponse {
   created_at: string;
   is_public: boolean;
   route_type: 'segment_list' | 'waypoint';
+  road_rating?: string | null;
 }
 
 export interface WaypointResponse {
