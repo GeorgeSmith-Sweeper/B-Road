@@ -76,18 +76,14 @@ class TestRepositorySearchByFilters:
 
     def test_filter_by_min_length(self, curvature_repo):
         """Should return only segments at or above min_length_meters."""
-        results = curvature_repo.search_by_filters(
-            {"min_length_meters": 15000}
-        )
+        results = curvature_repo.search_by_filters({"min_length_meters": 15000})
         assert len(results) > 0
         for seg in results:
             assert seg["length"] >= 15000
 
     def test_filter_by_max_length(self, curvature_repo):
         """Should return only segments at or below max_length_meters."""
-        results = curvature_repo.search_by_filters(
-            {"max_length_meters": 10000}
-        )
+        results = curvature_repo.search_by_filters({"max_length_meters": 10000})
         for seg in results:
             assert seg["length"] <= 10000
 
@@ -95,17 +91,13 @@ class TestRepositorySearchByFilters:
 
     def test_filter_paved_only(self, curvature_repo):
         """Should return only paved segments."""
-        results = curvature_repo.search_by_filters(
-            {"surface_types": ["paved"]}
-        )
+        results = curvature_repo.search_by_filters({"surface_types": ["paved"]})
         for seg in results:
             assert seg["paved"] is True
 
     def test_filter_unpaved_only(self, curvature_repo):
         """Should return only unpaved segments."""
-        results = curvature_repo.search_by_filters(
-            {"surface_types": ["unpaved"]}
-        )
+        results = curvature_repo.search_by_filters({"surface_types": ["unpaved"]})
         for seg in results:
             assert seg["paved"] is False
 
@@ -122,9 +114,7 @@ class TestRepositorySearchByFilters:
 
     def test_filter_by_single_source(self, curvature_repo):
         """Should return only segments from specified source."""
-        results = curvature_repo.search_by_filters(
-            {"sources": ["vermont"]}
-        )
+        results = curvature_repo.search_by_filters({"sources": ["vermont"]})
         assert len(results) > 0
         for seg in results:
             assert seg["source"] == "vermont"
@@ -139,9 +129,7 @@ class TestRepositorySearchByFilters:
 
     def test_filter_by_nonexistent_source(self, curvature_repo):
         """Should return empty results for unknown source."""
-        results = curvature_repo.search_by_filters(
-            {"sources": ["nonexistent"]}
-        )
+        results = curvature_repo.search_by_filters({"sources": ["nonexistent"]})
         assert results == []
 
     # --- Combined filters ---
@@ -216,9 +204,7 @@ class TestRepositorySearchByFilters:
 
     def test_no_matching_segments(self, curvature_repo):
         """Should return empty list when no segments match."""
-        results = curvature_repo.search_by_filters(
-            {"min_curvature": 999999}
-        )
+        results = curvature_repo.search_by_filters({"min_curvature": 999999})
         assert results == []
 
 
@@ -262,9 +248,7 @@ class TestServiceSearchByFilters:
 
     def test_count_matches_features(self, curvature_service):
         """Metadata count should match number of features."""
-        result = curvature_service.search_by_filters(
-            {"min_curvature": 300}
-        )
+        result = curvature_service.search_by_filters({"min_curvature": 300})
         assert result["metadata"]["count"] == len(result["features"])
 
     def test_unnamed_roads_get_default_name(self, curvature_service):
@@ -276,9 +260,7 @@ class TestServiceSearchByFilters:
 
     def test_empty_results_structure(self, curvature_service):
         """Empty results should still have valid FeatureCollection structure."""
-        result = curvature_service.search_by_filters(
-            {"min_curvature": 999999}
-        )
+        result = curvature_service.search_by_filters({"min_curvature": 999999})
         assert result["type"] == "FeatureCollection"
         assert result["features"] == []
         assert result["metadata"]["count"] == 0
@@ -290,13 +272,17 @@ class TestServiceSearchByFilters:
             curv = feature["properties"]["curvature"]
             level = feature["properties"]["curvature_level"]
             if curv < 600:
-                assert level == "mild"
+                assert level == "relaxed"
             elif curv < 1000:
-                assert level == "moderate"
+                assert level == "spirited"
             elif curv < 2000:
-                assert level == "curvy"
+                assert level == "engaging"
+            elif curv < 5000:
+                assert level == "technical"
+            elif curv < 10000:
+                assert level == "expert"
             else:
-                assert level == "extreme"
+                assert level == "legendary"
 
     def test_respects_limit(self, curvature_service):
         """Should pass limit through to repository."""

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import MobileNav from '@/components/MobileNav';
 import {
   Route,
   MapPin,
@@ -120,12 +121,12 @@ export default function LandingPage() {
     <div className="min-h-screen bg-bg-primary text-text-primary font-cormorant">
       {/* ── Header ── */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-[#0D0D0DCC] backdrop-blur-sm">
-        <div className="max-w-[1440px] mx-auto flex items-center justify-between px-[120px] py-5">
+        <div className="max-w-[1440px] mx-auto flex items-center justify-between px-6 md:px-12 lg:px-[120px] py-5">
           <div className="flex items-center gap-3">
             <Route className="w-7 h-7 text-accent-gold" />
             <span className="font-bebas text-[26px] tracking-[3px] text-text-primary">ROADRUNNER</span>
           </div>
-          <nav className="flex items-center gap-10">
+          <nav className="hidden lg:flex items-center gap-10">
             <a href="#explore" className="font-bebas text-sm tracking-[2px] text-text-secondary hover:text-text-primary transition-colors">EXPLORE</a>
             <a href="#routes" className="font-bebas text-sm tracking-[2px] text-text-secondary hover:text-text-primary transition-colors">ROUTES</a>
             <a href="#community" className="font-bebas text-sm tracking-[2px] text-text-secondary hover:text-text-primary transition-colors">COMMUNITY</a>
@@ -137,37 +138,38 @@ export default function LandingPage() {
               PLAN YOUR TRIP
             </Link>
           </nav>
+          <MobileNav />
         </div>
       </header>
 
       {/* ── Hero ── */}
-      <section className="relative h-[700px] overflow-hidden">
+      <section className="relative min-h-[500px] md:min-h-[600px] lg:min-h-[700px] overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${heroImageUrl})` }}
         />
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #0D0D0DEE 0%, #0D0D0D99 50%, #0D0D0DEE 100%)' }} />
-        <div className="relative z-10 flex flex-col justify-center h-full max-w-[1440px] mx-auto px-[120px] pt-[120px] pb-20 gap-8">
+        <div className="relative z-10 flex flex-col justify-center h-full max-w-[1440px] mx-auto px-6 md:px-12 lg:px-[120px] pt-24 lg:pt-[120px] pb-12 lg:pb-20 gap-6 lg:gap-8">
           <div className="flex items-center gap-2 border border-accent-gold px-4 py-2 w-fit">
             <MapPin className="w-3.5 h-3.5 text-accent-gold" />
             <span className="font-bebas text-xs tracking-[3px] text-accent-gold">DISCOVER THE BEST DRIVING ROADS</span>
           </div>
-          <h1 className="font-bebas text-[80px] leading-[0.9] tracking-tight text-text-primary">
+          <h1 className="font-bebas text-4xl sm:text-5xl md:text-6xl lg:text-[80px] leading-[0.9] tracking-tight text-text-primary">
             EVERY GREAT<br />JOURNEY STARTS<br />WITH A WAYPOINT
           </h1>
-          <p className="font-cormorant text-xl italic text-text-secondary leading-relaxed max-w-[580px]">
+          <p className="font-cormorant text-lg lg:text-xl italic text-text-secondary leading-relaxed max-w-[580px]">
             Plan your perfect road trip by selecting the most scenic, thrilling,
             and unforgettable driving roads — one waypoint at a time.
           </p>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <Link
               href="/planner"
-              className="flex items-center gap-2.5 bg-accent-gold px-9 py-4 font-bebas text-base tracking-[2px] text-bg-primary hover:brightness-110 transition"
+              className="flex items-center justify-center gap-2.5 bg-accent-gold px-9 py-4 font-bebas text-base tracking-[2px] text-bg-primary hover:brightness-110 transition w-full sm:w-auto"
             >
               <Navigation className="w-[18px] h-[18px]" />
               START PLANNING
             </Link>
-            <button className="flex items-center gap-2.5 border border-text-secondary px-9 py-4 font-bebas text-base tracking-[2px] text-text-secondary hover:border-text-primary hover:text-text-primary transition">
+            <button className="flex items-center justify-center gap-2.5 border border-text-secondary px-9 py-4 font-bebas text-base tracking-[2px] text-text-secondary hover:border-text-primary hover:text-text-primary transition w-full sm:w-auto">
               <Play className="w-4 h-4" />
               WATCH DEMO
             </button>
@@ -176,11 +178,11 @@ export default function LandingPage() {
       </section>
 
       {/* ── Route Builder ── */}
-      <section id="explore" className="max-w-[1440px] mx-auto px-[120px] py-20">
-        <div className="flex flex-col gap-12">
+      <section id="explore" className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-[120px] py-12 lg:py-20">
+        <div className="flex flex-col gap-8 lg:gap-12">
           <span className="font-bebas text-sm tracking-[6px] text-accent-gold">ROUTE PLANNER</span>
           <div className="flex flex-col gap-4">
-            <h2 className="font-bebas text-5xl tracking-tight leading-[0.95] text-text-primary">BUILD YOUR PERFECT ROUTE</h2>
+            <h2 className="font-bebas text-3xl md:text-4xl lg:text-5xl tracking-tight leading-[0.95] text-text-primary">BUILD YOUR PERFECT ROUTE</h2>
             <p className="font-cormorant text-lg italic text-text-secondary leading-relaxed max-w-[640px]">
               Drop waypoints on the map to chart your course through the county&apos;s best driving roads.
               Drag to reorder, click to explore each road&apos;s details.
@@ -188,9 +190,9 @@ export default function LandingPage() {
           </div>
 
           {/* Route Builder mockup */}
-          <div className="flex h-[520px] overflow-hidden">
+          <div className="flex flex-col lg:flex-row h-auto lg:h-[520px] overflow-hidden">
             {/* Waypoint Sidebar */}
-            <div className="w-[360px] flex-shrink-0 bg-bg-card border border-border-subtle flex flex-col">
+            <div className="w-full lg:w-[360px] lg:flex-shrink-0 bg-bg-card border border-border-subtle flex flex-col">
               <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
                 <span className="font-bebas text-base tracking-[3px] text-text-primary">WAYPOINTS</span>
                 <span className="flex items-center gap-1.5 bg-accent-gold px-3.5 py-1.5 font-bebas text-[11px] tracking-[2px] text-bg-primary">
@@ -235,7 +237,7 @@ export default function LandingPage() {
             </div>
 
             {/* Map Area */}
-            <div className="flex-1 relative overflow-hidden">
+            <div className="flex-1 relative overflow-hidden h-[300px] lg:h-auto">
               <div
                 className="absolute inset-0 bg-cover bg-center"
                 style={{ backgroundImage: `url(${mapImageUrl})` }}
@@ -262,14 +264,14 @@ export default function LandingPage() {
 
       {/* ── Featured Roads ── */}
       <section id="routes" className="bg-bg-card">
-        <div className="max-w-[1440px] mx-auto px-[120px] py-20">
-          <div className="flex flex-col gap-12">
+        <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-[120px] py-12 lg:py-20">
+          <div className="flex flex-col gap-8 lg:gap-12">
             <span className="font-bebas text-sm tracking-[6px] text-accent-gold">FEATURED ROADS</span>
-            <div className="flex items-end justify-between">
-              <h2 className="font-bebas text-5xl tracking-tight leading-[0.95] text-text-primary">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <h2 className="font-bebas text-3xl md:text-4xl lg:text-5xl tracking-tight leading-[0.95] text-text-primary">
                 THE COUNTY&apos;S FINEST<br />DRIVING ROADS
               </h2>
-              <div className="flex">
+              <div className="flex flex-wrap">
                 {filterTabs.map((tab, i) => (
                   <button
                     key={tab}
@@ -285,7 +287,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {roadCards.map((card) => (
                 <div key={card.tag} className="border border-border-subtle flex flex-col">
                   <div
@@ -313,12 +315,12 @@ export default function LandingPage() {
 
       {/* ── How It Works ── */}
       <section className="bg-bg-primary">
-        <div className="max-w-[1440px] mx-auto px-[120px] py-20 flex flex-col items-center gap-16">
+        <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-[120px] py-12 lg:py-20 flex flex-col items-center gap-10 lg:gap-16">
           <span className="font-bebas text-sm tracking-[6px] text-accent-gold">HOW IT WORKS</span>
-          <h2 className="font-bebas text-5xl tracking-tight leading-[0.95] text-text-primary text-center">
+          <h2 className="font-bebas text-3xl md:text-4xl lg:text-5xl tracking-tight leading-[0.95] text-text-primary text-center">
             THREE STEPS TO YOUR<br />PERFECT ROAD TRIP
           </h2>
-          <div className="grid grid-cols-3 gap-12 w-full">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 w-full">
             {steps.map((step) => (
               <div key={step.num} className="flex flex-col items-center gap-5">
                 <div
@@ -340,22 +342,22 @@ export default function LandingPage() {
 
       {/* ── Community ── */}
       <section id="community" className="bg-bg-card">
-        <div className="max-w-[1440px] mx-auto px-[120px] py-20 flex flex-col gap-16">
+        <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-[120px] py-12 lg:py-20 flex flex-col gap-10 lg:gap-16">
           <span className="font-bebas text-sm tracking-[6px] text-accent-gold">COMMUNITY</span>
-          <h2 className="font-bebas text-5xl tracking-tight leading-[0.95] text-text-primary">DRIVEN BY ENTHUSIASTS</h2>
+          <h2 className="font-bebas text-3xl md:text-4xl lg:text-5xl tracking-tight leading-[0.95] text-text-primary">DRIVEN BY ENTHUSIASTS</h2>
 
           {/* Stats bar */}
-          <div className="flex items-center justify-between py-8 border-y border-border-subtle">
+          <div className="flex flex-wrap items-center justify-center gap-8 md:justify-between py-8 border-y border-border-subtle">
             {stats.map((stat) => (
               <div key={stat.label} className="flex flex-col items-center gap-1">
-                <span className="font-bebas text-[42px] tracking-[1px] text-accent-gold">{stat.value}</span>
+                <span className="font-bebas text-3xl md:text-[42px] tracking-[1px] text-accent-gold">{stat.value}</span>
                 <span className="font-cormorant text-base italic text-text-secondary">{stat.label}</span>
               </div>
             ))}
           </div>
 
           {/* Testimonials */}
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {testimonials.map((t) => (
               <div
                 key={t.name}
@@ -379,14 +381,14 @@ export default function LandingPage() {
       </section>
 
       {/* ── Final CTA ── */}
-      <section className="relative h-[480px] overflow-hidden">
+      <section className="relative min-h-[360px] md:min-h-[480px] overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${ctaImageUrl})` }}
         />
         <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #0D0D0DDD 0%, #0D0D0DAA 50%, #0D0D0DDD 100%)' }} />
-        <div className="relative z-10 flex flex-col items-center justify-center h-full gap-6 px-[120px]">
-          <h2 className="font-bebas text-[64px] tracking-tight leading-[0.9] text-text-primary text-center">
+        <div className="relative z-10 flex flex-col items-center justify-center h-full gap-6 px-6 md:px-12 lg:px-[120px] py-12 md:py-20">
+          <h2 className="font-bebas text-4xl md:text-5xl lg:text-[64px] tracking-tight leading-[0.9] text-text-primary text-center">
             THE OPEN ROAD<br />IS CALLING
           </h2>
           <p className="font-cormorant text-xl italic text-text-secondary text-center leading-relaxed">
@@ -407,9 +409,9 @@ export default function LandingPage() {
 
       {/* ── Footer ── */}
       <footer id="about" className="bg-bg-primary border-t border-border-subtle">
-        <div className="max-w-[1440px] mx-auto px-[120px] pt-16 pb-8 flex flex-col gap-12">
+        <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-[120px] pt-12 lg:pt-16 pb-8 flex flex-col gap-12">
           {/* Top */}
-          <div className="flex justify-between">
+          <div className="flex flex-col gap-8 md:flex-row md:justify-between">
             <div className="flex flex-col gap-4 max-w-[300px]">
               <div className="flex items-center gap-3">
                 <Route className="w-6 h-6 text-accent-gold" />
@@ -419,7 +421,7 @@ export default function LandingPage() {
                 Discover the world&apos;s most unforgettable driving roads. Built by enthusiasts, for enthusiasts.
               </p>
             </div>
-            <div className="flex gap-20">
+            <div className="flex gap-8 flex-wrap md:gap-20">
               <div className="flex flex-col gap-4">
                 <span className="font-bebas text-[13px] tracking-[3px] text-accent-gold">EXPLORE</span>
                 <span className="font-cormorant text-sm italic text-text-secondary">All Routes</span>

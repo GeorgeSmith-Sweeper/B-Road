@@ -13,6 +13,7 @@ Modern Next.js 14 frontend for the B-Road Curvature project, replacing the vanil
 - **Session Persistence**: Routes saved to your session with localStorage
 - **Export Support**: Export routes to GPX/KML formats
 - **Google Maps Integration**: Street View previews, Google Maps links, and Get Directions from waypoint lists and map popups
+- **Map Layers**: Toggle gas stations (via Mapbox Streets vector tiles) and EV charging stations (via NREL API) as map overlays
 
 ## Tech Stack
 
@@ -71,6 +72,7 @@ frontend/
 ├── components/
 │   ├── Map.tsx                    # Mapbox GL JS map with curvature gradient, route rendering
 │   ├── AddressSearchBar.tsx       # Floating address search with autocomplete
+│   ├── LayerMenu.tsx              # Popover menu to toggle gas/EV map layers
 │   ├── Sidebar.tsx                # Control panel with filters and route builder
 │   └── WaypointRouteBuilder.tsx   # Manual waypoint routing panel
 ├── hooks/
@@ -80,10 +82,12 @@ frontend/
 │   ├── useAppStore.ts             # Global app state (sources, filters, map center)
 │   ├── useChatStore.ts            # Chat/search state
 │   ├── useGeocoderStore.ts        # Address search/geocoding state
-│   └── useWaypointRouteStore.ts   # Waypoint routing state + session
+│   ├── useWaypointRouteStore.ts   # Waypoint routing state + session
+│   └── useLayerStore.ts           # Gas station / EV charging layer toggles
 ├── lib/
 │   ├── api.ts                     # API client for FastAPI backend
 │   ├── geocoding-api.ts           # Mapbox Geocoding API v6 client
+│   ├── nrel-api.ts                # NREL EV charging station API client
 │   ├── routing-api.ts             # OSRM route API client
 │   ├── routes-api.ts              # Route saving/loading API client
 │   └── google-maps.ts             # Google Maps/Street View URL helpers
@@ -112,6 +116,7 @@ The frontend communicates with the FastAPI backend using the following endpoints
 ## Environment Variables
 
 - `NEXT_PUBLIC_API_URL`: Backend API URL (default: `http://localhost:8000`)
+- `NEXT_PUBLIC_NREL_API_KEY`: NREL API key for EV charging station data (free signup at https://developer.nrel.gov/signup/). Falls back to `DEMO_KEY` with rate limits.
 
 ## Known Issues
 

@@ -16,7 +16,6 @@ from api.models.schemas import (
     RouteDetailResponse,
 )
 
-
 # ---------------------------------------------------------------------------
 # Schema validation tests
 # ---------------------------------------------------------------------------
@@ -35,8 +34,7 @@ class TestWaypointData:
 
     def test_waypoint_with_all_fields(self):
         wp = WaypointData(
-            lng=-80.84, lat=35.22, order=1,
-            segment_id="seg_001", is_user_modified=True
+            lng=-80.84, lat=35.22, order=1, segment_id="seg_001", is_user_modified=True
         )
         assert wp.segment_id == "seg_001"
         assert wp.is_user_modified is True
@@ -182,7 +180,10 @@ class TestRouteResponseRouteType:
             created_at="2024-01-01T00:00:00",
             is_public=False,
             route_type="waypoint",
-            geojson={"type": "Feature", "geometry": {"type": "LineString", "coordinates": []}},
+            geojson={
+                "type": "Feature",
+                "geometry": {"type": "LineString", "coordinates": []},
+            },
             segments=[],
             waypoints=[
                 WaypointResponse(lng=-80.84, lat=35.22, order=0),
@@ -209,7 +210,10 @@ class TestRouteResponseRouteType:
             created_at="2024-01-01T00:00:00",
             is_public=False,
             route_type="segment_list",
-            geojson={"type": "Feature", "geometry": {"type": "LineString", "coordinates": []}},
+            geojson={
+                "type": "Feature",
+                "geometry": {"type": "LineString", "coordinates": []},
+            },
             segments=[{"way_id": 1}],
         )
         assert resp.waypoints is None
@@ -226,8 +230,7 @@ class TestWaypointResponse:
 
     def test_full_waypoint_response(self):
         wp = WaypointResponse(
-            lng=-80.84, lat=35.22, order=1,
-            segment_id="seg_001", is_user_modified=True
+            lng=-80.84, lat=35.22, order=1, segment_id="seg_001", is_user_modified=True
         )
         assert wp.segment_id == "seg_001"
         assert wp.is_user_modified is True

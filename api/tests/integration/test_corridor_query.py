@@ -21,15 +21,17 @@ class TestCorridorQuery:
         repo = CurvatureRepository(test_db_session)
 
         # Route line passing through Vermont (near the fixture segments)
-        route_geojson = json.dumps({
-            "type": "LineString",
-            "coordinates": [
-                [-72.5, 44.3],
-                [-72.6, 44.25],
-                [-72.7, 44.1],
-                [-72.9, 44.0],
-            ],
-        })
+        route_geojson = json.dumps(
+            {
+                "type": "LineString",
+                "coordinates": [
+                    [-72.5, 44.3],
+                    [-72.6, 44.25],
+                    [-72.7, 44.1],
+                    [-72.9, 44.0],
+                ],
+            }
+        )
 
         results = repo.get_segments_in_corridor(
             route_geojson=route_geojson,
@@ -49,19 +51,23 @@ class TestCorridorQuery:
             assert "centroid_lat" in seg
             assert seg["curvature"] >= 500
 
-    def test_route_position_between_zero_and_one(self, test_db_session, seed_curvature_data):
+    def test_route_position_between_zero_and_one(
+        self, test_db_session, seed_curvature_data
+    ):
         """route_position values are in [0, 1] range."""
         repo = CurvatureRepository(test_db_session)
 
-        route_geojson = json.dumps({
-            "type": "LineString",
-            "coordinates": [
-                [-72.5, 44.3],
-                [-72.6, 44.25],
-                [-72.7, 44.1],
-                [-72.95, 44.0],
-            ],
-        })
+        route_geojson = json.dumps(
+            {
+                "type": "LineString",
+                "coordinates": [
+                    [-72.5, 44.3],
+                    [-72.6, 44.25],
+                    [-72.7, 44.1],
+                    [-72.95, 44.0],
+                ],
+            }
+        )
 
         results = repo.get_segments_in_corridor(
             route_geojson=route_geojson,
@@ -71,18 +77,20 @@ class TestCorridorQuery:
         )
 
         for seg in results:
-            assert 0 <= seg["route_position"] <= 1, (
-                f"Segment {seg['id']} route_position {seg['route_position']} out of range"
-            )
+            assert (
+                0 <= seg["route_position"] <= 1
+            ), f"Segment {seg['id']} route_position {seg['route_position']} out of range"
 
     def test_filters_by_min_curvature(self, test_db_session, seed_curvature_data):
         """Only segments above min_curvature threshold are returned."""
         repo = CurvatureRepository(test_db_session)
 
-        route_geojson = json.dumps({
-            "type": "LineString",
-            "coordinates": [[-73.5, 45.0], [-71.0, 41.0]],
-        })
+        route_geojson = json.dumps(
+            {
+                "type": "LineString",
+                "coordinates": [[-73.5, 45.0], [-71.0, 41.0]],
+            }
+        )
 
         results = repo.get_segments_in_corridor(
             route_geojson=route_geojson,
@@ -98,10 +106,12 @@ class TestCorridorQuery:
         """Only segments above min_length threshold are returned."""
         repo = CurvatureRepository(test_db_session)
 
-        route_geojson = json.dumps({
-            "type": "LineString",
-            "coordinates": [[-73.5, 45.0], [-71.0, 41.0]],
-        })
+        route_geojson = json.dumps(
+            {
+                "type": "LineString",
+                "coordinates": [[-73.5, 45.0], [-71.0, 41.0]],
+            }
+        )
 
         results = repo.get_segments_in_corridor(
             route_geojson=route_geojson,
@@ -118,10 +128,12 @@ class TestCorridorQuery:
         repo = CurvatureRepository(test_db_session)
 
         # Route near Rhode Island where there's both paved and unpaved
-        route_geojson = json.dumps({
-            "type": "LineString",
-            "coordinates": [[-71.3, 41.4], [-71.6, 41.7]],
-        })
+        route_geojson = json.dumps(
+            {
+                "type": "LineString",
+                "coordinates": [[-71.3, 41.4], [-71.6, 41.7]],
+            }
+        )
 
         results = repo.get_segments_in_corridor(
             route_geojson=route_geojson,
@@ -139,10 +151,12 @@ class TestCorridorQuery:
         repo = CurvatureRepository(test_db_session)
 
         # Route in California — nowhere near fixtures
-        route_geojson = json.dumps({
-            "type": "LineString",
-            "coordinates": [[-122.0, 37.0], [-121.0, 36.0]],
-        })
+        route_geojson = json.dumps(
+            {
+                "type": "LineString",
+                "coordinates": [[-122.0, 37.0], [-121.0, 36.0]],
+            }
+        )
 
         results = repo.get_segments_in_corridor(
             route_geojson=route_geojson,
@@ -157,10 +171,12 @@ class TestCorridorQuery:
         """Result count does not exceed the limit parameter."""
         repo = CurvatureRepository(test_db_session)
 
-        route_geojson = json.dumps({
-            "type": "LineString",
-            "coordinates": [[-73.5, 45.0], [-71.0, 41.0]],
-        })
+        route_geojson = json.dumps(
+            {
+                "type": "LineString",
+                "coordinates": [[-73.5, 45.0], [-71.0, 41.0]],
+            }
+        )
 
         results = repo.get_segments_in_corridor(
             route_geojson=route_geojson,
@@ -172,14 +188,18 @@ class TestCorridorQuery:
 
         assert len(results) <= 2
 
-    def test_ordered_by_curvature_descending(self, test_db_session, seed_curvature_data):
+    def test_ordered_by_curvature_descending(
+        self, test_db_session, seed_curvature_data
+    ):
         """Results are ordered by curvature descending."""
         repo = CurvatureRepository(test_db_session)
 
-        route_geojson = json.dumps({
-            "type": "LineString",
-            "coordinates": [[-73.5, 45.0], [-71.0, 41.0]],
-        })
+        route_geojson = json.dumps(
+            {
+                "type": "LineString",
+                "coordinates": [[-73.5, 45.0], [-71.0, 41.0]],
+            }
+        )
 
         results = repo.get_segments_in_corridor(
             route_geojson=route_geojson,
@@ -196,10 +216,12 @@ class TestCorridorQuery:
         """Centroid coordinates are valid lng/lat values."""
         repo = CurvatureRepository(test_db_session)
 
-        route_geojson = json.dumps({
-            "type": "LineString",
-            "coordinates": [[-73.5, 45.0], [-71.0, 41.0]],
-        })
+        route_geojson = json.dumps(
+            {
+                "type": "LineString",
+                "coordinates": [[-73.5, 45.0], [-71.0, 41.0]],
+            }
+        )
 
         results = repo.get_segments_in_corridor(
             route_geojson=route_geojson,

@@ -253,14 +253,18 @@ class CurvatureService:
             curvature: Numeric curvature score
 
         Returns:
-            Level string: mild, moderate, curvy, or extreme
+            Level string: relaxed, spirited, engaging, technical, expert, or legendary
         """
         if curvature is None:
-            return "mild"
+            return "relaxed"
         if curvature < 600:
-            return "mild"
+            return "relaxed"
         if curvature < 1000:
-            return "moderate"
+            return "spirited"
         if curvature < 2000:
-            return "curvy"
-        return "extreme"
+            return "engaging"
+        if curvature < 5000:
+            return "technical"
+        if curvature < 10000:
+            return "expert"
+        return "legendary"

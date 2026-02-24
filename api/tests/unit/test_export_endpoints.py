@@ -99,15 +99,15 @@ class TestGPXExportEndpoint:
         """GPX export works for segment-list routes."""
         mock_route = _make_mock_segment_route()
 
-        with patch(
-            "api.services.export_service.RouteRepository"
-        ) as MockRepo:
+        with patch("api.services.export_service.RouteRepository") as MockRepo:
             MockRepo.return_value.get_by_id_or_slug.return_value = mock_route
             response = client.get("/routes/shared/nc-mountain-road-abc12345/export/gpx")
 
         assert response.status_code == 200
         assert "application/gpx+xml" in response.headers["content-type"]
-        assert "nc-mountain-road-abc12345.gpx" in response.headers["content-disposition"]
+        assert (
+            "nc-mountain-road-abc12345.gpx" in response.headers["content-disposition"]
+        )
         content = response.text
         assert "<trk>" in content
         assert "NC Mountain Road" in content
@@ -117,9 +117,7 @@ class TestGPXExportEndpoint:
         """GPX export uses connecting geometry for waypoint routes."""
         mock_route = _make_mock_waypoint_route()
 
-        with patch(
-            "api.services.export_service.RouteRepository"
-        ) as MockRepo:
+        with patch("api.services.export_service.RouteRepository") as MockRepo:
             MockRepo.return_value.get_by_id_or_slug.return_value = mock_route
             response = client.get("/routes/shared/nc-waypoint-abc12345/export/gpx")
 
@@ -131,9 +129,7 @@ class TestGPXExportEndpoint:
 
     def test_returns_404_for_missing_route(self, client):
         """GPX export returns 404 for non-existent route."""
-        with patch(
-            "api.services.export_service.RouteRepository"
-        ) as MockRepo:
+        with patch("api.services.export_service.RouteRepository") as MockRepo:
             MockRepo.return_value.get_by_id_or_slug.return_value = None
             response = client.get("/routes/shared/nonexistent/export/gpx")
 
@@ -147,14 +143,14 @@ class TestKMLExportEndpoint:
         """KML export works for segment-list routes."""
         mock_route = _make_mock_segment_route()
 
-        with patch(
-            "api.services.export_service.RouteRepository"
-        ) as MockRepo:
+        with patch("api.services.export_service.RouteRepository") as MockRepo:
             MockRepo.return_value.get_by_id_or_slug.return_value = mock_route
             response = client.get("/routes/shared/nc-mountain-road-abc12345/export/kml")
 
         assert response.status_code == 200
-        assert "application/vnd.google-earth.kml+xml" in response.headers["content-type"]
+        assert (
+            "application/vnd.google-earth.kml+xml" in response.headers["content-type"]
+        )
         content = response.text
         assert "<kml" in content
         assert "NC Mountain Road" in content
@@ -164,9 +160,7 @@ class TestKMLExportEndpoint:
         """KML export uses connecting geometry for waypoint routes."""
         mock_route = _make_mock_waypoint_route()
 
-        with patch(
-            "api.services.export_service.RouteRepository"
-        ) as MockRepo:
+        with patch("api.services.export_service.RouteRepository") as MockRepo:
             MockRepo.return_value.get_by_id_or_slug.return_value = mock_route
             response = client.get("/routes/shared/nc-waypoint-abc12345/export/kml")
 
@@ -179,9 +173,7 @@ class TestKMLExportEndpoint:
 
     def test_returns_404_for_missing_route(self, client):
         """KML export returns 404 for non-existent route."""
-        with patch(
-            "api.services.export_service.RouteRepository"
-        ) as MockRepo:
+        with patch("api.services.export_service.RouteRepository") as MockRepo:
             MockRepo.return_value.get_by_id_or_slug.return_value = None
             response = client.get("/routes/shared/nonexistent/export/kml")
 

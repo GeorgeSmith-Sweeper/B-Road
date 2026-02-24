@@ -276,11 +276,11 @@ class ExportService:
 
         # Determine line color based on curvature (AABBGGRR format for KML)
         if curvature_per_mile > 200:
-            line_color = "ff0000ff"  # Red - very curvy
+            line_color = "ff0000ff"  # Red - technical/expert
         elif curvature_per_mile > 100:
-            line_color = "ff0099ff"  # Orange - curvy
+            line_color = "ff0099ff"  # Orange - engaging
         else:
-            line_color = "ffff0000"  # Blue - moderate
+            line_color = "ffff0000"  # Blue - spirited
 
         # Build KML with enhanced metadata
         kml = f"""<?xml version="1.0" encoding="UTF-8"?>

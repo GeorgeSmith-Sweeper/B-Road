@@ -85,7 +85,9 @@ class SavedRoute(Base):
 
     # Waypoint routing fields
     connecting_geometry = Column(Geometry("LINESTRING", srid=4326), nullable=True)
-    route_type = Column(String(20), default="segment_list")  # "segment_list" or "waypoint"
+    route_type = Column(
+        String(20), default="segment_list"
+    )  # "segment_list" or "waypoint"
 
     # Relationships
     session = relationship("RouteSession", back_populates="routes")
@@ -180,9 +182,7 @@ class RouteWaypoint(Base):
     )
 
     id = Column(Integer, primary_key=True)
-    route_id = Column(
-        Integer, ForeignKey("saved_routes.route_id", ondelete="CASCADE")
-    )
+    route_id = Column(Integer, ForeignKey("saved_routes.route_id", ondelete="CASCADE"))
     waypoint_order = Column(Integer, nullable=False)
     lng = Column(Float, nullable=False)
     lat = Column(Float, nullable=False)

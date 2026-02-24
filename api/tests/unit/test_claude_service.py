@@ -429,9 +429,7 @@ class TestGenerateResponse:
 
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
             service = ClaudeService()
-            await service.generate_response(
-                "Find roads", self._make_search_results()
-            )
+            await service.generate_response("Find roads", self._make_search_results())
 
         call_kwargs = mock_client.messages.create.call_args[1]
         user_message = call_kwargs["messages"][-1]["content"]
@@ -507,9 +505,7 @@ class TestGenerateResponse:
 
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
             service = ClaudeService()
-            await service.generate_response(
-                "Find roads", self._make_search_results()
-            )
+            await service.generate_response("Find roads", self._make_search_results())
 
         call_kwargs = mock_client.messages.create.call_args[1]
         assert call_kwargs["system"] == RESPONSE_GENERATION_PROMPT
