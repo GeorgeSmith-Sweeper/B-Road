@@ -19,6 +19,7 @@ B-Road is a road discovery and trip planning platform for driving enthusiasts. B
 
 - Click curvature segments to add waypoints with OSRM road-snapped routing
 - Draggable waypoint markers with real-time route recalculation
+- Drag-and-drop reordering of waypoints in the sidebar list
 - Live route stats (distance, curvature, segment count)
 
 ### Save and Share

@@ -38,6 +38,7 @@ export interface WaypointRouteState {
   addWaypoint: (lng: number, lat: number, name?: string, curvature?: number) => void;
   updateWaypoint: (id: string, lng: number, lat: number) => void;
   removeWaypoint: (id: string) => void;
+  reorderWaypoints: (fromIndex: number, toIndex: number) => void;
   clearWaypoints: () => void;
   setCalculatedRoute: (route: CalculatedRoute | null) => void;
   setIsCalculating: (calculating: boolean) => void;
