@@ -4,53 +4,39 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import Map from '@/components/Map';
 import ChatInterface from '@/components/ChatInterface';
+import RouteStats from '@/components/planner/RouteStats';
+import SidebarFilters from '@/components/planner/SidebarFilters';
+import WaypointList from '@/components/planner/WaypointList';
+import SaveRouteModal from '@/components/planner/SaveRouteModal';
 import { useAppStore } from '@/store/useAppStore';
 import { useChatStore } from '@/store/useChatStore';
 import { useWaypointRouteStore } from '@/store/useWaypointRouteStore';
 import { apiClient } from '@/lib/api';
-import { createSession, saveRoute, getGpxExportUrl, getKmlExportUrl } from '@/lib/routes-api';
+import { getGpxExportUrl, getKmlExportUrl } from '@/lib/routes-api';
 import { getDirectionsUrl } from '@/lib/google-maps';
 import { ApiError } from '@/types';
-import type { Waypoint } from '@/types/routing';
 import {
   Save,
   Share2,
   User,
   Plus,
-  Search,
-  GripVertical,
-  MousePointerClick,
   X,
   PanelLeft,
+  MousePointerClick,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function Planner() {
   const { setMapboxToken, initError, setInitError } = useAppStore();
-  const {
-    searchFilters,
-    setSearchFilters,
-    curvatureSources,
-    setCurvatureSources,
-    selectedSource,
-    setSelectedSource,
-    setSourcesError,
-  } = useAppStore();
+  const { setCurvatureSources, setSourcesError } = useAppStore();
   const { setSearchResults } = useChatStore();
   const {
     waypoints,
     calculatedRoute,
     isCalculating,
     error: routeError,
-    removeWaypoint,
     clearWaypoints,
-    getTotalDistance,
-    getTotalDuration,
     getWaypointCount,
-    getRoadRating,
-    getTotalCurvature,
-    sessionId,
-    setSessionId,
   } = useWaypointRouteStore();
 
   const [loading, setLoading] = useState(true);
@@ -61,22 +47,10 @@ export default function Planner() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Save route state
-  const [saving, setSaving] = useState(false);
   const [showSaveForm, setShowSaveForm] = useState(false);
-  const [routeName, setRouteName] = useState('');
-  const [description, setDescription] = useState('');
-  const [isPublic, setIsPublic] = useState(false);
   const [savedSlug, setSavedSlug] = useState<string | null>(null);
 
-  const totalDistance = getTotalDistance();
-  const totalDuration = getTotalDuration();
   const waypointCount = getWaypointCount();
-  const roadRating = getRoadRating();
-
-  // Format duration as Xh Xm
-  const hours = Math.floor(totalDuration / 60);
-  const minutes = Math.round(totalDuration % 60);
-  const durationStr = hours > 0 ? `${hours}H ${minutes}M` : `${minutes}M`;
 
   // Initialize app
   useEffect(() => {
@@ -124,44 +98,6 @@ export default function Planner() {
   }, [loading, initError, loadSources]);
 
   const handleRetry = () => setRetryCount((c) => c + 1);
-
-  const handleSave = async () => {
-    if (!routeName.trim() || !calculatedRoute) return;
-    setSaving(true);
-    try {
-      let currentSessionId = sessionId;
-      if (!currentSessionId) {
-        const session = await createSession();
-        currentSessionId = session.session_id;
-        setSessionId(currentSessionId);
-      }
-      await saveRoute(currentSessionId, {
-        route_name: routeName.trim(),
-        description: description.trim() || undefined,
-        route_type: 'waypoint',
-        waypoints: waypoints.map((wp) => ({
-          lng: wp.lng,
-          lat: wp.lat,
-          order: wp.order,
-          segment_id: wp.segmentId || null,
-          is_user_modified: wp.isUserModified,
-        })),
-        connecting_geometry: calculatedRoute.geometry,
-        is_public: isPublic,
-        total_distance: calculatedRoute.distance,
-        total_curvature: getTotalCurvature(),
-      });
-      toast.success(`Route "${routeName}" saved!`);
-      setSavedSlug(routeName.trim().toLowerCase().replace(/\s+/g, '-'));
-      setShowSaveForm(false);
-      setRouteName('');
-      setDescription('');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save route');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   // Loading state
   if (loading) {
@@ -300,105 +236,11 @@ export default function Planner() {
               </div>
             </div>
 
-            {/* Source filter as search-like bar */}
-            <div className="flex items-center gap-2 h-9 rounded bg-bg-muted border border-border-subtle px-3">
-              <Search className="w-3.5 h-3.5 text-text-disabled flex-shrink-0" />
-              <select
-                value={selectedSource || ''}
-                onChange={(e) => setSelectedSource(e.target.value || null)}
-                disabled={sourcesLoading}
-                className="flex-1 bg-transparent text-sm font-cormorant italic text-text-disabled focus:text-text-secondary focus:outline-none appearance-none cursor-pointer"
-              >
-                <option value="">
-                  {sourcesLoading ? 'Loading states...' : 'Filter by state...'}
-                </option>
-                {curvatureSources.map((source) => (
-                  <option key={source.id} value={source.name} className="bg-bg-card text-text-primary">
-                    {source.name.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())} ({source.segment_count.toLocaleString()})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Road Rating slider */}
-            {(() => {
-              const stops = [
-                { value: 0, label: 'ALL' },
-                { value: 300, label: 'RELAXED' },
-                { value: 600, label: 'SPIRITED' },
-                { value: 1000, label: 'ENGAGING' },
-                { value: 2000, label: 'TECHNICAL' },
-                { value: 5000, label: 'EXPERT' },
-                { value: 10000, label: 'LEGENDARY' },
-              ];
-              const currentIndex = stops.findIndex(s => s.value === searchFilters.min_curvature);
-              const idx = currentIndex >= 0 ? currentIndex : 0;
-              return (
-                <div className="flex items-center gap-3">
-                  <span className="font-bebas text-[10px] tracking-[2px] text-text-disabled whitespace-nowrap">MIN RATING</span>
-                  <input
-                    type="range"
-                    min="0"
-                    max={stops.length - 1}
-                    step="1"
-                    value={idx}
-                    onChange={(e) => setSearchFilters({ min_curvature: stops[parseInt(e.target.value)].value })}
-                    className="flex-1 accent-[#C9A962] h-1"
-                  />
-                  <span className="font-bebas text-sm tracking-[1px] text-accent-gold text-right whitespace-nowrap">
-                    {stops[idx].label}
-                  </span>
-                </div>
-              );
-            })()}
+            <SidebarFilters sourcesLoading={sourcesLoading} />
           </div>
 
           {/* Waypoint List */}
-          <div className="flex-1 overflow-y-auto">
-            {waypointCount === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full px-8 text-center gap-4">
-                <MousePointerClick className="w-8 h-8 text-text-disabled" />
-                <p className="font-cormorant text-sm italic text-text-disabled leading-relaxed">
-                  Click on road segments on the map to add waypoints and build your route
-                </p>
-              </div>
-            ) : (
-              waypoints.map((wp: Waypoint, index: number) => (
-                <div
-                  key={wp.id}
-                  className={`flex items-center gap-3.5 px-5 py-3.5 border-b border-border-subtle group hover:bg-bg-muted/50 transition ${
-                    index === 0 ? 'bg-bg-muted' : ''
-                  }`}
-                >
-                  <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center font-bebas text-sm flex-shrink-0 ${
-                      index < 3
-                        ? 'bg-accent-gold text-bg-primary'
-                        : 'border-2 border-accent-gold text-accent-gold'
-                    }`}
-                  >
-                    {index + 1}
-                  </div>
-                  <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                    <span className="font-bebas text-[15px] tracking-[1px] text-text-primary truncate">
-                      {wp.segmentName?.toUpperCase() || 'WAYPOINT'}
-                    </span>
-                    <span className="font-cormorant text-[13px] italic text-text-secondary">
-                      {wp.lng.toFixed(4)}, {wp.lat.toFixed(4)}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => removeWaypoint(wp.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-text-disabled hover:text-accent-gold"
-                    title="Remove waypoint"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                  <GripVertical className="w-4 h-4 text-text-disabled flex-shrink-0" />
-                </div>
-              ))
-            )}
-          </div>
+          <WaypointList />
 
           {/* Route error */}
           {routeError && (
@@ -408,28 +250,7 @@ export default function Planner() {
           )}
 
           {/* Stats Row */}
-          <div className="flex items-center justify-between bg-bg-muted px-5 py-4 border-t border-border-subtle">
-            <div className="flex flex-col items-center gap-0.5">
-              <span className="font-bebas text-[22px] tracking-[1px] text-accent-gold">
-                {calculatedRoute ? totalDistance.toFixed(1) : '0.0'}
-              </span>
-              <span className="font-bebas text-[10px] tracking-[2px] text-text-disabled">TOTAL MI</span>
-            </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <span className="font-bebas text-[22px] tracking-[1px] text-accent-gold">
-                {calculatedRoute ? durationStr : '0M'}
-              </span>
-              <span className="font-bebas text-[10px] tracking-[2px] text-text-disabled">EST. TIME</span>
-            </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <span className="font-bebas text-[22px] tracking-[1px] text-accent-gold">{waypointCount}</span>
-              <span className="font-bebas text-[10px] tracking-[2px] text-text-disabled">STOPS</span>
-            </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <span className="font-bebas text-[22px] tracking-[1px] text-accent-gold">{roadRating}</span>
-              <span className="font-bebas text-[10px] tracking-[2px] text-text-disabled">ROAD RATING</span>
-            </div>
-          </div>
+          <RouteStats />
 
           {/* Action buttons */}
           {waypointCount > 0 && (
@@ -501,57 +322,11 @@ export default function Planner() {
       </div>
 
       {/* Save Form Modal */}
-      {showSaveForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-bg-card border border-border-subtle p-6 w-[calc(100%-2rem)] sm:w-[400px] mx-4 sm:mx-0 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <span className="font-bebas text-lg tracking-[3px] text-text-primary">SAVE ROUTE</span>
-              <button onClick={() => setShowSaveForm(false)} className="text-text-disabled hover:text-text-primary transition">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <input
-              type="text"
-              value={routeName}
-              onChange={(e) => setRouteName(e.target.value)}
-              placeholder="Route name"
-              maxLength={255}
-              className="w-full px-4 py-2.5 bg-bg-muted border border-border-subtle rounded text-sm font-cormorant italic text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-accent-gold-dim"
-            />
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Description (optional)"
-              rows={2}
-              className="w-full px-4 py-2.5 bg-bg-muted border border-border-subtle rounded text-sm font-cormorant italic text-text-primary placeholder:text-text-disabled focus:outline-none focus:border-accent-gold-dim resize-none"
-            />
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isPublic}
-                onChange={(e) => setIsPublic(e.target.checked)}
-                className="w-3.5 h-3.5 accent-[#C9A962]"
-              />
-              <span className="font-cormorant text-sm italic text-text-secondary">Make public (shareable)</span>
-            </label>
-            <div className="flex gap-3">
-              <button
-                onClick={handleSave}
-                disabled={!routeName.trim() || saving}
-                className="flex-1 font-bebas text-sm tracking-[2px] bg-accent-gold text-bg-primary py-2.5 hover:brightness-110 disabled:opacity-50 transition"
-              >
-                {saving ? 'SAVING...' : 'SAVE'}
-              </button>
-              <button
-                onClick={() => setShowSaveForm(false)}
-                className="px-6 font-bebas text-sm tracking-[2px] border border-border-subtle text-text-secondary py-2.5 hover:text-text-primary hover:border-text-secondary transition"
-              >
-                CANCEL
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SaveRouteModal
+        open={showSaveForm}
+        onClose={() => setShowSaveForm(false)}
+        onSaved={(slug) => setSavedSlug(slug)}
+      />
 
       {/* Chat Interface (floating overlay) */}
       <ChatInterface onResultsReceived={setSearchResults} />

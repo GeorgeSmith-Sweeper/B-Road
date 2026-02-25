@@ -68,13 +68,19 @@ frontend/
 ├── app/
 │   ├── layout.tsx                 # Root layout with metadata
 │   ├── page.tsx                   # Main application page
-│   └── globals.css                # Global styles
+│   ├── globals.css                # Global styles
+│   └── planner/
+│       └── page.tsx               # Route builder page (composes planner components)
 ├── components/
 │   ├── Map.tsx                    # Mapbox GL JS map with curvature gradient, route rendering
 │   ├── AddressSearchBar.tsx       # Floating address search with autocomplete
 │   ├── LayerMenu.tsx              # Popover menu to toggle gas/EV map layers
 │   ├── Sidebar.tsx                # Control panel with filters and route builder
-│   └── WaypointRouteBuilder.tsx   # Manual waypoint routing panel
+│   └── planner/
+│       ├── RouteStats.tsx         # Route stats row (distance, time, stops, rating)
+│       ├── SidebarFilters.tsx     # Source filter dropdown + curvature slider
+│       ├── WaypointList.tsx       # Draggable waypoint list with reordering
+│       └── SaveRouteModal.tsx     # Save route form modal
 ├── hooks/
 │   ├── useRouting.ts              # OSRM route calculation hook
 │   └── useGeocode.ts              # Debounced Mapbox geocoding hook

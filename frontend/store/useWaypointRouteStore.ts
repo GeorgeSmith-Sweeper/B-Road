@@ -34,6 +34,15 @@ export const useWaypointRouteStore = create<WaypointRouteState>((set, get) => ({
     }));
   },
 
+  reorderWaypoints: (fromIndex, toIndex) => {
+    set((state) => {
+      const updated = [...state.waypoints];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      return { waypoints: updated.map((wp, i) => ({ ...wp, order: i })) };
+    });
+  },
+
   removeWaypoint: (id) => {
     set((state) => {
       const filtered = state.waypoints.filter((wp) => wp.id !== id);
