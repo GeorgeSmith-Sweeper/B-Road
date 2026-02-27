@@ -47,7 +47,7 @@ export default function LayerMenu({ open, onClose, anchorRef }: LayerMenuProps) 
 
       <button
         onClick={toggleGasStations}
-        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-bg-muted transition text-left"
+        className="w-full flex items-center gap-3 px-3 py-2.5 min-h-[44px] hover:bg-bg-muted transition text-left"
       >
         <Fuel className="w-4 h-4 text-emerald-400 shrink-0" />
         <span className="font-bebas text-[12px] tracking-[0.5px] text-text-primary flex-1">
@@ -70,7 +70,7 @@ export default function LayerMenu({ open, onClose, anchorRef }: LayerMenuProps) 
 
       <button
         onClick={toggleEvCharging}
-        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-bg-muted transition text-left"
+        className="w-full flex items-center gap-3 px-3 py-2.5 min-h-[44px] hover:bg-bg-muted transition text-left"
       >
         <Zap className="w-4 h-4 text-blue-400 shrink-0" />
         <span className="font-bebas text-[12px] tracking-[0.5px] text-text-primary flex-1">

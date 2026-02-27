@@ -67,3 +67,14 @@ body {
 .font-cormorant {
   font-family: 'Cormorant Garamond', serif;
 }
+
+/* Mobile popup overflow prevention */
+@media (max-width: 767px) {
+  .mapboxgl-popup { max-width: calc(100vw - 2rem) !important; }
+  .mapboxgl-popup-content a,
+  .mapboxgl-popup-content button {
+    min-height: 44px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+}
