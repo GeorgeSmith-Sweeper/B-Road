@@ -55,11 +55,11 @@ export default function WaypointList() {
             dragIndexRef.current = null;
             setDragOverIndex(null);
           }}
-          className={`flex items-center gap-3.5 px-5 py-3.5 border-b border-border-subtle group hover:bg-bg-muted/50 transition cursor-grab active:cursor-grabbing ${
+          className={`flex items-center gap-3.5 px-5 py-3.5 border-b border-border-subtle group hover:bg-bg-muted/50 transition md:cursor-grab md:active:cursor-grabbing ${
             index === 0 ? 'bg-bg-muted' : ''
           } ${dragOverIndex === index ? 'border-t-2 border-t-accent-gold' : ''}`}
         >
-          <GripVertical className="w-4 h-4 text-text-disabled flex-shrink-0" />
+          <GripVertical className="w-4 h-4 text-text-disabled flex-shrink-0 hidden md:block" />
           <div
             className={`w-7 h-7 rounded-full flex items-center justify-center font-bebas text-sm flex-shrink-0 ${
               index < 3
@@ -79,7 +79,7 @@ export default function WaypointList() {
           </div>
           <button
             onClick={() => removeWaypoint(wp.id)}
-            className="opacity-0 group-hover:opacity-100 transition-opacity text-text-disabled hover:text-accent-gold"
+            className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-text-disabled hover:text-accent-gold p-3 -m-3"
             title="Remove waypoint"
           >
             <X className="w-4 h-4" />

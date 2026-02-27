@@ -106,7 +106,7 @@ export default function AddressSearchBar() {
   return (
     <div
       ref={containerRef}
-      className="absolute top-3 left-1/2 -translate-x-1/2 z-10 w-80 sm:w-96"
+      className="absolute top-16 md:top-3 left-1/2 -translate-x-1/2 z-10 w-[calc(100%-2rem)] sm:w-96"
     >
       <div className="relative">
         {/* Search icon */}
@@ -136,7 +136,7 @@ export default function AddressSearchBar() {
             }
           }}
           placeholder="Search for an address..."
-          className="w-full pl-10 pr-10 py-2.5 rounded-lg bg-gray-900/90 text-white text-sm placeholder-gray-400 border border-gray-700 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 backdrop-blur-sm shadow-lg"
+          className="w-full pl-10 pr-10 py-2.5 min-h-[44px] rounded-lg bg-gray-900/90 text-white text-sm placeholder-gray-400 border border-gray-700 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 backdrop-blur-sm shadow-lg"
         />
 
         {/* Loading spinner or clear button */}
@@ -147,7 +147,7 @@ export default function AddressSearchBar() {
         ) : query ? (
           <button
             onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-white"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -169,7 +169,7 @@ export default function AddressSearchBar() {
               key={s.id}
               onMouseDown={() => handleSelect(i)}
               onMouseEnter={() => setActiveIndex(i)}
-              className={`px-4 py-2.5 text-sm cursor-pointer ${
+              className={`px-4 py-2.5 min-h-[44px] text-sm cursor-pointer ${
                 i === activeIndex
                   ? 'bg-cyan-600/30 text-white'
                   : 'text-gray-300 hover:bg-gray-800'

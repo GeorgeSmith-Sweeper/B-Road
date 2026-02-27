@@ -12,10 +12,11 @@ interface Message {
 
 interface ChatInterfaceProps {
   onResultsReceived?: (results: ChatSearchResult['results']) => void;
+  isOpen: boolean;
+  onToggle: () => void;
 }
 
-export default function ChatInterface({ onResultsReceived }: ChatInterfaceProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function ChatInterface({ onResultsReceived, isOpen, onToggle }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -127,10 +128,11 @@ export default function ChatInterface({ onResultsReceived }: ChatInterfaceProps)
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      {/* Floating button */}
+      {/* Floating button — desktop only (mobile uses nav bar icon) */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={onToggle}
         className={`
+          hidden md:flex
           bg-blue-600 text-white rounded-full p-4 shadow-lg
           hover:bg-blue-700 transition-all duration-200
           ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}
@@ -152,13 +154,14 @@ export default function ChatInterface({ onResultsReceived }: ChatInterfaceProps)
         </svg>
       </button>
 
-      {/* Chat panel */}
+      {/* Chat panel — full-screen overlay on mobile, corner panel on desktop */}
       <div
         className={`
-          absolute bottom-0 right-0 w-[calc(100vw-2rem)] sm:w-96 h-[calc(100vh-6rem)] sm:h-[500px]
-          bg-white rounded-lg shadow-2xl
+          fixed inset-0 md:absolute md:inset-auto md:bottom-0 md:right-0
+          w-full md:w-96 h-full md:h-[500px]
+          bg-white md:rounded-lg shadow-2xl
           flex flex-col overflow-hidden
-          transition-all duration-200 origin-bottom-right
+          transition-all duration-200 md:origin-bottom-right
           ${isOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}
         `}
       >
@@ -169,7 +172,7 @@ export default function ChatInterface({ onResultsReceived }: ChatInterfaceProps)
             <p className="text-xs text-blue-100">Powered by Claude AI</p>
           </div>
           <button
-            onClick={() => setIsOpen(false)}
+            onClick={onToggle}
             className="text-white hover:text-blue-200 transition-colors"
             aria-label="Close chat"
           >

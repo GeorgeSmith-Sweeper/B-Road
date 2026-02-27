@@ -16,7 +16,7 @@ export default function RouteStats() {
   const durationStr = hours > 0 ? `${hours}H ${minutes}M` : `${minutes}M`;
 
   return (
-    <div className="flex items-center justify-between bg-bg-muted px-5 py-4 border-t border-border-subtle">
+    <div className="flex items-center justify-between bg-bg-muted px-5 py-4 border-t border-border-subtle cursor-pointer md:cursor-default">
       <div className="flex flex-col items-center gap-0.5">
         <span className="font-bebas text-[22px] tracking-[1px] text-accent-gold">
           {calculatedRoute ? totalDistance.toFixed(1) : '0.0'}

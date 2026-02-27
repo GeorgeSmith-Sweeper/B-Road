@@ -56,6 +56,10 @@ const POPUP_CSS = `
     color: #F5F4F2 !important;
     background: transparent !important;
   }
+  .mapboxgl-popup-content {
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+  }
 `;
 
 function buildSegmentPopupHTML(
@@ -394,7 +398,7 @@ export default function Map() {
           }
         }
 
-        new mapboxgl.Popup({ offset: 12, closeButton: true })
+        new mapboxgl.Popup({ offset: 12, closeButton: true, maxWidth: '300px' })
           .setLngLat(e.lngLat)
           .setHTML(buildSegmentPopupHTML(
             (props.name || 'Unnamed Road').toUpperCase(),
@@ -420,7 +424,7 @@ export default function Map() {
         if (!e.features?.length) return;
         const props = e.features[0].properties;
         const name = props?.name || 'Gas Station';
-        new mapboxgl.Popup({ offset: 12, closeButton: true })
+        new mapboxgl.Popup({ offset: 12, closeButton: true, maxWidth: '300px' })
           .setLngLat(e.lngLat)
           .setHTML(buildGasStationPopupHTML(name.toUpperCase()))
           .addTo(map);
@@ -437,7 +441,7 @@ export default function Map() {
       map.on('click', 'ev-stations-layer', (e: mapboxgl.MapLayerMouseEvent) => {
         if (!e.features?.length) return;
         const props = e.features[0].properties || {};
-        new mapboxgl.Popup({ offset: 12, closeButton: true })
+        new mapboxgl.Popup({ offset: 12, closeButton: true, maxWidth: '300px' })
           .setLngLat(e.lngLat)
           .setHTML(buildEVStationPopupHTML(props))
           .addTo(map);
@@ -597,7 +601,7 @@ export default function Map() {
         }
       }
 
-      new mapboxgl.Popup({ offset: 12, closeButton: true })
+      new mapboxgl.Popup({ offset: 12, closeButton: true, maxWidth: '300px' })
         .setLngLat(e.lngLat)
         .setHTML(buildChatResultPopupHTML(
           (props.name || 'Unnamed Road').toUpperCase(),
@@ -729,7 +733,7 @@ export default function Map() {
 
     geocoderMarkerRef.current = marker;
 
-    const popup = new mapboxgl.Popup({ offset: 20, closeButton: true })
+    const popup = new mapboxgl.Popup({ offset: 20, closeButton: true, maxWidth: '300px' })
       .setLngLat([lng, lat])
       .setHTML(buildGeocoderPopupHTML(
         geocoderSelectedResult.name.toUpperCase(),
@@ -835,14 +839,14 @@ export default function Map() {
           <button
             key={key}
             onClick={() => handleStyleChange(key)}
-            className={`flex items-center gap-1.5 px-3.5 py-2 font-bebas text-[11px] tracking-[1px] transition ${
+            className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-2 min-h-[44px] md:min-h-0 font-bebas text-[11px] tracking-[1px] transition ${
               activeStyle === key
                 ? 'bg-bg-muted text-accent-gold'
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >
-            <Icon className="w-3.5 h-3.5" />
-            {label}
+            <Icon className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+            <span className="hidden sm:inline">{label}</span>
           </button>
         ))}
       </div>
@@ -851,25 +855,25 @@ export default function Map() {
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-px">
         <button
           onClick={handleZoomIn}
-          className="w-9 h-9 bg-bg-card border border-border-subtle rounded-t flex items-center justify-center text-text-secondary hover:text-text-primary transition"
+          className="w-11 h-11 md:w-9 md:h-9 bg-bg-card border border-border-subtle rounded-t flex items-center justify-center text-text-secondary hover:text-text-primary transition"
         >
           <Plus className="w-4 h-4" />
         </button>
         <button
           onClick={handleZoomOut}
-          className="w-9 h-9 bg-bg-card border border-border-subtle rounded-b flex items-center justify-center text-text-secondary hover:text-text-primary transition"
+          className="w-11 h-11 md:w-9 md:h-9 bg-bg-card border border-border-subtle rounded-b flex items-center justify-center text-text-secondary hover:text-text-primary transition"
         >
           <Minus className="w-4 h-4" />
         </button>
       </div>
 
       {/* Layer & Compass Controls */}
-      <div className="absolute top-[108px] right-4 z-10 flex flex-col gap-2">
+      <div className="absolute top-[120px] md:top-[108px] right-4 z-10 flex flex-col gap-2">
         <div className="relative">
           <button
             ref={layerButtonRef}
             onClick={() => setLayerMenuOpen((v) => !v)}
-            className={`w-9 h-9 bg-bg-card border border-border-subtle rounded flex items-center justify-center transition ${
+            className={`w-11 h-11 md:w-9 md:h-9 bg-bg-card border border-border-subtle rounded flex items-center justify-center transition ${
               gasStationsVisible || evChargingVisible
                 ? 'text-accent-gold'
                 : 'text-text-primary hover:text-accent-gold'
@@ -879,7 +883,7 @@ export default function Map() {
           </button>
           <LayerMenu open={layerMenuOpen} onClose={() => setLayerMenuOpen(false)} anchorRef={layerButtonRef} />
         </div>
-        <button className="w-9 h-9 bg-bg-card border border-border-subtle rounded flex items-center justify-center text-text-primary hover:text-accent-gold transition">
+        <button className="w-11 h-11 md:w-9 md:h-9 bg-bg-card border border-border-subtle rounded flex items-center justify-center text-text-primary hover:text-accent-gold transition">
           <Compass className="w-4 h-4" />
         </button>
       </div>

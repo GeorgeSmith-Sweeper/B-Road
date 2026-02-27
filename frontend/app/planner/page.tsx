@@ -21,8 +21,9 @@ import {
   User,
   Plus,
   X,
-  PanelLeft,
   MousePointerClick,
+  ChevronUp,
+  MessageSquare,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -43,8 +44,11 @@ export default function Planner() {
   const [retryCount, setRetryCount] = useState(0);
   const [sourcesLoading, setSourcesLoading] = useState(false);
 
-  // Sidebar toggle for mobile
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Bottom drawer state for mobile (replaces left sidebar)
+  const [drawerExpanded, setDrawerExpanded] = useState(false);
+
+  // Chat panel state (lifted so nav bar can toggle on mobile)
+  const [chatOpen, setChatOpen] = useState(false);
 
   // Save route state
   const [showSaveForm, setShowSaveForm] = useState(false);
@@ -102,7 +106,7 @@ export default function Planner() {
   // Loading state
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-bg-primary">
+      <div className="flex items-center justify-center h-[100dvh] bg-bg-primary">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-accent-gold mx-auto mb-4" />
           <p className="font-bebas text-lg tracking-[2px] text-text-secondary">LOADING ROADRUNNER...</p>
@@ -114,7 +118,7 @@ export default function Planner() {
   // Error state
   if (initError) {
     return (
-      <div className="flex items-center justify-center h-screen bg-bg-primary">
+      <div className="flex items-center justify-center h-[100dvh] bg-bg-primary">
         <div className="bg-bg-card border border-border-subtle p-8 max-w-md text-center">
           <div className="text-accent-gold mb-4">
             <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -142,25 +146,103 @@ export default function Planner() {
     );
   }
 
-  return (
-    <div className="flex flex-col h-screen bg-bg-primary overflow-hidden">
-      {/* ── Top Nav ── */}
-      <nav className="flex items-center justify-between h-14 px-6 bg-bg-card border-b border-border-subtle flex-shrink-0">
-        <div className="flex items-center gap-3 sm:gap-5">
+  // Shared sidebar content (used in both desktop aside and mobile bottom drawer)
+  const sidebarContent = (
+    <>
+      {/* Sidebar Header */}
+      <div className="px-5 pt-5 pb-4 border-b border-border-subtle flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <span className="font-bebas text-lg tracking-[3px] text-text-primary">WAYPOINTS</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => toast('Click on a road segment on the map to add waypoints', { icon: '\uD83D\uDCCD' })}
+              className="flex items-center gap-1.5 rounded bg-accent-gold px-3 py-1.5 font-bebas text-[11px] tracking-[2px] text-bg-primary hover:brightness-110 transition min-h-[44px] md:min-h-0"
+            >
+              <Plus className="w-3 h-3" />
+              ADD
+            </button>
+            {/* Close button for mobile drawer */}
+            <button
+              onClick={() => setDrawerExpanded(false)}
+              className="md:hidden text-text-disabled hover:text-text-primary transition p-1"
+              aria-label="Close drawer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        <SidebarFilters sourcesLoading={sourcesLoading} />
+      </div>
+
+      {/* Waypoint List */}
+      <WaypointList />
+
+      {/* Route error */}
+      {routeError && (
+        <div className="px-5 py-2 bg-red-900/20 border-t border-red-800/30">
+          <p className="font-cormorant text-xs italic text-red-400">{routeError}</p>
+        </div>
+      )}
+
+      {/* Action buttons */}
+      {waypointCount > 0 && (
+        <div className="px-5 py-3 border-t border-border-subtle flex flex-col gap-2">
+          {calculatedRoute && waypointCount >= 2 && (
+            <a
+              href={getDirectionsUrl(waypoints.map((wp) => [wp.lat, wp.lng]))}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-center font-bebas text-xs tracking-[2px] text-accent-gold border border-accent-gold-dim px-4 py-2 hover:bg-accent-gold hover:text-bg-primary transition min-h-[44px] md:min-h-0 flex items-center justify-center"
+            >
+              GET DIRECTIONS
+            </a>
+          )}
+          {savedSlug && (
+            <div className="flex gap-2">
+              <a
+                href={getGpxExportUrl(savedSlug)}
+                download
+                className="flex-1 text-center font-bebas text-[11px] tracking-[2px] text-text-secondary border border-border-subtle px-3 py-1.5 hover:text-text-primary hover:border-text-secondary transition"
+              >
+                EXPORT GPX
+              </a>
+              <a
+                href={getKmlExportUrl(savedSlug)}
+                download
+                className="flex-1 text-center font-bebas text-[11px] tracking-[2px] text-text-secondary border border-border-subtle px-3 py-1.5 hover:text-text-primary hover:border-text-secondary transition"
+              >
+                EXPORT KML
+              </a>
+            </div>
+          )}
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="md:hidden text-text-secondary hover:text-text-primary transition-colors p-1"
-            aria-label="Toggle sidebar"
+            onClick={() => {
+              clearWaypoints();
+              setSavedSlug(null);
+              setShowSaveForm(false);
+            }}
+            className="font-bebas text-xs tracking-[2px] text-text-disabled hover:text-text-secondary transition"
           >
-            <PanelLeft className="w-5 h-5" />
+            CLEAR ALL
           </button>
+        </div>
+      )}
+    </>
+  );
+
+  return (
+    <div className="flex flex-col h-[100dvh] bg-bg-primary overflow-hidden">
+      {/* ── Top Nav ── */}
+      <nav className="flex items-center justify-between h-14 px-4 sm:px-6 bg-bg-card border-b border-border-subtle flex-shrink-0">
+        <div className="flex items-center gap-3 sm:gap-5">
           <Link href="/" className="font-bebas text-[22px] tracking-[4px] text-accent-gold hover:brightness-110 transition">
             ROADRUNNER
           </Link>
           <div className="w-px h-6 bg-border-subtle hidden sm:block" />
           <span className="font-bebas text-base tracking-[3px] text-text-primary hidden sm:inline">ROUTE BUILDER</span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           {/* Save button */}
           <button
             onClick={() => {
@@ -171,10 +253,10 @@ export default function Planner() {
                 toast('Add at least 2 waypoints to save a route', { icon: '\u2139\uFE0F' });
               }
             }}
-            className="flex items-center gap-1.5 rounded bg-bg-muted border border-border-subtle px-4 py-2 font-bebas text-xs tracking-[2px] text-text-secondary hover:text-text-primary hover:border-text-secondary transition"
+            className="flex items-center gap-1.5 rounded bg-bg-muted border border-border-subtle px-3 sm:px-4 py-2 font-bebas text-xs tracking-[2px] text-text-secondary hover:text-text-primary hover:border-text-secondary transition min-h-[44px]"
           >
             <Save className="w-3.5 h-3.5" />
-            SAVE ROUTE
+            <span className="hidden sm:inline">SAVE ROUTE</span>
           </button>
           {/* Share button */}
           <button
@@ -186,10 +268,18 @@ export default function Planner() {
                 toast('Save the route first to share it', { icon: '\u2139\uFE0F' });
               }
             }}
-            className="flex items-center gap-1.5 rounded bg-accent-gold px-4 py-2 font-bebas text-xs tracking-[2px] text-bg-primary hover:brightness-110 transition"
+            className="flex items-center gap-1.5 rounded bg-accent-gold px-3 sm:px-4 py-2 font-bebas text-xs tracking-[2px] text-bg-primary hover:brightness-110 transition min-h-[44px]"
           >
             <Share2 className="w-3.5 h-3.5" />
-            SHARE
+            <span className="hidden sm:inline">SHARE</span>
+          </button>
+          {/* Chat button — mobile only (desktop uses floating button) */}
+          <button
+            onClick={() => setChatOpen(!chatOpen)}
+            className="md:hidden flex items-center justify-center w-9 h-9 rounded bg-bg-muted border border-border-subtle text-text-secondary hover:text-accent-gold hover:border-accent-gold-dim transition min-h-[44px]"
+            aria-label="Toggle chat"
+          >
+            <MessageSquare className="w-4 h-4" />
           </button>
           {/* Profile icon */}
           <div className="w-8 h-8 rounded-full bg-bg-muted border border-accent-gold-dim flex items-center justify-center">
@@ -200,101 +290,11 @@ export default function Planner() {
 
       {/* ── Body ── */}
       <div className="flex flex-1 min-h-0">
-        {/* ── Mobile sidebar overlay ── */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-30 bg-black/50 md:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* ── Sidebar ── */}
-        <aside className={`
-          ${sidebarOpen ? 'fixed inset-y-0 left-0 z-40 w-[300px] sm:w-[340px] pt-14' : 'hidden'}
-          md:relative md:flex md:w-[340px] md:pt-0
-          flex-shrink-0 bg-bg-card border-r border-border-subtle flex flex-col
-        `}>
-          {/* Sidebar Header */}
-          <div className="px-5 pt-5 pb-4 border-b border-border-subtle flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <span className="font-bebas text-lg tracking-[3px] text-text-primary">WAYPOINTS</span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => toast('Click on a road segment on the map to add waypoints', { icon: '\uD83D\uDCCD' })}
-                  className="flex items-center gap-1.5 rounded bg-accent-gold px-3 py-1.5 font-bebas text-[11px] tracking-[2px] text-bg-primary hover:brightness-110 transition"
-                >
-                  <Plus className="w-3 h-3" />
-                  ADD
-                </button>
-                <button
-                  onClick={() => setSidebarOpen(false)}
-                  className="md:hidden text-text-disabled hover:text-text-primary transition p-1"
-                  aria-label="Close sidebar"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            <SidebarFilters sourcesLoading={sourcesLoading} />
-          </div>
-
-          {/* Waypoint List */}
-          <WaypointList />
-
-          {/* Route error */}
-          {routeError && (
-            <div className="px-5 py-2 bg-red-900/20 border-t border-red-800/30">
-              <p className="font-cormorant text-xs italic text-red-400">{routeError}</p>
-            </div>
-          )}
-
-          {/* Stats Row */}
+        {/* ── Desktop Sidebar (hidden on mobile) ── */}
+        <aside className="hidden md:flex md:relative md:w-[340px] flex-shrink-0 bg-bg-card border-r border-border-subtle flex-col">
+          {sidebarContent}
+          {/* Desktop Stats Row */}
           <RouteStats />
-
-          {/* Action buttons */}
-          {waypointCount > 0 && (
-            <div className="px-5 py-3 border-t border-border-subtle flex flex-col gap-2">
-              {calculatedRoute && waypointCount >= 2 && (
-                <a
-                  href={getDirectionsUrl(waypoints.map((wp) => [wp.lat, wp.lng]))}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block text-center font-bebas text-xs tracking-[2px] text-accent-gold border border-accent-gold-dim px-4 py-2 hover:bg-accent-gold hover:text-bg-primary transition"
-                >
-                  GET DIRECTIONS
-                </a>
-              )}
-              {savedSlug && (
-                <div className="flex gap-2">
-                  <a
-                    href={getGpxExportUrl(savedSlug)}
-                    download
-                    className="flex-1 text-center font-bebas text-[11px] tracking-[2px] text-text-secondary border border-border-subtle px-3 py-1.5 hover:text-text-primary hover:border-text-secondary transition"
-                  >
-                    EXPORT GPX
-                  </a>
-                  <a
-                    href={getKmlExportUrl(savedSlug)}
-                    download
-                    className="flex-1 text-center font-bebas text-[11px] tracking-[2px] text-text-secondary border border-border-subtle px-3 py-1.5 hover:text-text-primary hover:border-text-secondary transition"
-                  >
-                    EXPORT KML
-                  </a>
-                </div>
-              )}
-              <button
-                onClick={() => {
-                  clearWaypoints();
-                  setSavedSlug(null);
-                  setShowSaveForm(false);
-                }}
-                className="font-bebas text-xs tracking-[2px] text-text-disabled hover:text-text-secondary transition"
-              >
-                CLEAR ALL
-              </button>
-            </div>
-          )}
         </aside>
 
         {/* ── Map Area ── */}
@@ -309,9 +309,9 @@ export default function Planner() {
             </div>
           )}
 
-          {/* Hint bar */}
+          {/* Hint bar — sits above collapsed drawer on mobile */}
           {waypointCount === 0 && (
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 bg-[#1A1A1ACC] backdrop-blur-sm rounded-full px-6 h-9">
+            <div className="absolute bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 bg-[#1A1A1ACC] backdrop-blur-sm rounded-full px-6 h-9">
               <MousePointerClick className="w-3.5 h-3.5 text-accent-gold" />
               <span className="font-cormorant text-sm italic text-text-secondary">
                 Click anywhere on the map to add a waypoint
@@ -319,6 +319,52 @@ export default function Planner() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── Mobile Bottom Drawer (visible only on mobile) ── */}
+      {/* Backdrop */}
+      {drawerExpanded && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          onClick={() => setDrawerExpanded(false)}
+        />
+      )}
+
+      {/* Drawer */}
+      <div
+        className={`
+          fixed bottom-0 left-0 right-0 z-40 md:hidden
+          bg-bg-card border-t border-border-subtle
+          transition-[max-height] duration-300 ease-in-out
+          ${drawerExpanded ? 'max-h-[60dvh]' : 'max-h-[80px]'}
+          flex flex-col overflow-hidden
+        `}
+      >
+        {/* Drag handle + collapsed stats */}
+        <button
+          onClick={() => setDrawerExpanded(!drawerExpanded)}
+          className="flex flex-col items-center w-full flex-shrink-0 active:bg-bg-muted/50 transition"
+        >
+          <div className="w-10 h-1 rounded-full bg-text-disabled mt-2 mb-1" />
+          <div className="flex items-center gap-1 mb-1">
+            <ChevronUp className={`w-3.5 h-3.5 text-text-disabled transition-transform ${drawerExpanded ? 'rotate-180' : ''}`} />
+            <span className="font-bebas text-[10px] tracking-[2px] text-text-disabled">
+              {drawerExpanded ? 'COLLAPSE' : 'EXPAND'}
+            </span>
+          </div>
+        </button>
+
+        {/* Collapsed: show RouteStats */}
+        <div className="flex-shrink-0">
+          <RouteStats />
+        </div>
+
+        {/* Expanded: scrollable sidebar content */}
+        {drawerExpanded && (
+          <div className="flex-1 overflow-y-auto overscroll-contain">
+            {sidebarContent}
+          </div>
+        )}
       </div>
 
       {/* Save Form Modal */}
@@ -329,7 +375,11 @@ export default function Planner() {
       />
 
       {/* Chat Interface (floating overlay) */}
-      <ChatInterface onResultsReceived={setSearchResults} />
+      <ChatInterface
+        isOpen={chatOpen}
+        onToggle={() => setChatOpen(!chatOpen)}
+        onResultsReceived={setSearchResults}
+      />
     </div>
   );
 }
