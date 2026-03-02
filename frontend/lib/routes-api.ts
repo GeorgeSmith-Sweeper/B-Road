@@ -149,6 +149,24 @@ export async function listRoutes(
 }
 
 /**
+ * List all public routes (no session required).
+ */
+export async function listPublicRoutes(
+  limit: number = 50,
+  offset: number = 0
+): Promise<{ routes: RouteResponse[] }> {
+  const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  const response = await fetch(`${API_BASE_URL}/routes/public?${params}`);
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    throw new Error(error.detail || `Failed to list public routes: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Get route detail by ID.
  */
 export async function getRoute(routeId: number): Promise<RouteDetailResponse> {

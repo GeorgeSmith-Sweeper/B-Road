@@ -300,6 +300,30 @@ class RouteService:
             connecting_geometry=connecting_geo,
         )
 
+    def list_public_routes(self, limit: int = 50, offset: int = 0) -> RouteListResponse:
+        """List all public routes from all users"""
+        routes = self.route_repo.get_public(limit, offset)
+
+        route_responses = [
+            RouteResponse(
+                route_id=r.route_id,
+                route_name=r.route_name,
+                description=r.description,
+                total_curvature=r.total_curvature or 0,
+                total_length_km=(r.total_length or 0) / 1000,
+                total_length_mi=(r.total_length or 0) / 1609.34,
+                segment_count=r.segment_count,
+                url_slug=r.url_slug,
+                created_at=r.created_at.isoformat(),
+                is_public=r.is_public,
+                route_type=r.route_type or "segment_list",
+                road_rating=r.road_rating,
+            )
+            for r in routes
+        ]
+
+        return RouteListResponse(routes=route_responses)
+
     def list_routes(self, session_id: str) -> RouteListResponse:
         """List all routes for a session"""
         session_uuid = uuid.UUID(session_id)

@@ -6,7 +6,7 @@ road segments together. Routes are scoped to anonymous sessions
 identified by X-Session-Id header.
 """
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -80,6 +80,26 @@ async def list_routes(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to list routes: {str(e)}",
+        )
+
+
+@router.get("/public", response_model=RouteListResponse)
+async def list_public_routes(
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    service: RouteService = Depends(get_route_service),
+):
+    """
+    List all public routes from all users.
+
+    No session required — public routes are browsable by anyone.
+    """
+    try:
+        return service.list_public_routes(limit, offset)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to list public routes: {str(e)}",
         )
 
 

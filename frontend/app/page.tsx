@@ -128,8 +128,8 @@ export default function LandingPage() {
           </div>
           <nav className="hidden lg:flex items-center gap-10">
             <a href="#explore" className="font-bebas text-sm tracking-[2px] text-text-secondary hover:text-text-primary transition-colors">EXPLORE</a>
-            <a href="#routes" className="font-bebas text-sm tracking-[2px] text-text-secondary hover:text-text-primary transition-colors">ROUTES</a>
-            <a href="#community" className="font-bebas text-sm tracking-[2px] text-text-secondary hover:text-text-primary transition-colors">COMMUNITY</a>
+            <Link href="/my-routes" className="font-bebas text-sm tracking-[2px] text-text-secondary hover:text-text-primary transition-colors">ROUTES</Link>
+            <Link href="/library" className="font-bebas text-sm tracking-[2px] text-text-secondary hover:text-text-primary transition-colors">LIBRARY</Link>
             <a href="#about" className="font-bebas text-sm tracking-[2px] text-text-secondary hover:text-text-primary transition-colors">ABOUT</a>
             <Link
               href="/planner"
