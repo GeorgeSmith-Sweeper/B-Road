@@ -69,6 +69,17 @@ class RouteRepository(BaseRepository[SavedRoute]):
         self.db.flush()
         return route
 
+    def get_public(self, limit: int = 50, offset: int = 0) -> List[SavedRoute]:
+        """Get all public routes, ordered by creation date"""
+        return (
+            self.db.query(SavedRoute)
+            .filter_by(is_public=True)
+            .order_by(desc(SavedRoute.created_at))
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+
     def delete_route(self, route: SavedRoute) -> None:
         """Delete a route (cascades to segments)"""
         self.db.delete(route)

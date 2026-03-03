@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 
 const navLinks = [
-  { href: '#explore', label: 'EXPLORE' },
-  { href: '#routes', label: 'ROUTES' },
-  { href: '#community', label: 'COMMUNITY' },
-  { href: '#about', label: 'ABOUT' },
+  { href: '#explore', label: 'EXPLORE', internal: false },
+  { href: '/my-routes', label: 'ROUTES', internal: true },
+  { href: '/library', label: 'LIBRARY', internal: true },
+  { href: '#about', label: 'ABOUT', internal: false },
 ];
 
 export default function MobileNav() {
@@ -28,16 +28,27 @@ export default function MobileNav() {
       {isOpen && (
         <div className="absolute top-full left-0 right-0 bg-[#0D0D0DEE] backdrop-blur-sm border-t border-border-subtle">
           <nav className="flex flex-col px-6 py-4 gap-4">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                onClick={() => setIsOpen(false)}
-                className="font-bebas text-sm tracking-[2px] text-text-secondary hover:text-text-primary transition-colors"
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map((link) =>
+              link.internal ? (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setIsOpen(false)}
+                  className="font-bebas text-sm tracking-[2px] text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setIsOpen(false)}
+                  className="font-bebas text-sm tracking-[2px] text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  {link.label}
+                </a>
+              )
+            )}
             <Link
               href="/planner"
               onClick={() => setIsOpen(false)}
