@@ -46,7 +46,7 @@ help:
 # -----------------------------------------------------------------------------
 
 up:
-	docker compose up -d
+	docker compose up -d --force-recreate
 	@echo ""
 	@echo "Services starting..."
 	@echo "  API:      http://localhost:8000"
