@@ -195,6 +195,7 @@ export default function Map() {
   const [layerMenuOpen, setLayerMenuOpen] = useState(false);
   const layerButtonRef = useRef<HTMLButtonElement>(null);
   const evDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selectedFeaturesRef = useRef(new Set<number | string>());
 
   const mapboxToken = useAppStore((state) => state.mapboxToken);
   const selectedSource = useAppStore((state) => state.selectedSource);
@@ -225,6 +226,7 @@ export default function Map() {
       tiles: [buildTileUrl(useAppStore.getState().selectedSource)],
       minzoom: 4,
       maxzoom: 14,
+      promoteId: { 'curvature': 'id' },
     });
 
     // Halo layer: white outline behind colored roads for legibility
@@ -238,11 +240,25 @@ export default function Map() {
         'line-color': 'rgba(255, 255, 255, 0.6)',
         'line-width': [
           'interpolate', ['linear'], ['zoom'],
-          4, ['interpolate', ['linear'], ['get', 'curvature'], 300, 2.5, 2000, 3, 5000, 3.5],
-          8, ['interpolate', ['linear'], ['get', 'curvature'], 300, 3, 2000, 4, 5000, 5],
-          12, ['interpolate', ['linear'], ['get', 'curvature'], 300, 3.5, 2000, 5, 5000, 6.5],
+          4, ['case', ['boolean', ['feature-state', 'selected'], false],
+            ['interpolate', ['linear'], ['get', 'curvature'], 300, 3.75, 2000, 4.5, 5000, 5.25],
+            ['interpolate', ['linear'], ['get', 'curvature'], 300, 2.5, 2000, 3, 5000, 3.5],
+          ],
+          8, ['case', ['boolean', ['feature-state', 'selected'], false],
+            ['interpolate', ['linear'], ['get', 'curvature'], 300, 4.5, 2000, 6, 5000, 7.5],
+            ['interpolate', ['linear'], ['get', 'curvature'], 300, 3, 2000, 4, 5000, 5],
+          ],
+          12, ['case', ['boolean', ['feature-state', 'selected'], false],
+            ['interpolate', ['linear'], ['get', 'curvature'], 300, 5.25, 2000, 7.5, 5000, 9.75],
+            ['interpolate', ['linear'], ['get', 'curvature'], 300, 3.5, 2000, 5, 5000, 6.5],
+          ],
         ],
-        'line-opacity': 0.5,
+        'line-opacity': [
+          'case',
+          ['boolean', ['feature-state', 'selected'], false],
+          1.0,
+          0.2,
+        ],
       },
       filter: ['>=', ['get', 'curvature'], useAppStore.getState().searchFilters.min_curvature],
     });
@@ -265,9 +281,18 @@ export default function Map() {
         ],
         'line-width': [
           'interpolate', ['linear'], ['zoom'],
-          4, ['interpolate', ['linear'], ['get', 'curvature'], 300, 0.5, 2000, 1, 5000, 1.5],
-          8, ['interpolate', ['linear'], ['get', 'curvature'], 300, 1, 2000, 2, 5000, 3],
-          12, ['interpolate', ['linear'], ['get', 'curvature'], 300, 1.5, 2000, 3, 5000, 4.5],
+          4, ['case', ['boolean', ['feature-state', 'selected'], false],
+            ['interpolate', ['linear'], ['get', 'curvature'], 300, 0.65, 2000, 1.3, 5000, 1.95],
+            ['interpolate', ['linear'], ['get', 'curvature'], 300, 0.5, 2000, 1, 5000, 1.5],
+          ],
+          8, ['case', ['boolean', ['feature-state', 'selected'], false],
+            ['interpolate', ['linear'], ['get', 'curvature'], 300, 1.3, 2000, 2.6, 5000, 3.9],
+            ['interpolate', ['linear'], ['get', 'curvature'], 300, 1, 2000, 2, 5000, 3],
+          ],
+          12, ['case', ['boolean', ['feature-state', 'selected'], false],
+            ['interpolate', ['linear'], ['get', 'curvature'], 300, 1.95, 2000, 3.9, 5000, 5.85],
+            ['interpolate', ['linear'], ['get', 'curvature'], 300, 1.5, 2000, 3, 5000, 4.5],
+          ],
         ],
         'line-opacity': 0.9,
       },
@@ -374,16 +399,31 @@ export default function Map() {
         if (!props) return;
 
         const { addWaypoint } = useWaypointRouteStore.getState();
-        let midLng = e.lngLat.lng;
-        let midLat = e.lngLat.lat;
+        let snapLng = e.lngLat.lng;
+        let snapLat = e.lngLat.lat;
         if (feature.geometry.type === 'LineString') {
           const coords = (feature.geometry as GeoJSON.LineString).coordinates as [number, number][];
           if (coords.length > 0) {
-            const midIdx = Math.floor(coords.length / 2);
-            [midLng, midLat] = coords[midIdx];
+            const first = coords[0];
+            const last = coords[coords.length - 1];
+            const clickLng = e.lngLat.lng;
+            const clickLat = e.lngLat.lat;
+            const distToFirst = (clickLng - first[0]) ** 2 + (clickLat - first[1]) ** 2;
+            const distToLast = (clickLng - last[0]) ** 2 + (clickLat - last[1]) ** 2;
+            [snapLng, snapLat] = distToFirst <= distToLast ? first : last;
           }
         }
-        addWaypoint(midLng, midLat, props.name || undefined, props.curvature);
+        addWaypoint(snapLng, snapLat, props.name || undefined, props.curvature);
+
+        // Highlight the selected segment
+        const featureId = feature.id;
+        if (featureId != null) {
+          map.setFeatureState(
+            { source: 'curvature', sourceLayer: 'curvature', id: featureId },
+            { selected: true },
+          );
+          selectedFeaturesRef.current.add(featureId);
+        }
         toast.success(`Added waypoint for "${props.name || 'Unnamed Road'}"`, { icon: '\uD83D\uDCCD' });
 
         const lengthMi = props.length ? (props.length / 1609).toFixed(1) : '?';
@@ -495,6 +535,14 @@ export default function Map() {
           features: [{ type: 'Feature', geometry: route.geometry, properties: {} }],
         });
       }
+
+      // Restore segment highlight feature states after style swap
+      selectedFeaturesRef.current.forEach((id) => {
+        map.setFeatureState(
+          { source: 'curvature', sourceLayer: 'curvature', id },
+          { selected: true },
+        );
+      });
 
       // Restore POI layer visibility after style swap
       const { gasStationsVisible: gasVis, evChargingVisible: evVis } = useLayerStore.getState();
@@ -645,6 +693,14 @@ export default function Map() {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !sourceAddedRef.current) return;
+
+    // Clear all segment highlights when waypoints are fully cleared
+    if (waypointRouteWaypoints.length === 0 && selectedFeaturesRef.current.size > 0) {
+      selectedFeaturesRef.current.forEach((id) => {
+        map.removeFeatureState({ source: 'curvature', sourceLayer: 'curvature', id });
+      });
+      selectedFeaturesRef.current.clear();
+    }
 
     const existingIds = new Set(waypointRouteWaypoints.map((wp) => wp.id));
 
