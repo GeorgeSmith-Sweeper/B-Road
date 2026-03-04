@@ -128,6 +128,22 @@ class RouteListResponse(BaseModel):
     routes: List[RouteResponse]
 
 
+# Auth Models
+
+
+class ClaimRoutesRequest(BaseModel):
+    """Request to claim anonymous session routes for an authenticated user"""
+
+    session_id: str
+
+
+class ClaimRoutesResponse(BaseModel):
+    """Response after claiming routes"""
+
+    claimed_count: int
+    message: str
+
+
 # Chat Models
 
 

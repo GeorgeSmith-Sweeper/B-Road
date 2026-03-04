@@ -15,10 +15,11 @@ import { apiClient } from '@/lib/api';
 import { getGpxExportUrl, getKmlExportUrl } from '@/lib/routes-api';
 import { getDirectionsUrl } from '@/lib/google-maps';
 import { ApiError } from '@/types';
+import AuthButton from '@/components/AuthButton';
+import { useClaimRoutes } from '@/hooks/useClaimRoutes';
 import {
   Save,
   Share2,
-  User,
   Plus,
   X,
   MousePointerClick,
@@ -53,6 +54,9 @@ export default function Planner() {
   // Save route state
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [savedSlug, setSavedSlug] = useState<string | null>(null);
+
+  // Auto-claim anonymous routes on sign-in
+  useClaimRoutes();
 
   const waypointCount = getWaypointCount();
 
@@ -281,10 +285,8 @@ export default function Planner() {
           >
             <MessageSquare className="w-4 h-4" />
           </button>
-          {/* Profile icon */}
-          <div className="w-8 h-8 rounded-full bg-bg-muted border border-accent-gold-dim flex items-center justify-center">
-            <User className="w-4 h-4 text-text-secondary" />
-          </div>
+          {/* Auth */}
+          <AuthButton />
         </div>
       </nav>
 

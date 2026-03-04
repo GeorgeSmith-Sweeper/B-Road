@@ -42,6 +42,8 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-curvature}:${POSTGRES_PASSWORD}@db:5432/curvature
       MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN:?MAPBOX_ACCESS_TOKEN is required}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      CLERK_ISSUER: ${CLERK_ISSUER:-}
       OSRM_URL: http://osrm:5000
       PYTHONUNBUFFERED: 1
     ports:
@@ -97,11 +99,14 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       NEXT_PUBLIC_MAPBOX_TOKEN: ${MAPBOX_ACCESS_TOKEN}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}
+      NEXT_PUBLIC_CLERK_SIGN_IN_URL: /sign-in
+      NEXT_PUBLIC_CLERK_SIGN_UP_URL: /sign-up
     ports:
       - "3000:3000"
     volumes:
       - ./frontend:/app
-      - /app/node_modules
+      - frontend_node_modules:/app/node_modules
       - next_cache:/app/.next
     depends_on:
       api:
@@ -121,5 +126,7 @@ volumes:
     name: b-road-postgres-data
   api_cache:
     name: b-road-api-cache
+  frontend_node_modules:
+    name: b-road-frontend-node-modules
   next_cache:
     name: b-road-next-cache

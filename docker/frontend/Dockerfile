@@ -26,11 +26,15 @@ FROM node:22-alpine AS dev
 
 WORKDIR /app
 
-# Copy dependencies from deps stage
+# Copy dependencies from deps stage (initial seed for the named volume)
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy package.json for scripts
-COPY frontend/package.json ./
+# Copy package files for the entrypoint checksum sync
+COPY frontend/package.json frontend/package-lock.json* ./
+
+# Copy entrypoint script
+COPY docker/frontend/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Set development environment
 ENV NODE_ENV=development \
@@ -38,7 +42,8 @@ ENV NODE_ENV=development \
 
 EXPOSE 3000
 
-# Development server with hot-reload
+# Entrypoint syncs node_modules when package-lock.json changes
+ENTRYPOINT ["entrypoint.sh"]
 CMD ["npm", "run", "dev"]
 
 # -----------------------------------------------------------------------------

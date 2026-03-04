@@ -3,42 +3,46 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Route, ArrowLeft, Trash2, Navigation } from 'lucide-react';
+import { useAuth } from '@clerk/nextjs';
+import AuthButton from '@/components/AuthButton';
 import { useWaypointRouteStore } from '@/store/useWaypointRouteStore';
+import { useClaimRoutes } from '@/hooks/useClaimRoutes';
 import { listRoutes, deleteRoute, type RouteResponse } from '@/lib/routes-api';
 import RouteCard from '@/components/RouteCard';
 
 export default function MyRoutesPage() {
   const sessionId = useWaypointRouteStore((s) => s.sessionId);
+  const { getToken } = useAuth();
   const [routes, setRoutes] = useState<RouteResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
+  // Auto-claim anonymous routes on sign-in
+  useClaimRoutes();
+
   const fetchRoutes = useCallback(async () => {
-    if (!sessionId) {
-      setLoading(false);
-      return;
-    }
     try {
       setError(null);
-      const data = await listRoutes(sessionId);
+      const token = await getToken();
+      const data = await listRoutes(sessionId || undefined, token || undefined);
       setRoutes(data.routes);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load routes');
     } finally {
       setLoading(false);
     }
-  }, [sessionId]);
+  }, [sessionId, getToken]);
 
   useEffect(() => {
     fetchRoutes();
   }, [fetchRoutes]);
 
   const handleDelete = async (routeId: number) => {
-    if (!sessionId) return;
     setDeletingId(routeId);
     try {
-      await deleteRoute(routeId, sessionId);
+      const token = await getToken();
+      await deleteRoute(routeId, sessionId || undefined, token || undefined);
       setRoutes((prev) => prev.filter((r) => r.route_id !== routeId));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete route');
@@ -61,12 +65,15 @@ export default function MyRoutesPage() {
               <span className="font-bebas text-[22px] tracking-[3px] text-text-primary">MY ROUTES</span>
             </div>
           </div>
-          <Link
-            href="/planner"
-            className="font-bebas text-sm tracking-[2px] bg-accent-gold text-bg-primary px-6 py-2.5 hover:brightness-110 transition"
-          >
-            NEW ROUTE
-          </Link>
+          <div className="flex items-center gap-4">
+            <AuthButton />
+            <Link
+              href="/planner"
+              className="font-bebas text-sm tracking-[2px] bg-accent-gold text-bg-primary px-6 py-2.5 hover:brightness-110 transition"
+            >
+              NEW ROUTE
+            </Link>
+          </div>
         </div>
       </header>
 

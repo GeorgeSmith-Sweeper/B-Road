@@ -28,6 +28,8 @@ B-Road is a road discovery and trip planning platform for driving enthusiasts. B
 - Share via public URL slug
 - Export as GPX or KML for GPS devices
 - Open full routes in Google Maps for turn-by-turn navigation
+- User accounts via Clerk (email/password + Google social login)
+- Anonymous routes automatically claimed on sign-up
 
 ### Search
 
@@ -61,6 +63,7 @@ Every road segment is scored by curvature and assigned a Road Rating:
 - [Docker](https://www.docker.com/) and Docker Compose
 - [Mapbox access token](https://www.mapbox.com/)
 - [Anthropic API key](https://console.anthropic.com/) (optional — enables AI search)
+- [Clerk account](https://clerk.com/) (optional — enables user accounts)
 
 ### Get running
 
@@ -69,6 +72,7 @@ git clone https://github.com/GeorgeSmith-Sweeper/B-Road.git
 cd B-Road
 cp .env.example .env
 # Edit .env — add your MAPBOX_ACCESS_TOKEN (and optionally ANTHROPIC_API_KEY)
+# For user accounts: add NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY, and CLERK_ISSUER
 docker compose up -d
 ```
 
@@ -84,6 +88,7 @@ For detailed setup — data loading, OSRM routing, manual installation — see [
 | Backend | FastAPI, SQLAlchemy, Python 3.11 |
 | Database | PostgreSQL 15 + PostGIS |
 | Map | Mapbox GL JS with custom curvature tile layers |
+| Auth | Clerk (email/password + Google OAuth) |
 | AI Search | Anthropic Claude SDK |
 | Routing | OSRM (Open Source Routing Machine) |
 | Data | OpenStreetMap via curvature processing pipeline |

@@ -57,7 +57,7 @@ class RouteService:
         self.segment_repo = SegmentRepository(db)
 
     def save_route(
-        self, request: SaveRouteRequest, session_id: str
+        self, request: SaveRouteRequest, session_id: str, user_id: Optional[str] = None
     ) -> SaveRouteResponse:
         """
         Save a route to the database (segment-list or waypoint-based).
@@ -79,12 +79,13 @@ class RouteService:
         url_slug = self._generate_url_slug(request.route_name, session_id)
 
         if request.route_type == "waypoint":
-            return self._save_waypoint_route(request, session_uuid, url_slug)
+            return self._save_waypoint_route(request, session_uuid, url_slug, user_id)
         else:
-            return self._save_segment_route(request, session_uuid, url_slug)
+            return self._save_segment_route(request, session_uuid, url_slug, user_id)
 
     def _save_segment_route(
-        self, request: SaveRouteRequest, session_uuid: uuid.UUID, url_slug: str
+        self, request: SaveRouteRequest, session_uuid: uuid.UUID, url_slug: str,
+        user_id: Optional[str] = None
     ) -> SaveRouteResponse:
         """Save a segment-list route."""
         # Calculate statistics
@@ -114,6 +115,7 @@ class RouteService:
             url_slug=url_slug,
             is_public=request.is_public,
             route_type="segment_list",
+            user_id=user_id,
         )
 
         route = self.route_repo.create_route(route)
@@ -146,7 +148,8 @@ class RouteService:
         )
 
     def _save_waypoint_route(
-        self, request: SaveRouteRequest, session_uuid: uuid.UUID, url_slug: str
+        self, request: SaveRouteRequest, session_uuid: uuid.UUID, url_slug: str,
+        user_id: Optional[str] = None
     ) -> SaveRouteResponse:
         """Save a waypoint-based route with OSRM connecting geometry."""
         geom_coords = request.connecting_geometry.get("coordinates", [])
@@ -189,6 +192,7 @@ class RouteService:
             route_type="waypoint",
             connecting_geometry=connecting_geom,
             road_rating=road_rating,
+            user_id=user_id,
         )
 
         route = self.route_repo.create_route(route)
@@ -324,6 +328,40 @@ class RouteService:
 
         return RouteListResponse(routes=route_responses)
 
+    def list_user_routes(self, user_id: str) -> RouteListResponse:
+        """List all routes for an authenticated user"""
+        routes = self.route_repo.get_by_user(user_id)
+
+        route_responses = [
+            RouteResponse(
+                route_id=r.route_id,
+                route_name=r.route_name,
+                description=r.description,
+                total_curvature=r.total_curvature or 0,
+                total_length_km=(r.total_length or 0) / 1000,
+                total_length_mi=(r.total_length or 0) / 1609.34,
+                segment_count=r.segment_count,
+                url_slug=r.url_slug,
+                created_at=r.created_at.isoformat(),
+                is_public=r.is_public,
+                route_type=r.route_type or "segment_list",
+                road_rating=r.road_rating,
+            )
+            for r in routes
+        ]
+
+        return RouteListResponse(routes=route_responses)
+
+    def claim_session_routes(self, session_id: str, user_id: str) -> dict:
+        """Claim anonymous session routes for an authenticated user."""
+        session_uuid = uuid.UUID(session_id)
+        session = self.session_repo.get_by_id(session_uuid)
+        if not session:
+            return {"claimed_count": 0, "message": "Session not found"}
+
+        count = self.route_repo.claim_routes_from_session(session_uuid, user_id)
+        return {"claimed_count": count, "message": f"{count} route(s) added to your account"}
+
     def list_routes(self, session_id: str) -> RouteListResponse:
         """List all routes for a session"""
         session_uuid = uuid.UUID(session_id)
@@ -350,11 +388,16 @@ class RouteService:
         return RouteListResponse(routes=route_responses)
 
     def update_route(
-        self, route_id: int, session_id: str, request: UpdateRouteRequest
+        self, route_id: int, session_id: Optional[str], request: UpdateRouteRequest,
+        user_id: Optional[str] = None
     ) -> dict:
-        """Update route metadata"""
-        session_uuid = uuid.UUID(session_id)
-        route = self.route_repo.get_by_session_and_id(session_uuid, route_id)
+        """Update route metadata. Authorize by session_id OR user_id."""
+        route = None
+        if user_id:
+            route = self.route_repo.get_by_user_and_id(user_id, route_id)
+        if not route and session_id:
+            session_uuid = uuid.UUID(session_id)
+            route = self.route_repo.get_by_session_and_id(session_uuid, route_id)
 
         if not route:
             raise ValueError("Route not found or unauthorized")
@@ -371,10 +414,16 @@ class RouteService:
 
         return {"status": "success", "message": "Route updated"}
 
-    def delete_route(self, route_id: int, session_id: str) -> dict:
-        """Delete a saved route"""
-        session_uuid = uuid.UUID(session_id)
-        route = self.route_repo.get_by_session_and_id(session_uuid, route_id)
+    def delete_route(
+        self, route_id: int, session_id: Optional[str], user_id: Optional[str] = None
+    ) -> dict:
+        """Delete a saved route. Authorize by session_id OR user_id."""
+        route = None
+        if user_id:
+            route = self.route_repo.get_by_user_and_id(user_id, route_id)
+        if not route and session_id:
+            session_uuid = uuid.UUID(session_id)
+            route = self.route_repo.get_by_session_and_id(session_uuid, route_id)
 
         if not route:
             raise ValueError("Route not found or unauthorized")

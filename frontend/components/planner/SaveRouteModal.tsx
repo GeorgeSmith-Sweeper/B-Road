@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { useWaypointRouteStore } from '@/store/useWaypointRouteStore';
 import { createSession, saveRoute } from '@/lib/routes-api';
 import { X } from 'lucide-react';
@@ -13,6 +14,7 @@ interface SaveRouteModalProps {
 }
 
 export default function SaveRouteModal({ open, onClose, onSaved }: SaveRouteModalProps) {
+  const { getToken } = useAuth();
   const { waypoints, calculatedRoute, getTotalCurvature, sessionId, setSessionId } =
     useWaypointRouteStore();
 
@@ -33,6 +35,7 @@ export default function SaveRouteModal({ open, onClose, onSaved }: SaveRouteModa
         currentSessionId = session.session_id;
         setSessionId(currentSessionId);
       }
+      const token = await getToken();
       const result = await saveRoute(currentSessionId, {
         route_name: routeName.trim(),
         description: description.trim() || undefined,
@@ -48,7 +51,7 @@ export default function SaveRouteModal({ open, onClose, onSaved }: SaveRouteModa
         is_public: isPublic,
         total_distance: calculatedRoute.distance,
         total_curvature: getTotalCurvature(),
-      });
+      }, token || undefined);
       toast.success(`Route "${routeName}" saved!`);
       onSaved(result.url_slug);
       onClose();

@@ -21,5 +21,8 @@ httpx==0.25.2  # For elevation API calls
 # Claude AI integration for conversational search
 anthropic>=0.39.0
 
+# JWT verification for Clerk authentication
+pyjwt[crypto]>=2.8.0
+
 # Existing curvature dependencies (already in parent project)
 # osmium - already installed
