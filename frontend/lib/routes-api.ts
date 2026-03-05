@@ -3,8 +3,7 @@
  */
 
 import { RouteSegment } from '@/types';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { API_BASE_URL } from '@/lib/config';
 
 export interface SaveRouteRequest {
   route_name: string;

@@ -12,6 +12,7 @@ import { useRouting } from '@/hooks/useRouting';
 import { getGoogleMapsUrl, getStreetViewUrl, getMidpoint } from '@/lib/google-maps';
 import { fetchEVStations } from '@/lib/nrel-api';
 import { EVStationProps } from '@/types';
+import { API_BASE_URL } from '@/lib/config';
 import {
   MAP_STYLES,
   MapStyleKey,
@@ -24,8 +25,6 @@ import { Plus, Minus, Satellite, Mountain, Map as MapIcon, Layers, Compass } fro
 import AddressSearchBar from './AddressSearchBar';
 import LayerMenu from './LayerMenu';
 import 'mapbox-gl/dist/mapbox-gl.css';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 function buildTileUrl(source: string | null): string {
   const base = `${API_BASE_URL}/curvature/tiles/{z}/{x}/{y}.pbf`;
