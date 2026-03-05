@@ -39,7 +39,6 @@ jobs:
         run: |
           cd api
           pip install --upgrade pip
-          pip install -r requirements.txt
           pip install -r requirements-dev.txt
 
       - name: Wait for PostgreSQL

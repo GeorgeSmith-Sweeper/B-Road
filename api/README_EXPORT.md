@@ -124,7 +124,7 @@ pip install -r requirements.txt
 
 2. For testing:
 ```bash
-pip install -r requirements-test.txt
+pip install -r requirements-dev.txt
 ```
 
 ## Testing
