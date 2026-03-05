@@ -218,13 +218,13 @@ Replace broad `except Exception` with specific exceptions across the backend.
 
 ## Phase 7: Documentation Updates
 
-### Task 7.1 — Update README.md tech stack version
+### Task 7.1 — ✅ Update README.md tech stack version
 - **File**: `README.md:87`
 - **Issue**: Says "Next.js 14" but project uses Next.js 16.1.1.
 - **Action**: Update to "Next.js 16".
 - **Commit**: `docs: update README tech stack to reflect Next.js 16`
 
-### Task 7.2 — Update `.env.example` with all required variables
+### Task 7.2 — ✅ Update `.env.example` with all required variables
 - **File**: `.env.example`
 - **Issue**: Missing some variables used in compose/code. Duplicate `api/.env` causes confusion.
 - **Action**: Add all env vars with comments. Document that `api/.env` is redundant when using Docker Compose.
