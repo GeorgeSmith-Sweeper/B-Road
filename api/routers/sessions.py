@@ -5,12 +5,16 @@ Provides anonymous session creation for route building.
 Sessions allow users to save and manage routes without authentication.
 """
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from api.database import get_db_session
 from api.repositories.session_repository import SessionRepository
 from api.models.schemas import SessionResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -30,7 +34,10 @@ async def create_session(db: Session = Depends(get_db_session)):
             session_id=str(session.session_id),
             created_at=session.created_at.isoformat(),
         )
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Failed to create session: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to create session: {str(e)}",
