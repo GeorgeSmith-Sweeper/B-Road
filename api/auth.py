@@ -17,16 +17,6 @@ from fastapi import Header, HTTPException
 @lru_cache(maxsize=1)
 def get_jwks_client() -> PyJWKClient:
     """Get a cached JWKS client for Clerk's public keys."""
-    secret_key = os.environ.get("CLERK_SECRET_KEY", "")
-    # Extract the Clerk instance ID from the secret key (sk_test_xxx or sk_live_xxx)
-    # Clerk JWKS URL format: https://<instance>.clerk.accounts.dev/.well-known/jwks.json
-    # But the simpler approach is to use the Clerk Frontend API domain
-    # which can be derived from the publishable key or configured directly.
-    #
-    # For Clerk, the JWKS endpoint is at:
-    # https://<your-clerk-frontend-api>/.well-known/jwks.json
-    #
-    # We use the CLERK_JWKS_URL env var if set, otherwise construct from CLERK_SECRET_KEY
     jwks_url = os.environ.get("CLERK_JWKS_URL", "")
     if not jwks_url:
         # Fallback: Clerk's JWKS can be fetched via the Backend API
