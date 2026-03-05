@@ -124,7 +124,7 @@ class TestRouteCRUDOperations:
         assert "Session not found" in response.json()["detail"]
 
     def test_save_route_missing_session_header(self, test_client):
-        """Test POST /routes without X-Session-Id header returns 422."""
+        """Test POST /routes without X-Session-Id header returns 400."""
         payload = {
             "route_name": "Test Route",
             "segments": CONNECTED_SEGMENTS,
@@ -133,7 +133,7 @@ class TestRouteCRUDOperations:
 
         response = test_client.post("/routes", json=payload)
 
-        assert response.status_code == 422
+        assert response.status_code == 400
 
     def test_get_route_by_id(self, test_client, sample_route):
         """Test GET /routes/{id} returns route details."""

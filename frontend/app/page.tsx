@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import MobileNav from '@/components/MobileNav';
+import AuthButton from '@/components/AuthButton';
 import {
   Route,
   MapPin,
@@ -131,6 +132,7 @@ export default function LandingPage() {
             <Link href="/my-routes" className="font-bebas text-sm tracking-[2px] text-text-secondary hover:text-text-primary transition-colors">ROUTES</Link>
             <Link href="/library" className="font-bebas text-sm tracking-[2px] text-text-secondary hover:text-text-primary transition-colors">LIBRARY</Link>
             <a href="#about" className="font-bebas text-sm tracking-[2px] text-text-secondary hover:text-text-primary transition-colors">ABOUT</a>
+            <AuthButton />
             <Link
               href="/planner"
               className="font-bebas text-sm tracking-[2px] bg-accent-gold text-bg-primary px-7 py-3 hover:brightness-110 transition"

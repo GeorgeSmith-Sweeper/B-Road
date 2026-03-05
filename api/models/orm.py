@@ -79,6 +79,9 @@ class SavedRoute(Base):
     geom = Column(Geometry("LINESTRING", srid=4326))  # PostGIS LineString
     route_data = Column(JSONB)  # Complete segment data
 
+    # Authentication
+    user_id = Column(String(255), nullable=True, index=True)
+
     # Rating
     road_rating = Column(String(20), nullable=True)
 

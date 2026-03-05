@@ -80,6 +80,37 @@ class RouteRepository(BaseRepository[SavedRoute]):
             .all()
         )
 
+    def get_by_user(self, user_id: str) -> List[SavedRoute]:
+        """Get all routes for a user, ordered by creation date"""
+        return (
+            self.db.query(SavedRoute)
+            .filter_by(user_id=user_id)
+            .order_by(desc(SavedRoute.created_at))
+            .all()
+        )
+
+    def get_by_user_and_id(
+        self, user_id: str, route_id: int
+    ) -> Optional[SavedRoute]:
+        """Get route by ID and user_id (for authorization)"""
+        return (
+            self.db.query(SavedRoute)
+            .filter_by(route_id=route_id, user_id=user_id)
+            .first()
+        )
+
+    def claim_routes_from_session(
+        self, session_id: uuid.UUID, user_id: str
+    ) -> int:
+        """Bulk update user_id on a session's unclaimed routes. Returns count."""
+        count = (
+            self.db.query(SavedRoute)
+            .filter_by(session_id=session_id, user_id=None)
+            .update({"user_id": user_id})
+        )
+        self.db.flush()
+        return count
+
     def delete_route(self, route: SavedRoute) -> None:
         """Delete a route (cascades to segments)"""
         self.db.delete(route)

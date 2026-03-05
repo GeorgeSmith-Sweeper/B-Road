@@ -3,19 +3,26 @@ FastAPI router for saved route endpoints.
 
 Provides CRUD operations for user-created routes built by stitching
 road segments together. Routes are scoped to anonymous sessions
-identified by X-Session-Id header.
+(X-Session-Id header) or authenticated users (Authorization: Bearer token),
+or both.
 """
+
+from typing import Optional
+from dataclasses import dataclass
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from api.database import get_db_session
+from api.auth import get_optional_user_id
 from api.services.route_service import RouteService
 from api.services.export_service import ExportService
 from api.models.schemas import (
     SaveRouteRequest,
     UpdateRouteRequest,
+    ClaimRoutesRequest,
+    ClaimRoutesResponse,
     RouteDetailResponse,
     RouteListResponse,
     SaveRouteResponse,
@@ -34,6 +41,22 @@ def get_export_service(db: Session = Depends(get_db_session)) -> ExportService:
     return ExportService(db)
 
 
+@dataclass
+class AuthContext:
+    """Authentication context from session and/or JWT."""
+
+    session_id: Optional[str]
+    user_id: Optional[str]
+
+
+def get_auth_context(
+    x_session_id: Optional[str] = Header(None),
+    user_id: Optional[str] = Depends(get_optional_user_id),
+) -> AuthContext:
+    """Extract auth context from session header and/or Bearer token."""
+    return AuthContext(session_id=x_session_id, user_id=user_id)
+
+
 def require_session_id(x_session_id: str = Header(...)) -> str:
     """Extract and validate the X-Session-Id header."""
     if not x_session_id:
@@ -44,17 +67,19 @@ def require_session_id(x_session_id: str = Header(...)) -> str:
 @router.post("", response_model=SaveRouteResponse)
 async def save_route(
     request: SaveRouteRequest,
-    session_id: str = Depends(require_session_id),
+    auth: AuthContext = Depends(get_auth_context),
     service: RouteService = Depends(get_route_service),
 ):
     """
     Save a new route.
 
-    Requires X-Session-Id header. The route is associated with
-    the session and can only be modified/deleted by the same session.
+    Requires X-Session-Id header. If authenticated, the route is also
+    associated with the user's account.
     """
+    if not auth.session_id:
+        raise HTTPException(status_code=400, detail="X-Session-Id header is required")
     try:
-        return service.save_route(request, session_id)
+        return service.save_route(request, auth.session_id, user_id=auth.user_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -66,20 +91,56 @@ async def save_route(
 
 @router.get("", response_model=RouteListResponse)
 async def list_routes(
-    session_id: str = Depends(require_session_id),
+    auth: AuthContext = Depends(get_auth_context),
     service: RouteService = Depends(get_route_service),
 ):
     """
-    List all routes for the current session.
+    List routes for the current user or session.
 
-    Requires X-Session-Id header.
+    If authenticated, returns user's routes. Otherwise falls back to session routes.
     """
     try:
-        return service.list_routes(session_id)
+        if auth.user_id:
+            return service.list_user_routes(auth.user_id)
+        if auth.session_id:
+            return service.list_routes(auth.session_id)
+        raise HTTPException(
+            status_code=400,
+            detail="X-Session-Id header or Authorization token is required",
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to list routes: {str(e)}",
+        )
+
+
+@router.post("/claim", response_model=ClaimRoutesResponse)
+async def claim_routes(
+    request: ClaimRoutesRequest,
+    auth: AuthContext = Depends(get_auth_context),
+    service: RouteService = Depends(get_route_service),
+):
+    """
+    Claim anonymous session routes for the authenticated user.
+
+    Requires Authorization: Bearer token. Transfers all unclaimed routes
+    from the given session to the authenticated user.
+    """
+    if not auth.user_id:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required to claim routes",
+        )
+    try:
+        result = service.claim_session_routes(request.session_id, auth.user_id)
+        return ClaimRoutesResponse(**result)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to claim routes: {str(e)}",
         )
 
 
@@ -154,16 +215,23 @@ async def get_route(
 async def update_route(
     route_id: int,
     request: UpdateRouteRequest,
-    session_id: str = Depends(require_session_id),
+    auth: AuthContext = Depends(get_auth_context),
     service: RouteService = Depends(get_route_service),
 ):
     """
     Update route metadata (name, description, public status).
 
-    Requires X-Session-Id header matching the route's session.
+    Authorized by session ID or user ID.
     """
+    if not auth.session_id and not auth.user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="X-Session-Id header or Authorization token is required",
+        )
     try:
-        return service.update_route(route_id, session_id, request)
+        return service.update_route(
+            route_id, auth.session_id, request, user_id=auth.user_id
+        )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -176,17 +244,21 @@ async def update_route(
 @router.delete("/{route_id}")
 async def delete_route(
     route_id: int,
-    session_id: str = Depends(require_session_id),
+    auth: AuthContext = Depends(get_auth_context),
     service: RouteService = Depends(get_route_service),
 ):
     """
     Delete a saved route.
 
-    Requires X-Session-Id header matching the route's session.
-    Cascades to delete all associated segments.
+    Authorized by session ID or user ID.
     """
+    if not auth.session_id and not auth.user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="X-Session-Id header or Authorization token is required",
+        )
     try:
-        return service.delete_route(route_id, session_id)
+        return service.delete_route(route_id, auth.session_id, user_id=auth.user_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

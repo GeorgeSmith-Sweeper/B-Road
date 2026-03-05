@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
+import AuthButton from '@/components/AuthButton';
 
 const navLinks = [
   { href: '#explore', label: 'EXPLORE', internal: false },
@@ -49,6 +50,9 @@ export default function MobileNav() {
                 </a>
               )
             )}
+            <div className="flex items-center gap-3">
+              <AuthButton />
+            </div>
             <Link
               href="/planner"
               onClick={() => setIsOpen(false)}

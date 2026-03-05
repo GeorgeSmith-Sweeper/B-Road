@@ -88,6 +88,30 @@ export interface SessionResponse {
   created_at: string;
 }
 
+export interface ClaimRoutesResponse {
+  claimed_count: number;
+  message: string;
+}
+
+/**
+ * Build headers with optional session and auth token.
+ */
+function buildHeaders(
+  sessionId?: string,
+  token?: string
+): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (sessionId) {
+    headers['X-Session-Id'] = sessionId;
+  }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 /**
  * Create a new anonymous session.
  */
@@ -110,14 +134,12 @@ export async function createSession(): Promise<SessionResponse> {
  */
 export async function saveRoute(
   sessionId: string,
-  request: SaveRouteRequest
+  request: SaveRouteRequest,
+  token?: string
 ): Promise<SaveRouteResponse> {
   const response = await fetch(`${API_BASE_URL}/routes`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Session-Id': sessionId,
-    },
+    headers: buildHeaders(sessionId, token),
     body: JSON.stringify(request),
   });
 
@@ -130,14 +152,16 @@ export async function saveRoute(
 }
 
 /**
- * List all saved routes for a session.
+ * List routes. If token is provided, returns authenticated user's routes.
+ * Otherwise returns session routes.
  */
 export async function listRoutes(
-  sessionId: string
+  sessionId?: string,
+  token?: string
 ): Promise<{ routes: RouteResponse[] }> {
   const response = await fetch(`${API_BASE_URL}/routes`, {
     method: 'GET',
-    headers: { 'X-Session-Id': sessionId },
+    headers: buildHeaders(sessionId, token),
   });
 
   if (!response.ok) {
@@ -181,21 +205,43 @@ export async function getRoute(routeId: number): Promise<RouteDetailResponse> {
 }
 
 /**
- * Delete a saved route.
+ * Delete a saved route. Authorized by session or auth token.
  */
 export async function deleteRoute(
   routeId: number,
-  sessionId: string
+  sessionId?: string,
+  token?: string
 ): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/routes/${routeId}`, {
     method: 'DELETE',
-    headers: { 'X-Session-Id': sessionId },
+    headers: buildHeaders(sessionId, token),
   });
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
     throw new Error(error.detail || `Failed to delete route: ${response.status}`);
   }
+}
+
+/**
+ * Claim anonymous session routes for the authenticated user.
+ */
+export async function claimRoutes(
+  sessionId: string,
+  token: string
+): Promise<ClaimRoutesResponse> {
+  const response = await fetch(`${API_BASE_URL}/routes/claim`, {
+    method: 'POST',
+    headers: buildHeaders(sessionId, token),
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    throw new Error(error.detail || `Failed to claim routes: ${response.status}`);
+  }
+
+  return response.json();
 }
 
 /**
