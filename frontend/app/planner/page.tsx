@@ -264,10 +264,14 @@ export default function Planner() {
           </button>
           {/* Share button */}
           <button
-            onClick={() => {
+            onClick={async () => {
               if (savedSlug) {
-                navigator.clipboard.writeText(window.location.href);
-                toast.success('Link copied!');
+                try {
+                  await navigator.clipboard.writeText(window.location.href);
+                  toast.success('Link copied!');
+                } catch {
+                  toast.error('Failed to copy link to clipboard');
+                }
               } else {
                 toast('Save the route first to share it', { icon: '\u2139\uFE0F' });
               }
