@@ -115,7 +115,6 @@ const stats = [
   { value: '4.9', label: 'Avg. Rating' },
 ];
 
-const filterTabs = ['ALL', 'SCENIC', 'MOUNTAIN', 'COASTAL'];
 
 export default function LandingPage() {
   return (
@@ -263,25 +262,9 @@ export default function LandingPage() {
         <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-[120px] py-12 lg:py-20">
           <div className="flex flex-col gap-8 lg:gap-12">
             <span className="font-bebas text-sm tracking-[6px] text-accent-gold">FEATURED ROADS</span>
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <h2 className="font-bebas text-3xl md:text-4xl lg:text-5xl tracking-tight leading-[0.95] text-text-primary">
-                THE COUNTY&apos;S FINEST<br />DRIVING ROADS
-              </h2>
-              <div className="flex flex-wrap">
-                {filterTabs.map((tab, i) => (
-                  <button
-                    key={tab}
-                    className={`font-bebas text-xs tracking-[2px] px-5 py-2.5 transition ${
-                      i === 0
-                        ? 'bg-accent-gold text-bg-primary'
-                        : 'border border-border-subtle text-text-secondary hover:text-text-primary hover:border-text-secondary'
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <h2 className="font-bebas text-3xl md:text-4xl lg:text-5xl tracking-tight leading-[0.95] text-text-primary">
+              THE COUNTY&apos;S FINEST<br />DRIVING ROADS
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {roadCards.map((card) => (
