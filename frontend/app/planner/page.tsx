@@ -159,7 +159,7 @@ export default function Planner() {
           <span className="font-bebas text-lg tracking-[3px] text-text-primary">WAYPOINTS</span>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => toast('Click on a road segment on the map to add waypoints', { icon: '\uD83D\uDCCD' })}
+              onClick={() => setChatOpen(true)}
               className="flex items-center gap-1.5 rounded bg-accent-gold px-3 py-1.5 font-bebas text-[11px] tracking-[2px] text-bg-primary hover:brightness-110 transition min-h-[44px] md:min-h-0"
             >
               <Plus className="w-3 h-3" />
