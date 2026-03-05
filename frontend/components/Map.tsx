@@ -562,7 +562,7 @@ export default function Map() {
         }).then((geojson) => {
           const source = map.getSource('ev-stations') as mapboxgl.GeoJSONSource | undefined;
           source?.setData(geojson);
-        }).catch((err) => console.error('Failed to fetch EV stations:', err));
+        }).catch(() => toast.error('Failed to load EV stations'));
       }
 
       // Re-add markers
@@ -841,7 +841,7 @@ export default function Map() {
       }).then((geojson) => {
         const source = map.getSource('ev-stations') as mapboxgl.GeoJSONSource | undefined;
         source?.setData(geojson);
-      }).catch((err) => console.error('Failed to fetch EV stations:', err));
+      }).catch(() => toast.error('Failed to load EV stations'));
     }
   }, [evChargingVisible]);
 
@@ -866,7 +866,7 @@ export default function Map() {
         }).then((geojson) => {
           const source = map!.getSource('ev-stations') as mapboxgl.GeoJSONSource | undefined;
           source?.setData(geojson);
-        }).catch((err) => console.error('Failed to fetch EV stations:', err));
+        }).catch(() => toast.error('Failed to load EV stations'));
       }, EV_DEBOUNCE_MS);
     }
 

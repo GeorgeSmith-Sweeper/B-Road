@@ -75,7 +75,6 @@ export default function Planner() {
       } catch (error) {
         if (!cancelled) {
           const apiError = error as ApiError;
-          console.error('Failed to initialize app:', apiError);
           setInitError(apiError);
           setLoading(false);
         }
@@ -94,7 +93,6 @@ export default function Planner() {
       setCurvatureSources(sources);
     } catch (error) {
       const apiError = error as ApiError;
-      console.error('Failed to load curvature sources:', apiError);
       setSourcesError(apiError);
     } finally {
       setSourcesLoading(false);
