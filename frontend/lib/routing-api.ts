@@ -3,7 +3,7 @@
  */
 
 import type { CalculatedRoute } from '@/types/routing';
-import { API_BASE_URL } from '@/lib/config';
+import { API_BASE_URL, parseErrorResponse } from '@/lib/config';
 
 export interface RoutingWaypoint {
   lng: number;
@@ -24,7 +24,7 @@ export async function calculateRoute(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    const error = await parseErrorResponse(response);
     throw new Error(error.detail || `Route calculation failed: ${response.status}`);
   }
 

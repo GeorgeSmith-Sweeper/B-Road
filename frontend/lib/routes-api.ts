@@ -3,7 +3,7 @@
  */
 
 import { RouteSegment } from '@/types';
-import { API_BASE_URL } from '@/lib/config';
+import { API_BASE_URL, parseErrorResponse } from '@/lib/config';
 
 export interface SaveRouteRequest {
   route_name: string;
@@ -123,7 +123,7 @@ export async function createSession(): Promise<SessionResponse> {
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    const error = await parseErrorResponse(response);
     throw new Error(error.detail || `Failed to create session: ${response.status}`);
   }
 
@@ -145,7 +145,7 @@ export async function saveRoute(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    const error = await parseErrorResponse(response);
     throw new Error(error.detail || `Failed to save route: ${response.status}`);
   }
 
@@ -166,7 +166,7 @@ export async function listRoutes(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    const error = await parseErrorResponse(response);
     throw new Error(error.detail || `Failed to list routes: ${response.status}`);
   }
 
@@ -184,7 +184,7 @@ export async function listPublicRoutes(
   const response = await fetch(`${API_BASE_URL}/routes/public?${params}`);
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    const error = await parseErrorResponse(response);
     throw new Error(error.detail || `Failed to list public routes: ${response.status}`);
   }
 
@@ -198,7 +198,7 @@ export async function getRoute(routeId: number): Promise<RouteDetailResponse> {
   const response = await fetch(`${API_BASE_URL}/routes/${routeId}`);
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    const error = await parseErrorResponse(response);
     throw new Error(error.detail || `Failed to get route: ${response.status}`);
   }
 
@@ -219,7 +219,7 @@ export async function deleteRoute(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    const error = await parseErrorResponse(response);
     throw new Error(error.detail || `Failed to delete route: ${response.status}`);
   }
 }
@@ -238,7 +238,7 @@ export async function claimRoutes(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    const error = await parseErrorResponse(response);
     throw new Error(error.detail || `Failed to claim routes: ${response.status}`);
   }
 

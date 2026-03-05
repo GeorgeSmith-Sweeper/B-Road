@@ -3,7 +3,7 @@
  */
 
 import { ChatFilters } from '@/types';
-import { API_BASE_URL } from '@/lib/config';
+import { API_BASE_URL, parseErrorResponse } from '@/lib/config';
 
 export interface ChatMessagePayload {
   role: 'user' | 'assistant';
@@ -61,7 +61,7 @@ export async function sendChatMessage(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    const error = await parseErrorResponse(response);
     throw new Error(error.detail || `API error: ${response.status}`);
   }
 
