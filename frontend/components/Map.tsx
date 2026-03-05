@@ -12,20 +12,20 @@ import { useRouting } from '@/hooks/useRouting';
 import { getGoogleMapsUrl, getStreetViewUrl, getMidpoint } from '@/lib/google-maps';
 import { fetchEVStations } from '@/lib/nrel-api';
 import { EVStationProps } from '@/types';
+import {
+  MAP_STYLES,
+  MapStyleKey,
+  CURVATURE_COLOR_EXPRESSION,
+  EV_FETCH_MIN_ZOOM,
+  EV_DEBOUNCE_MS,
+  POPUP_CSS,
+} from '@/lib/map-constants';
 import { Plus, Minus, Satellite, Mountain, Map as MapIcon, Layers, Compass } from 'lucide-react';
 import AddressSearchBar from './AddressSearchBar';
 import LayerMenu from './LayerMenu';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-const MAP_STYLES = {
-  satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
-  terrain: 'mapbox://styles/mapbox/outdoors-v12',
-  streets: 'mapbox://styles/mapbox/dark-v11',
-} as const;
-
-type MapStyleKey = keyof typeof MAP_STYLES;
 
 function buildTileUrl(source: string | null): string {
   const base = `${API_BASE_URL}/curvature/tiles/{z}/{x}/{y}.pbf`;
@@ -34,34 +34,6 @@ function buildTileUrl(source: string | null): string {
   }
   return base;
 }
-
-// Shared popup CSS injected once
-const POPUP_CSS = `
-  .mapboxgl-popup-content {
-    background: #1A1A1A !important;
-    border: 1px solid #2A2A2A !important;
-    border-radius: 6px !important;
-    padding: 0 !important;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
-    color: #F5F4F2 !important;
-  }
-  .mapboxgl-popup-tip {
-    border-top-color: #1A1A1A !important;
-  }
-  .mapboxgl-popup-close-button {
-    color: #5A5A5A !important;
-    font-size: 18px !important;
-    padding: 4px 8px !important;
-  }
-  .mapboxgl-popup-close-button:hover {
-    color: #F5F4F2 !important;
-    background: transparent !important;
-  }
-  .mapboxgl-popup-content {
-    overflow-wrap: break-word !important;
-    word-break: break-word !important;
-  }
-`;
 
 function buildSegmentPopupHTML(
   name: string,
@@ -183,9 +155,6 @@ function buildEVStationPopupHTML(props: EVStationProps) {
   `;
 }
 
-const EV_FETCH_MIN_ZOOM = 8;
-const EV_DEBOUNCE_MS = 500;
-
 export default function Map() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -271,15 +240,7 @@ export default function Map() {
       'source-layer': 'curvature',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: {
-        'line-color': [
-          'step', ['get', 'curvature'],
-          '#29B6F6',   // < 600: Relaxed (Sky Blue)
-          600, '#26C97E',   // Spirited (Emerald)
-          1000, '#FFC107',  // Engaging (Amber)
-          2000, '#FF6D2A',  // Technical (Deep Orange)
-          5000, '#E53935',  // Expert (Crimson)
-          10000, '#9C27B0', // Legendary (Electric Purple)
-        ],
+        'line-color': CURVATURE_COLOR_EXPRESSION as unknown as mapboxgl.ExpressionSpecification,
         'line-width': [
           'interpolate', ['linear'], ['zoom'],
           4, ['case', ['boolean', ['feature-state', 'selected'], false],
