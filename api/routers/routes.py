@@ -57,12 +57,6 @@ def get_auth_context(
     return AuthContext(session_id=x_session_id, user_id=user_id)
 
 
-def require_session_id(x_session_id: str = Header(...)) -> str:
-    """Extract and validate the X-Session-Id header."""
-    if not x_session_id:
-        raise HTTPException(status_code=400, detail="X-Session-Id header is required")
-    return x_session_id
-
 
 @router.post("", response_model=SaveRouteResponse)
 async def save_route(
