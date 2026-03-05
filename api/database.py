@@ -5,6 +5,7 @@ Handles PostgreSQL/PostGIS connection using SQLAlchemy.
 """
 
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
 import os
@@ -50,9 +51,9 @@ def get_db():
     try:
         yield db
         db.commit()
-    except Exception as e:
+    except SQLAlchemyError as e:
         db.rollback()
-        logger.error(f"Database error: {e}")
+        logger.error(f"Database error: {type(e).__name__}: {e}")
         raise
     finally:
         db.close()
@@ -71,7 +72,7 @@ def get_db_session():
     try:
         yield db
         db.commit()
-    except Exception:
+    except SQLAlchemyError:
         db.rollback()
         raise
     finally:
@@ -91,8 +92,8 @@ def init_db():
         logger.info("Creating database tables...")
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully!")
-    except Exception as e:
-        logger.error(f"Failed to create database tables: {e}")
+    except SQLAlchemyError as e:
+        logger.error(f"Failed to create database tables: {type(e).__name__}: {e}")
         raise
 
 
@@ -108,8 +109,8 @@ def check_db_connection():
             conn.execute(text("SELECT 1"))
         logger.info("Database connection successful")
         return True
-    except Exception as e:
-        logger.error(f"Database connection failed: {e}")
+    except SQLAlchemyError as e:
+        logger.error(f"Database connection failed: {type(e).__name__}: {e}")
         return False
 
 
@@ -126,8 +127,8 @@ def test_postgis():
             version = result.fetchone()[0]
             logger.info(f"PostGIS version: {version}")
             return True
-    except Exception as e:
-        logger.error(f"PostGIS not available: {e}")
+    except SQLAlchemyError as e:
+        logger.error(f"PostGIS not available: {type(e).__name__}: {e}")
         logger.error("Make sure to run: CREATE EXTENSION postgis;")
         return False
 
