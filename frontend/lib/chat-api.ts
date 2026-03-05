@@ -2,6 +2,8 @@
  * Chat API client for natural language road search.
  */
 
+import { ChatFilters } from '@/types';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export interface ChatMessagePayload {
@@ -11,7 +13,7 @@ export interface ChatMessagePayload {
 
 export interface ChatSearchResult {
   query: string;
-  filters: Record<string, unknown>;
+  filters: ChatFilters;
   response: string;
   results: {
     type: 'FeatureCollection';

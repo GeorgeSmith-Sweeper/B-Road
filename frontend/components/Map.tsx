@@ -11,6 +11,7 @@ import { useLayerStore } from '@/store/useLayerStore';
 import { useRouting } from '@/hooks/useRouting';
 import { getGoogleMapsUrl, getStreetViewUrl, getMidpoint } from '@/lib/google-maps';
 import { fetchEVStations } from '@/lib/nrel-api';
+import { EVStationProps } from '@/types';
 import { Plus, Minus, Satellite, Mountain, Map as MapIcon, Layers, Compass } from 'lucide-react';
 import AddressSearchBar from './AddressSearchBar';
 import LayerMenu from './LayerMenu';
@@ -152,15 +153,15 @@ function buildGasStationPopupHTML(name: string) {
   `;
 }
 
-function buildEVStationPopupHTML(props: Record<string, unknown>) {
-  const name = String(props.name || 'EV Station');
-  const network = props.network ? String(props.network) : null;
-  const address = props.address ? String(props.address) : null;
-  const city = props.city ? String(props.city) : null;
-  const state = props.state ? String(props.state) : null;
-  const l2 = props.level2Count != null ? Number(props.level2Count) : null;
-  const dcFast = props.dcFastCount != null ? Number(props.dcFastCount) : null;
-  const hours = props.hours ? String(props.hours) : null;
+function buildEVStationPopupHTML(props: EVStationProps) {
+  const name = props.name || 'EV Station';
+  const network = props.network ?? null;
+  const address = props.address ?? null;
+  const city = props.city ?? null;
+  const state = props.state ?? null;
+  const l2 = props.level2Count ?? null;
+  const dcFast = props.dcFastCount ?? null;
+  const hours = props.hours ?? null;
 
   const locationLine = [address, [city, state].filter(Boolean).join(', ')].filter(Boolean).join(', ');
   const plugParts: string[] = [];
@@ -480,7 +481,7 @@ export default function Map() {
       // EV station click handler
       map.on('click', 'ev-stations-layer', (e: mapboxgl.MapLayerMouseEvent) => {
         if (!e.features?.length) return;
-        const props = e.features[0].properties || {};
+        const props = (e.features[0].properties || {}) as EVStationProps;
         new mapboxgl.Popup({ offset: 12, closeButton: true, maxWidth: '300px' })
           .setLngLat(e.lngLat)
           .setHTML(buildEVStationPopupHTML(props))

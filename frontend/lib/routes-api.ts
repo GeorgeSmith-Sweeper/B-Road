@@ -2,6 +2,8 @@
  * Routes API client for saving and managing user-built routes.
  */
 
+import { RouteSegment } from '@/types';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export interface SaveRouteRequest {
@@ -75,7 +77,7 @@ export interface RouteDetailResponse extends RouteResponse {
     };
     properties: Record<string, unknown>;
   };
-  segments: Array<Record<string, unknown>>;
+  segments: RouteSegment[];
   waypoints?: WaypointResponse[];
   connecting_geometry?: {
     type: string;
