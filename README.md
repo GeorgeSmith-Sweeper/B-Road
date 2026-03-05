@@ -84,7 +84,7 @@ For detailed setup — data loading, OSRM routing, manual installation — see [
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 14, Mapbox GL JS, Zustand, TypeScript, Tailwind CSS |
+| Frontend | Next.js 16, Mapbox GL JS, Zustand, TypeScript, Tailwind CSS |
 | Backend | FastAPI, SQLAlchemy, Python 3.11 |
 | Database | PostgreSQL 15 + PostGIS |
 | Map | Mapbox GL JS with custom curvature tile layers |
