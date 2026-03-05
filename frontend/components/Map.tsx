@@ -579,6 +579,7 @@ export default function Map() {
   // Zoom handlers
   const handleZoomIn = useCallback(() => mapRef.current?.zoomIn(), []);
   const handleZoomOut = useCallback(() => mapRef.current?.zoomOut(), []);
+  const handleResetNorth = useCallback(() => mapRef.current?.easeTo({ bearing: 0, pitch: 0 }), []);
 
   // Update tile URL when selected source changes
   useEffect(() => {
@@ -939,7 +940,10 @@ export default function Map() {
           </button>
           <LayerMenu open={layerMenuOpen} onClose={() => setLayerMenuOpen(false)} anchorRef={layerButtonRef} />
         </div>
-        <button className="w-11 h-11 md:w-9 md:h-9 bg-bg-card border border-border-subtle rounded flex items-center justify-center text-text-primary hover:text-accent-gold transition">
+        <button
+          onClick={handleResetNorth}
+          className="w-11 h-11 md:w-9 md:h-9 bg-bg-card border border-border-subtle rounded flex items-center justify-center text-text-primary hover:text-accent-gold transition"
+        >
           <Compass className="w-4 h-4" />
         </button>
       </div>
