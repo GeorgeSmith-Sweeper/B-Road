@@ -90,7 +90,7 @@ test:
 	docker compose -f docker compose.test.yml down -v
 
 lint:
-	docker compose exec api python -m flake8 api/ || true
+	docker compose exec api ruff check api/
 	docker compose exec frontend npm run lint || true
 
 coverage:
