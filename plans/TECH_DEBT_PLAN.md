@@ -177,37 +177,37 @@ Replace broad `except Exception` with specific exceptions across the backend.
 
 ## Phase 6: Infrastructure & CI/CD
 
-### Task 6.1 — Fix Makefile lint command (flake8 -> ruff)
+### Task 6.1 — ✅ Fix Makefile lint command (flake8 -> ruff)
 - **File**: `Makefile:93`
 - **Issue**: References `flake8` which isn't installed. Project uses `ruff`.
 - **Action**: Replace `python -m flake8 api/ || true` with `ruff check api/`.
 - **Commit**: `fix: update Makefile lint target from flake8 to ruff`
 
-### Task 6.2 — Consolidate requirements files
+### Task 6.2 — ✅ Consolidate requirements files
 - **Files**: `api/requirements.txt`, `api/requirements-dev.txt`, `api/requirements-test.txt`
 - **Issue**: `requirements-dev.txt` doesn't include `-r requirements.txt`. Test deps duplicated across files.
 - **Action**: Make `requirements-dev.txt` start with `-r requirements.txt`, merge test deps into dev, remove `requirements-test.txt`.
 - **Commit**: `chore: consolidate Python requirements files`
 
-### Task 6.3 — Add frontend checks to CI/CD
+### Task 6.3 — ✅ Add frontend checks to CI/CD
 - **File**: `.github/workflows/test.yml`
 - **Issue**: Only runs backend tests. No frontend type checking, linting, or build verification.
 - **Action**: Add a `frontend` job that runs `npm ci`, `npx tsc --noEmit`, and `npm run build`.
 - **Commit**: `ci: add frontend type check and build to test workflow`
 
-### Task 6.4 — Add ESLint configuration for frontend
+### Task 6.4 — ✅ Add ESLint configuration for frontend (already existed)
 - **Missing file**: `frontend/eslint.config.mjs` (ESLint 9 flat config)
 - **Issue**: ESLint 9 + eslint-config-next are installed but no config file exists. `npm run lint` does nothing useful.
 - **Action**: Create ESLint flat config with Next.js and TypeScript rules.
 - **Commit**: `chore: add ESLint configuration for frontend`
 
-### Task 6.5 — Add `.dockerignore` file
+### Task 6.5 — ✅ Add `.dockerignore` file (already existed)
 - **Missing file**: `.dockerignore`
 - **Issue**: Docker builds include unnecessary files (`.git`, `__pycache__`, `.pytest_cache`, `node_modules`, `.next`, `.claude/`).
 - **Action**: Create `.dockerignore` with standard exclusions.
 - **Commit**: `chore: add .dockerignore to reduce build context size`
 
-### Task 6.6 — Replace `print()` with logging in backend
+### Task 6.6 — ✅ Replace `print()` with logging in backend
 - **Files**:
   - `api/database.py:142-158` — print statements in `__main__` block
   - `api/server.py:36,69-70` — print statements for warnings
