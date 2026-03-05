@@ -29,9 +29,8 @@ export function useClaimRoutes() {
         if (result.claimed_count > 0) {
           toast.success(`${result.claimed_count} route(s) added to your account`);
         }
-      } catch (err) {
+      } catch {
         // Silent failure - don't block user flow for claim errors
-        console.error('Failed to claim routes:', err);
       }
     };
 

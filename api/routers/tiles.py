@@ -5,12 +5,16 @@ Serves Mapbox Vector Tiles (MVT) from PostGIS via ST_AsMVT for efficient
 map rendering of curvature data across all US states.
 """
 
+import logging
+
 from fastapi import APIRouter, HTTPException, Query, Depends, Response
 from sqlalchemy.orm import Session
 from typing import Optional
 
 from api.database import get_db_session
 from api.services.curvature_service import CurvatureService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/curvature/tiles", tags=["tiles"])
 
@@ -75,7 +79,10 @@ async def get_tile(
             min_curvature=min_curvature,
             source=source,
         )
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Error generating tile: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Error generating tile: {str(e)}",

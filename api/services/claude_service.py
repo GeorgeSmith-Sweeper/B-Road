@@ -97,7 +97,7 @@ class ClaudeService:
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable not set")
 
-        self.client = anthropic.Anthropic(api_key=api_key)
+        self.client = anthropic.AsyncAnthropic(api_key=api_key)
         self.model = "claude-sonnet-4-20250514"
 
     async def send_message(self, message: str, max_tokens: int = 1024) -> str:
@@ -112,7 +112,7 @@ class ClaudeService:
             Claude's response text
         """
         try:
-            response = self.client.messages.create(
+            response = await self.client.messages.create(
                 model=self.model,
                 max_tokens=max_tokens,
                 messages=[{"role": "user", "content": message}],
@@ -144,7 +144,7 @@ class ClaudeService:
                 messages.extend(history)
             messages.append({"role": "user", "content": user_query})
 
-            response = self.client.messages.create(
+            response = await self.client.messages.create(
                 model=self.model,
                 max_tokens=1024,
                 system=FILTER_EXTRACTION_PROMPT,
@@ -232,7 +232,7 @@ class ClaudeService:
                 messages.extend(history)
             messages.append({"role": "user", "content": context})
 
-            response = self.client.messages.create(
+            response = await self.client.messages.create(
                 model=self.model,
                 max_tokens=1024,
                 system=RESPONSE_GENERATION_PROMPT,
@@ -255,7 +255,4 @@ class ClaudeService:
         Returns:
             True if the service can be used, False otherwise
         """
-        try:
-            return bool(os.getenv("ANTHROPIC_API_KEY"))
-        except Exception:
-            return False
+        return bool(os.getenv("ANTHROPIC_API_KEY"))

@@ -12,6 +12,7 @@ This server provides endpoints to:
 Author: George Smith-Sweeper (contribution to adamfranco/curvature)
 """
 
+import logging
 import os
 import sys
 from pathlib import Path
@@ -20,6 +21,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent / ".env")
+
+logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -33,7 +36,7 @@ try:
     from api.database import DATABASE_AVAILABLE
 except ImportError:
     DATABASE_AVAILABLE = False
-    print("Warning: Database module not available")
+    logger.warning("Database module not available")
 
 # Import routers
 from api.routers import health, curvature, tiles, chat, routes, sessions, routing
@@ -66,8 +69,8 @@ if DATABASE_AVAILABLE:
     app.include_router(routes.router)
     app.include_router(sessions.router)
 else:
-    print("Warning: Database not available. Curvature data features disabled.")
-    print("Install requirements: pip install -r api/requirements.txt")
+    logger.warning("Database not available. Curvature data features disabled.")
+    logger.warning("Install requirements: pip install -r api/requirements.txt")
 
 # Mount the web interface static files
 web_path = Path(__file__).parent.parent / "web" / "static"

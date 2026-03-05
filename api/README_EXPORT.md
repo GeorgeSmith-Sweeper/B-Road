@@ -124,7 +124,7 @@ pip install -r requirements.txt
 
 2. For testing:
 ```bash
-pip install -r requirements-test.txt
+pip install -r requirements-dev.txt
 ```
 
 ## Testing
@@ -156,7 +156,7 @@ The test suite covers:
 ## Usage in Code
 
 ```python
-from api.export_service import ExportService
+from api.services.export_service import ExportService
 from api.database import get_db
 
 # Generate GPX

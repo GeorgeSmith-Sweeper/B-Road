@@ -2,8 +2,11 @@
 Service for GeoJSON conversions.
 """
 
+import logging
 from typing import List, Dict
 from curvature.output import OutputTools
+
+logger = logging.getLogger(__name__)
 
 
 class GeometryService:
@@ -56,8 +59,8 @@ class GeometryService:
             try:
                 feature = self.collection_to_geojson_feature(collection)
                 features.append(feature)
-            except Exception:
-                # Skip collections that can't be converted
+            except (KeyError, TypeError, IndexError) as e:
+                logger.warning(f"Skipping unconvertible collection: {type(e).__name__}: {e}")
                 continue
 
         geojson = {"type": "FeatureCollection", "features": features}

@@ -5,12 +5,16 @@ Provides endpoints for querying curvature data loaded by the curvature
 processing pipeline from OSM data.
 """
 
+import logging
+
 from fastapi import APIRouter, HTTPException, Query, Depends
 from sqlalchemy.orm import Session
 from typing import Optional, List
 
 from api.database import get_db_session
 from api.services.curvature_service import CurvatureService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/curvature", tags=["curvature"])
 
@@ -100,6 +104,7 @@ async def get_segments(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error fetching segments: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Error fetching segments: {str(e)}",
@@ -118,7 +123,10 @@ async def list_sources(
     """
     try:
         return service.list_sources()
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Error listing sources: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Error listing sources: {str(e)}",
@@ -152,7 +160,10 @@ async def get_source_segments(
             min_curvature=min_curvature,
             limit=limit,
         )
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Error fetching segments for source: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Error fetching segments for source: {str(e)}",
@@ -181,6 +192,7 @@ async def get_source_bounds(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error fetching bounds: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Error fetching bounds: {str(e)}",
@@ -208,6 +220,7 @@ async def get_segment_detail(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error fetching segment: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Error fetching segment: {str(e)}",

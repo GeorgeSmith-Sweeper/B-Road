@@ -2,12 +2,12 @@ import axios, { AxiosError, CancelTokenSource } from 'axios';
 import {
   AppConfig,
   CurvatureGeoJSON,
+  CurvatureSegmentDetail,
   SourceInfo,
   SourceBounds,
   ApiError,
 } from '@/types';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { API_BASE_URL } from '@/lib/config';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -151,7 +151,7 @@ export const apiClient = {
   },
 
   // Get detail for a single segment
-  getCurvatureSegmentDetail: async (segmentId: number): Promise<unknown> => {
+  getCurvatureSegmentDetail: async (segmentId: number): Promise<CurvatureSegmentDetail> => {
     try {
       const response = await api.get(`/curvature/segments/${segmentId}`);
       return response.data;

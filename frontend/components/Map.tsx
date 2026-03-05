@@ -11,20 +11,20 @@ import { useLayerStore } from '@/store/useLayerStore';
 import { useRouting } from '@/hooks/useRouting';
 import { getGoogleMapsUrl, getStreetViewUrl, getMidpoint } from '@/lib/google-maps';
 import { fetchEVStations } from '@/lib/nrel-api';
+import { EVStationProps } from '@/types';
+import { API_BASE_URL } from '@/lib/config';
+import {
+  MAP_STYLES,
+  MapStyleKey,
+  CURVATURE_COLOR_EXPRESSION,
+  EV_FETCH_MIN_ZOOM,
+  EV_DEBOUNCE_MS,
+  POPUP_CSS,
+} from '@/lib/map-constants';
 import { Plus, Minus, Satellite, Mountain, Map as MapIcon, Layers, Compass } from 'lucide-react';
 import AddressSearchBar from './AddressSearchBar';
 import LayerMenu from './LayerMenu';
 import 'mapbox-gl/dist/mapbox-gl.css';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-const MAP_STYLES = {
-  satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
-  terrain: 'mapbox://styles/mapbox/outdoors-v12',
-  streets: 'mapbox://styles/mapbox/dark-v11',
-} as const;
-
-type MapStyleKey = keyof typeof MAP_STYLES;
 
 function buildTileUrl(source: string | null): string {
   const base = `${API_BASE_URL}/curvature/tiles/{z}/{x}/{y}.pbf`;
@@ -33,34 +33,6 @@ function buildTileUrl(source: string | null): string {
   }
   return base;
 }
-
-// Shared popup CSS injected once
-const POPUP_CSS = `
-  .mapboxgl-popup-content {
-    background: #1A1A1A !important;
-    border: 1px solid #2A2A2A !important;
-    border-radius: 6px !important;
-    padding: 0 !important;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
-    color: #F5F4F2 !important;
-  }
-  .mapboxgl-popup-tip {
-    border-top-color: #1A1A1A !important;
-  }
-  .mapboxgl-popup-close-button {
-    color: #5A5A5A !important;
-    font-size: 18px !important;
-    padding: 4px 8px !important;
-  }
-  .mapboxgl-popup-close-button:hover {
-    color: #F5F4F2 !important;
-    background: transparent !important;
-  }
-  .mapboxgl-popup-content {
-    overflow-wrap: break-word !important;
-    word-break: break-word !important;
-  }
-`;
 
 function buildSegmentPopupHTML(
   name: string,
@@ -152,15 +124,15 @@ function buildGasStationPopupHTML(name: string) {
   `;
 }
 
-function buildEVStationPopupHTML(props: Record<string, unknown>) {
-  const name = String(props.name || 'EV Station');
-  const network = props.network ? String(props.network) : null;
-  const address = props.address ? String(props.address) : null;
-  const city = props.city ? String(props.city) : null;
-  const state = props.state ? String(props.state) : null;
-  const l2 = props.level2Count != null ? Number(props.level2Count) : null;
-  const dcFast = props.dcFastCount != null ? Number(props.dcFastCount) : null;
-  const hours = props.hours ? String(props.hours) : null;
+function buildEVStationPopupHTML(props: EVStationProps) {
+  const name = props.name || 'EV Station';
+  const network = props.network ?? null;
+  const address = props.address ?? null;
+  const city = props.city ?? null;
+  const state = props.state ?? null;
+  const l2 = props.level2Count ?? null;
+  const dcFast = props.dcFastCount ?? null;
+  const hours = props.hours ?? null;
 
   const locationLine = [address, [city, state].filter(Boolean).join(', ')].filter(Boolean).join(', ');
   const plugParts: string[] = [];
@@ -181,9 +153,6 @@ function buildEVStationPopupHTML(props: Record<string, unknown>) {
     </div>
   `;
 }
-
-const EV_FETCH_MIN_ZOOM = 8;
-const EV_DEBOUNCE_MS = 500;
 
 export default function Map() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -270,15 +239,7 @@ export default function Map() {
       'source-layer': 'curvature',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: {
-        'line-color': [
-          'step', ['get', 'curvature'],
-          '#29B6F6',   // < 600: Relaxed (Sky Blue)
-          600, '#26C97E',   // Spirited (Emerald)
-          1000, '#FFC107',  // Engaging (Amber)
-          2000, '#FF6D2A',  // Technical (Deep Orange)
-          5000, '#E53935',  // Expert (Crimson)
-          10000, '#9C27B0', // Legendary (Electric Purple)
-        ],
+        'line-color': CURVATURE_COLOR_EXPRESSION as unknown as mapboxgl.ExpressionSpecification,
         'line-width': [
           'interpolate', ['linear'], ['zoom'],
           4, ['case', ['boolean', ['feature-state', 'selected'], false],
@@ -480,7 +441,7 @@ export default function Map() {
       // EV station click handler
       map.on('click', 'ev-stations-layer', (e: mapboxgl.MapLayerMouseEvent) => {
         if (!e.features?.length) return;
-        const props = e.features[0].properties || {};
+        const props = (e.features[0].properties || {}) as EVStationProps;
         new mapboxgl.Popup({ offset: 12, closeButton: true, maxWidth: '300px' })
           .setLngLat(e.lngLat)
           .setHTML(buildEVStationPopupHTML(props))
@@ -562,7 +523,7 @@ export default function Map() {
         }).then((geojson) => {
           const source = map.getSource('ev-stations') as mapboxgl.GeoJSONSource | undefined;
           source?.setData(geojson);
-        }).catch((err) => console.error('Failed to fetch EV stations:', err));
+        }).catch(() => toast.error('Failed to load EV stations'));
       }
 
       // Re-add markers
@@ -579,6 +540,7 @@ export default function Map() {
   // Zoom handlers
   const handleZoomIn = useCallback(() => mapRef.current?.zoomIn(), []);
   const handleZoomOut = useCallback(() => mapRef.current?.zoomOut(), []);
+  const handleResetNorth = useCallback(() => mapRef.current?.easeTo({ bearing: 0, pitch: 0 }), []);
 
   // Update tile URL when selected source changes
   useEffect(() => {
@@ -840,7 +802,7 @@ export default function Map() {
       }).then((geojson) => {
         const source = map.getSource('ev-stations') as mapboxgl.GeoJSONSource | undefined;
         source?.setData(geojson);
-      }).catch((err) => console.error('Failed to fetch EV stations:', err));
+      }).catch(() => toast.error('Failed to load EV stations'));
     }
   }, [evChargingVisible]);
 
@@ -865,7 +827,7 @@ export default function Map() {
         }).then((geojson) => {
           const source = map!.getSource('ev-stations') as mapboxgl.GeoJSONSource | undefined;
           source?.setData(geojson);
-        }).catch((err) => console.error('Failed to fetch EV stations:', err));
+        }).catch(() => toast.error('Failed to load EV stations'));
       }, EV_DEBOUNCE_MS);
     }
 
@@ -939,7 +901,10 @@ export default function Map() {
           </button>
           <LayerMenu open={layerMenuOpen} onClose={() => setLayerMenuOpen(false)} anchorRef={layerButtonRef} />
         </div>
-        <button className="w-11 h-11 md:w-9 md:h-9 bg-bg-card border border-border-subtle rounded flex items-center justify-center text-text-primary hover:text-accent-gold transition">
+        <button
+          onClick={handleResetNorth}
+          className="w-11 h-11 md:w-9 md:h-9 bg-bg-card border border-border-subtle rounded flex items-center justify-center text-text-primary hover:text-accent-gold transition"
+        >
           <Compass className="w-4 h-4" />
         </button>
       </div>

@@ -75,7 +75,6 @@ export default function Planner() {
       } catch (error) {
         if (!cancelled) {
           const apiError = error as ApiError;
-          console.error('Failed to initialize app:', apiError);
           setInitError(apiError);
           setLoading(false);
         }
@@ -94,7 +93,6 @@ export default function Planner() {
       setCurvatureSources(sources);
     } catch (error) {
       const apiError = error as ApiError;
-      console.error('Failed to load curvature sources:', apiError);
       setSourcesError(apiError);
     } finally {
       setSourcesLoading(false);
@@ -159,7 +157,7 @@ export default function Planner() {
           <span className="font-bebas text-lg tracking-[3px] text-text-primary">WAYPOINTS</span>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => toast('Click on a road segment on the map to add waypoints', { icon: '\uD83D\uDCCD' })}
+              onClick={() => setChatOpen(true)}
               className="flex items-center gap-1.5 rounded bg-accent-gold px-3 py-1.5 font-bebas text-[11px] tracking-[2px] text-bg-primary hover:brightness-110 transition min-h-[44px] md:min-h-0"
             >
               <Plus className="w-3 h-3" />
@@ -264,10 +262,14 @@ export default function Planner() {
           </button>
           {/* Share button */}
           <button
-            onClick={() => {
+            onClick={async () => {
               if (savedSlug) {
-                navigator.clipboard.writeText(window.location.href);
-                toast.success('Link copied!');
+                try {
+                  await navigator.clipboard.writeText(window.location.href);
+                  toast.success('Link copied!');
+                } catch {
+                  toast.error('Failed to copy link to clipboard');
+                }
               } else {
                 toast('Save the route first to share it', { icon: '\u2139\uFE0F' });
               }

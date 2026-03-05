@@ -9,6 +9,7 @@ or both.
 
 from typing import Optional
 from dataclasses import dataclass
+import logging
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import Response
@@ -27,6 +28,8 @@ from api.models.schemas import (
     RouteListResponse,
     SaveRouteResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/routes", tags=["routes"])
 
@@ -57,12 +60,6 @@ def get_auth_context(
     return AuthContext(session_id=x_session_id, user_id=user_id)
 
 
-def require_session_id(x_session_id: str = Header(...)) -> str:
-    """Extract and validate the X-Session-Id header."""
-    if not x_session_id:
-        raise HTTPException(status_code=400, detail="X-Session-Id header is required")
-    return x_session_id
-
 
 @router.post("", response_model=SaveRouteResponse)
 async def save_route(
@@ -82,7 +79,10 @@ async def save_route(
         return service.save_route(request, auth.session_id, user_id=auth.user_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Failed to save route: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to save route: {str(e)}",
@@ -111,6 +111,7 @@ async def list_routes(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Failed to list routes: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to list routes: {str(e)}",
@@ -137,7 +138,10 @@ async def claim_routes(
     try:
         result = service.claim_session_routes(request.session_id, auth.user_id)
         return ClaimRoutesResponse(**result)
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Failed to claim routes: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to claim routes: {str(e)}",
@@ -157,7 +161,10 @@ async def list_public_routes(
     """
     try:
         return service.list_public_routes(limit, offset)
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Failed to list public routes: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to list public routes: {str(e)}",
@@ -184,6 +191,7 @@ async def get_shared_route(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Failed to get shared route: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get route: {str(e)}",
@@ -204,7 +212,10 @@ async def get_route(
         return service.get_route(str(route_id))
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Failed to get route: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get route: {str(e)}",
@@ -234,7 +245,10 @@ async def update_route(
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Failed to update route: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to update route: {str(e)}",
@@ -261,7 +275,10 @@ async def delete_route(
         return service.delete_route(route_id, auth.session_id, user_id=auth.user_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Failed to delete route: {type(e).__name__}: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to delete route: {str(e)}",
@@ -283,7 +300,10 @@ async def export_shared_route_gpx(
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"GPX export failed: {type(e).__name__}: {e}")
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
 
 
@@ -302,5 +322,8 @@ async def export_shared_route_kml(
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"KML export failed: {type(e).__name__}: {e}")
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")

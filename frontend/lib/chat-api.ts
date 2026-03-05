@@ -2,7 +2,8 @@
  * Chat API client for natural language road search.
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { ChatFilters } from '@/types';
+import { API_BASE_URL, parseErrorResponse } from '@/lib/config';
 
 export interface ChatMessagePayload {
   role: 'user' | 'assistant';
@@ -11,7 +12,7 @@ export interface ChatMessagePayload {
 
 export interface ChatSearchResult {
   query: string;
-  filters: Record<string, unknown>;
+  filters: ChatFilters;
   response: string;
   results: {
     type: 'FeatureCollection';
@@ -60,7 +61,7 @@ export async function sendChatMessage(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+    const error = await parseErrorResponse(response);
     throw new Error(error.detail || `API error: ${response.status}`);
   }
 
