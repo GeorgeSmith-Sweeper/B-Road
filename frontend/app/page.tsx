@@ -5,7 +5,7 @@ import {
   Route,
   MapPin,
   Navigation,
-  Play,
+
   Plus,
   Minus,
   GripVertical,
@@ -163,19 +163,13 @@ export default function LandingPage() {
             Plan your perfect road trip by selecting the most scenic, thrilling,
             and unforgettable driving roads — one waypoint at a time.
           </p>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <Link
-              href="/planner"
-              className="flex items-center justify-center gap-2.5 bg-accent-gold px-9 py-4 font-bebas text-base tracking-[2px] text-bg-primary hover:brightness-110 transition w-full sm:w-auto"
-            >
-              <Navigation className="w-[18px] h-[18px]" />
-              START PLANNING
-            </Link>
-            <button className="flex items-center justify-center gap-2.5 border border-text-secondary px-9 py-4 font-bebas text-base tracking-[2px] text-text-secondary hover:border-text-primary hover:text-text-primary transition w-full sm:w-auto">
-              <Play className="w-4 h-4" />
-              WATCH DEMO
-            </button>
-          </div>
+          <Link
+            href="/planner"
+            className="flex items-center justify-center gap-2.5 bg-accent-gold px-9 py-4 font-bebas text-base tracking-[2px] text-bg-primary hover:brightness-110 transition w-full sm:w-auto"
+          >
+            <Navigation className="w-[18px] h-[18px]" />
+            START PLANNING
+          </Link>
         </div>
       </section>
 
