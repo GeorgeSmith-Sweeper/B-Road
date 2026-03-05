@@ -8,7 +8,7 @@ real API calls during testing.
 import json
 import os
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 from api.services.claude_service import (
     ClaudeService,
@@ -28,7 +28,7 @@ class TestClaudeServiceInit:
             with pytest.raises(ValueError, match="ANTHROPIC_API_KEY"):
                 ClaudeService()
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     def test_creates_client_with_key(self, mock_anthropic):
         """Should create Anthropic client when API key is set."""
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key-123"}):
@@ -40,14 +40,14 @@ class TestClaudeServiceInit:
 class TestIsAvailable:
     """Tests for ClaudeService.is_available()"""
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     def test_available_when_key_set(self, mock_anthropic):
         """Should return True when API key is set."""
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key-123"}):
             service = ClaudeService()
             assert service.is_available() is True
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     def test_not_available_when_key_removed(self, mock_anthropic):
         """Should return False when API key is absent."""
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key-123"}):
@@ -62,7 +62,7 @@ class TestIsAvailable:
 class TestSendMessage:
     """Tests for ClaudeService.send_message()"""
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_returns_response_text(self, mock_anthropic_cls):
         """Should return the text content from Claude's response."""
@@ -74,7 +74,7 @@ class TestSendMessage:
         mock_content.text = "Hello! I'm Claude."
         mock_response = MagicMock()
         mock_response.content = [mock_content]
-        mock_client.messages.create.return_value = mock_response
+        mock_client.messages.create = AsyncMock(return_value=mock_response)
 
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
             service = ClaudeService()
@@ -87,7 +87,7 @@ class TestSendMessage:
             messages=[{"role": "user", "content": "Hello"}],
         )
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_custom_max_tokens(self, mock_anthropic_cls):
         """Should pass custom max_tokens to API."""
@@ -98,7 +98,7 @@ class TestSendMessage:
         mock_content.text = "response"
         mock_response = MagicMock()
         mock_response.content = [mock_content]
-        mock_client.messages.create.return_value = mock_response
+        mock_client.messages.create = AsyncMock(return_value=mock_response)
 
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
             service = ClaudeService()
@@ -107,7 +107,7 @@ class TestSendMessage:
         call_kwargs = mock_client.messages.create.call_args[1]
         assert call_kwargs["max_tokens"] == 256
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_raises_on_api_error(self, mock_anthropic_cls):
         """Should re-raise anthropic API errors."""
@@ -115,10 +115,12 @@ class TestSendMessage:
 
         mock_client = MagicMock()
         mock_anthropic_cls.return_value = mock_client
-        mock_client.messages.create.side_effect = anthropic.APIError(
-            message="Rate limited",
-            request=MagicMock(),
-            body=None,
+        mock_client.messages.create = AsyncMock(
+            side_effect=anthropic.APIError(
+                message="Rate limited",
+                request=MagicMock(),
+                body=None,
+            )
         )
 
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
@@ -137,10 +139,10 @@ class TestExtractFilters:
         mock_content.text = response_text
         mock_response = MagicMock()
         mock_response.content = [mock_content]
-        mock_client.messages.create.return_value = mock_response
+        mock_client.messages.create = AsyncMock(return_value=mock_response)
         return mock_client
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_extracts_valid_json(self, mock_anthropic_cls):
         """Should parse valid JSON filter response."""
@@ -154,7 +156,7 @@ class TestExtractFilters:
 
         assert filters == {"min_curvature": 1000, "sources": ["vermont"]}
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_uses_system_prompt(self, mock_anthropic_cls):
         """Should pass the filter extraction system prompt."""
@@ -168,7 +170,7 @@ class TestExtractFilters:
         call_kwargs = mock_client.messages.create.call_args[1]
         assert call_kwargs["system"] == FILTER_EXTRACTION_PROMPT
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_handles_markdown_code_block(self, mock_anthropic_cls):
         """Should extract JSON from markdown code blocks."""
@@ -182,7 +184,7 @@ class TestExtractFilters:
 
         assert filters == {"min_curvature": 2000}
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_handles_plain_code_block(self, mock_anthropic_cls):
         """Should extract JSON from plain code blocks (no language tag)."""
@@ -196,7 +198,7 @@ class TestExtractFilters:
 
         assert filters == {"min_curvature": 3000}
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_returns_empty_for_invalid_json(self, mock_anthropic_cls):
         """Should return empty dict when Claude returns invalid JSON."""
@@ -209,7 +211,7 @@ class TestExtractFilters:
 
         assert filters == {}
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_returns_empty_for_non_dict_response(self, mock_anthropic_cls):
         """Should return empty dict when Claude returns a JSON array or primitive."""
@@ -222,7 +224,7 @@ class TestExtractFilters:
 
         assert filters == {}
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_returns_empty_dict_for_string_response(self, mock_anthropic_cls):
         """Should return empty dict when Claude returns a JSON string."""
@@ -235,7 +237,7 @@ class TestExtractFilters:
 
         assert filters == {}
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_handles_whitespace_in_response(self, mock_anthropic_cls):
         """Should strip whitespace from response before parsing."""
@@ -249,7 +251,7 @@ class TestExtractFilters:
 
         assert filters == {"min_curvature": 1000}
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_raises_on_api_error(self, mock_anthropic_cls):
         """Should re-raise API errors from extract_filters."""
@@ -257,10 +259,12 @@ class TestExtractFilters:
 
         mock_client = MagicMock()
         mock_anthropic_cls.return_value = mock_client
-        mock_client.messages.create.side_effect = anthropic.APIError(
-            message="Service unavailable",
-            request=MagicMock(),
-            body=None,
+        mock_client.messages.create = AsyncMock(
+            side_effect=anthropic.APIError(
+                message="Service unavailable",
+                request=MagicMock(),
+                body=None,
+            )
         )
 
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
@@ -268,7 +272,7 @@ class TestExtractFilters:
             with pytest.raises(anthropic.APIError):
                 await service.extract_filters("Find roads")
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_complex_filter_response(self, mock_anthropic_cls):
         """Should handle a response with multiple filter types."""
@@ -294,7 +298,7 @@ class TestExtractFilters:
         assert filters["surface_types"] == ["paved"]
         assert filters["sources"] == ["new_hampshire"]
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_empty_json_object(self, mock_anthropic_cls):
         """Should handle empty JSON object (no filters extracted)."""
@@ -307,7 +311,7 @@ class TestExtractFilters:
 
         assert filters == {}
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_extract_filters_with_history(self, mock_anthropic_cls):
         """Should prepend history to messages when provided."""
@@ -332,7 +336,7 @@ class TestExtractFilters:
         assert messages[1] == {"role": "assistant", "content": "Found 5 roads..."}
         assert messages[2] == {"role": "user", "content": "Show me shorter ones"}
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_extract_filters_without_history(self, mock_anthropic_cls):
         """Should send only the user query when no history is provided."""
@@ -359,7 +363,7 @@ class TestGenerateResponse:
         mock_content.text = response_text
         mock_response = MagicMock()
         mock_response.content = [mock_content]
-        mock_client.messages.create.return_value = mock_response
+        mock_client.messages.create = AsyncMock(return_value=mock_response)
         return mock_client
 
     def _make_search_results(self, features=None):
@@ -385,7 +389,7 @@ class TestGenerateResponse:
             "metadata": {"count": len(features)},
         }
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_generates_response_with_results(self, mock_anthropic_cls):
         """Should generate a conversational response from search results."""
@@ -403,7 +407,7 @@ class TestGenerateResponse:
         assert "Mountain Pass Rd" in result
         mock_client.messages.create.assert_called_once()
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_handles_empty_results(self, mock_anthropic_cls):
         """Should handle empty search results gracefully."""
@@ -420,7 +424,7 @@ class TestGenerateResponse:
 
         assert "No roads" in result
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_strips_geometry_from_context(self, mock_anthropic_cls):
         """Should send only properties to Claude, not geometry data."""
@@ -437,7 +441,7 @@ class TestGenerateResponse:
         assert "Mountain Pass Rd" in user_message
         assert "LineString" not in user_message
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_caps_results_at_10(self, mock_anthropic_cls):
         """Should only include up to 10 roads in the context."""
@@ -469,7 +473,7 @@ class TestGenerateResponse:
         assert "Road 9" in user_message
         assert "Road 10" not in user_message
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_passes_history(self, mock_anthropic_cls):
         """Should prepend history to messages."""
@@ -496,7 +500,7 @@ class TestGenerateResponse:
         assert messages[1]["role"] == "assistant"
         assert messages[2]["role"] == "user"
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_uses_response_generation_prompt(self, mock_anthropic_cls):
         """Should use the response generation system prompt."""
@@ -510,7 +514,7 @@ class TestGenerateResponse:
         call_kwargs = mock_client.messages.create.call_args[1]
         assert call_kwargs["system"] == RESPONSE_GENERATION_PROMPT
 
-    @patch("api.services.claude_service.anthropic.Anthropic")
+    @patch("api.services.claude_service.anthropic.AsyncAnthropic")
     @pytest.mark.asyncio
     async def test_raises_on_api_error(self, mock_anthropic_cls):
         """Should re-raise API errors."""
@@ -518,10 +522,12 @@ class TestGenerateResponse:
 
         mock_client = MagicMock()
         mock_anthropic_cls.return_value = mock_client
-        mock_client.messages.create.side_effect = anthropic.APIError(
-            message="Service unavailable",
-            request=MagicMock(),
-            body=None,
+        mock_client.messages.create = AsyncMock(
+            side_effect=anthropic.APIError(
+                message="Service unavailable",
+                request=MagicMock(),
+                body=None,
+            )
         )
 
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
