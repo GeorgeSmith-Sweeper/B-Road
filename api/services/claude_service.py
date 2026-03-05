@@ -255,7 +255,4 @@ class ClaudeService:
         Returns:
             True if the service can be used, False otherwise
         """
-        try:
-            return bool(os.getenv("ANTHROPIC_API_KEY"))
-        except Exception:
-            return False
+        return bool(os.getenv("ANTHROPIC_API_KEY"))
