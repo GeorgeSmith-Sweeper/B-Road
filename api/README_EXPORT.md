@@ -156,7 +156,7 @@ The test suite covers:
 ## Usage in Code
 
 ```python
-from api.export_service import ExportService
+from api.services.export_service import ExportService
 from api.database import get_db
 
 # Generate GPX
