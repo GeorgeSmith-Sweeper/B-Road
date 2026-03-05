@@ -234,7 +234,7 @@ Replace broad `except Exception` with specific exceptions across the backend.
 
 ## Phase 8: Security Hardening
 
-### Task 8.1 — Replace `crypto.randomUUID()` fallback with `nanoid`
+### Task 8.1 — ✅ Replace `crypto.randomUUID()` fallback with `nanoid`
 - **File**: `frontend/store/useWaypointRouteStore.ts:6-13`
 - **Issue**: Math.random UUID v4 fallback for non-HTTPS is cryptographically weak.
 - **Action**: Install `nanoid` and replace `generateId()` helper entirely.
