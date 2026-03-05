@@ -140,20 +140,21 @@ if __name__ == "__main__":
     Usage:
         python -m api.database
     """
-    print("Checking database connection...")
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    logger.info("Checking database connection...")
     if check_db_connection():
-        print("✓ Database connection OK")
+        logger.info("✓ Database connection OK")
 
-        print("\nChecking PostGIS extension...")
+        logger.info("Checking PostGIS extension...")
         if test_postgis():
-            print("✓ PostGIS extension OK")
+            logger.info("✓ PostGIS extension OK")
         else:
-            print("✗ PostGIS extension not found")
-            print("  Run: psql <database> -c 'CREATE EXTENSION postgis;'")
+            logger.error("✗ PostGIS extension not found")
+            logger.error("  Run: psql <database> -c 'CREATE EXTENSION postgis;'")
 
-        print("\nInitializing database tables...")
+        logger.info("Initializing database tables...")
         init_db()
-        print("✓ Database initialization complete!")
+        logger.info("✓ Database initialization complete!")
     else:
-        print("✗ Database connection failed")
-        print(f"  Check DATABASE_URL: {DATABASE_URL}")
+        logger.error("✗ Database connection failed")
+        logger.error(f"  Check DATABASE_URL: {DATABASE_URL}")
