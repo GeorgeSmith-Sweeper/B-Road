@@ -165,6 +165,7 @@ export default function Map() {
   const layerButtonRef = useRef<HTMLButtonElement>(null);
   const evDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedFeaturesRef = useRef(new Set<number | string>());
+  const hasAutoFittedRouteRef = useRef(false);
 
   const mapboxToken = useAppStore((state) => state.mapboxToken);
   const selectedSource = useAppStore((state) => state.selectedSource);
@@ -647,8 +648,21 @@ export default function Map() {
         type: 'FeatureCollection',
         features: [{ type: 'Feature', geometry: waypointCalculatedRoute.geometry, properties: {} }],
       });
+
+      // Auto-zoom to loaded route (e.g. from ?route= query param)
+      if (!hasAutoFittedRouteRef.current && waypointCalculatedRoute.geometry.coordinates.length > 1) {
+        hasAutoFittedRouteRef.current = true;
+        const bounds = new mapboxgl.LngLatBounds();
+        waypointCalculatedRoute.geometry.coordinates.forEach((coord) => {
+          bounds.extend(coord as [number, number]);
+        });
+        if (!bounds.isEmpty()) {
+          map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 1000 });
+        }
+      }
     } else {
       routeSource.setData({ type: 'FeatureCollection', features: [] });
+      hasAutoFittedRouteRef.current = false;
     }
   }, [waypointCalculatedRoute]);
 
