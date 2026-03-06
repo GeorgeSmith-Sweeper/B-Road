@@ -60,6 +60,14 @@ export const useWaypointRouteStore = create<WaypointRouteState>((set, get) => ({
       error: null,
     }),
 
+  loadRoute: (waypoints, route) =>
+    set({
+      waypoints,
+      calculatedRoute: route,
+      isCalculating: false,
+      error: null,
+    }),
+
   setCalculatedRoute: (route) => set({ calculatedRoute: route, isCalculating: false }),
 
   setIsCalculating: (calculating) => set({ isCalculating: calculating }),

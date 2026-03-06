@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Route, ArrowLeft, Trash2, Navigation } from 'lucide-react';
+import { Route, ArrowLeft, Trash2, Navigation, MapPin } from 'lucide-react';
 import { useAuth } from '@clerk/nextjs';
 import AuthButton from '@/components/AuthButton';
 import { useWaypointRouteStore } from '@/store/useWaypointRouteStore';
@@ -116,14 +116,23 @@ export default function MyRoutesPage() {
                 key={route.route_id}
                 route={route}
                 actions={
-                  <button
-                    onClick={() => handleDelete(route.route_id)}
-                    disabled={deletingId === route.route_id}
-                    className="flex items-center gap-2 font-bebas text-[12px] tracking-[1px] text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    {deletingId === route.route_id ? 'DELETING...' : 'DELETE'}
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/planner?route=${route.route_id}`}
+                      className="flex items-center gap-1.5 font-bebas text-[12px] tracking-[1px] text-accent-gold hover:brightness-110 transition"
+                    >
+                      <MapPin className="w-3.5 h-3.5" />
+                      VIEW ON MAP
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(route.route_id)}
+                      disabled={deletingId === route.route_id}
+                      className="flex items-center gap-2 font-bebas text-[12px] tracking-[1px] text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      {deletingId === route.route_id ? 'DELETING...' : 'DELETE'}
+                    </button>
+                  </div>
                 }
               />
             ))}

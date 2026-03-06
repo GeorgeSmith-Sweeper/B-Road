@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Map from '@/components/Map';
 import ChatInterface from '@/components/ChatInterface';
@@ -12,7 +13,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { useChatStore } from '@/store/useChatStore';
 import { useWaypointRouteStore } from '@/store/useWaypointRouteStore';
 import { apiClient } from '@/lib/api';
-import { getGpxExportUrl, getKmlExportUrl } from '@/lib/routes-api';
+import { getRoute, getGpxExportUrl, getKmlExportUrl } from '@/lib/routes-api';
 import { getDirectionsUrl } from '@/lib/google-maps';
 import { ApiError } from '@/types';
 import AuthButton from '@/components/AuthButton';
@@ -38,8 +39,10 @@ export default function Planner() {
     isCalculating,
     error: routeError,
     clearWaypoints,
+    loadRoute,
     getWaypointCount,
   } = useWaypointRouteStore();
+  const searchParams = useSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
@@ -102,6 +105,45 @@ export default function Planner() {
   useEffect(() => {
     if (!loading && !initError) loadSources();
   }, [loading, initError, loadSources]);
+
+  // Load a saved route from ?route=<id> query param
+  useEffect(() => {
+    const routeId = searchParams.get('route');
+    if (!routeId || loading || initError) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const detail = await getRoute(Number(routeId));
+        if (cancelled) return;
+
+        const { nanoid } = await import('nanoid');
+        const waypts = (detail.waypoints || []).map((wp, i) => ({
+          id: nanoid(),
+          lng: wp.lng,
+          lat: wp.lat,
+          order: i,
+          segmentId: wp.segment_id ?? undefined,
+          isUserModified: wp.is_user_modified,
+        }));
+
+        const geometry = detail.connecting_geometry ?? detail.geojson?.geometry;
+        const calcRoute = geometry
+          ? {
+              geometry: { type: 'LineString' as const, coordinates: geometry.coordinates },
+              distance: detail.total_length_km * 1000,
+              duration: 0,
+              waypoints: waypts.map((wp) => ({ lng: wp.lng, lat: wp.lat, snapped: true })),
+            }
+          : null;
+
+        loadRoute(waypts, calcRoute);
+      } catch {
+        // Route loading is best-effort; don't block the planner
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [searchParams, loading, initError, loadRoute]);
 
   const handleRetry = () => setRetryCount((c) => c + 1);
 

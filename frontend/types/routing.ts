@@ -45,6 +45,8 @@ export interface WaypointRouteState {
   setError: (error: string | null) => void;
   setSessionId: (id: string) => void;
 
+  loadRoute: (waypoints: Waypoint[], route: CalculatedRoute | null) => void;
+
   // Computed
   getTotalDistance: () => number; // miles
   getTotalDuration: () => number; // minutes
