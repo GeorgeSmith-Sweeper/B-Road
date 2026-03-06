@@ -84,8 +84,11 @@ class RouteService:
             return self._save_segment_route(request, session_uuid, url_slug, user_id)
 
     def _save_segment_route(
-        self, request: SaveRouteRequest, session_uuid: uuid.UUID, url_slug: str,
-        user_id: Optional[str] = None
+        self,
+        request: SaveRouteRequest,
+        session_uuid: uuid.UUID,
+        url_slug: str,
+        user_id: Optional[str] = None,
     ) -> SaveRouteResponse:
         """Save a segment-list route."""
         # Calculate statistics
@@ -148,8 +151,11 @@ class RouteService:
         )
 
     def _save_waypoint_route(
-        self, request: SaveRouteRequest, session_uuid: uuid.UUID, url_slug: str,
-        user_id: Optional[str] = None
+        self,
+        request: SaveRouteRequest,
+        session_uuid: uuid.UUID,
+        url_slug: str,
+        user_id: Optional[str] = None,
     ) -> SaveRouteResponse:
         """Save a waypoint-based route with OSRM connecting geometry."""
         geom_coords = request.connecting_geometry.get("coordinates", [])
@@ -360,7 +366,10 @@ class RouteService:
             return {"claimed_count": 0, "message": "Session not found"}
 
         count = self.route_repo.claim_routes_from_session(session_uuid, user_id)
-        return {"claimed_count": count, "message": f"{count} route(s) added to your account"}
+        return {
+            "claimed_count": count,
+            "message": f"{count} route(s) added to your account",
+        }
 
     def list_routes(self, session_id: str) -> RouteListResponse:
         """List all routes for a session"""
@@ -388,8 +397,11 @@ class RouteService:
         return RouteListResponse(routes=route_responses)
 
     def update_route(
-        self, route_id: int, session_id: Optional[str], request: UpdateRouteRequest,
-        user_id: Optional[str] = None
+        self,
+        route_id: int,
+        session_id: Optional[str],
+        request: UpdateRouteRequest,
+        user_id: Optional[str] = None,
     ) -> dict:
         """Update route metadata. Authorize by session_id OR user_id."""
         route = None

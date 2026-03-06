@@ -60,7 +60,6 @@ def get_auth_context(
     return AuthContext(session_id=x_session_id, user_id=user_id)
 
 
-
 @router.post("", response_model=SaveRouteResponse)
 async def save_route(
     request: SaveRouteRequest,

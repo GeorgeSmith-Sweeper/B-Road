@@ -164,7 +164,7 @@ export default function LandingPage() {
           </p>
           <Link
             href="/planner"
-            className="flex items-center justify-center gap-2.5 bg-accent-gold px-9 py-4 font-bebas text-base tracking-[2px] text-bg-primary hover:brightness-110 transition w-full sm:w-auto"
+            className="flex items-center justify-center gap-2.5 bg-accent-gold px-9 py-4 font-bebas text-base tracking-[2px] text-bg-primary hover:brightness-110 transition w-fit"
           >
             <Navigation className="w-[18px] h-[18px]" />
             START PLANNING

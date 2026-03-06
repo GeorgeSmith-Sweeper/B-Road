@@ -60,7 +60,9 @@ class GeometryService:
                 feature = self.collection_to_geojson_feature(collection)
                 features.append(feature)
             except (KeyError, TypeError, IndexError) as e:
-                logger.warning(f"Skipping unconvertible collection: {type(e).__name__}: {e}")
+                logger.warning(
+                    f"Skipping unconvertible collection: {type(e).__name__}: {e}"
+                )
                 continue
 
         geojson = {"type": "FeatureCollection", "features": features}

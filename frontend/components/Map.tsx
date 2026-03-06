@@ -21,7 +21,7 @@ import {
   EV_DEBOUNCE_MS,
   POPUP_CSS,
 } from '@/lib/map-constants';
-import { Plus, Minus, Satellite, Mountain, Map as MapIcon, Layers, Compass } from 'lucide-react';
+import { Plus, Minus, Satellite, Mountain, Moon, Layers, Compass } from 'lucide-react';
 import AddressSearchBar from './AddressSearchBar';
 import LayerMenu from './LayerMenu';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -165,6 +165,7 @@ export default function Map() {
   const layerButtonRef = useRef<HTMLButtonElement>(null);
   const evDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedFeaturesRef = useRef(new Set<number | string>());
+  const hasAutoFittedRouteRef = useRef(false);
 
   const mapboxToken = useAppStore((state) => state.mapboxToken);
   const selectedSource = useAppStore((state) => state.selectedSource);
@@ -339,6 +340,7 @@ export default function Map() {
       style: MAP_STYLES.terrain,
       center: [-98.5, 39.8],
       zoom: 5,
+      customAttribution: '<a href="https://github.com/adamfranco/curvature" target="_blank">Curvature Data</a>',
     });
 
     mapRef.current = map;
@@ -646,8 +648,21 @@ export default function Map() {
         type: 'FeatureCollection',
         features: [{ type: 'Feature', geometry: waypointCalculatedRoute.geometry, properties: {} }],
       });
+
+      // Auto-zoom to loaded route (e.g. from ?route= query param)
+      if (!hasAutoFittedRouteRef.current && waypointCalculatedRoute.geometry.coordinates.length > 1) {
+        hasAutoFittedRouteRef.current = true;
+        const bounds = new mapboxgl.LngLatBounds();
+        waypointCalculatedRoute.geometry.coordinates.forEach((coord) => {
+          bounds.extend(coord as [number, number]);
+        });
+        if (!bounds.isEmpty()) {
+          map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 1000 });
+        }
+      }
     } else {
       routeSource.setData({ type: 'FeatureCollection', features: [] });
+      hasAutoFittedRouteRef.current = false;
     }
   }, [waypointCalculatedRoute]);
 
@@ -852,7 +867,7 @@ export default function Map() {
         {([
           { key: 'satellite' as MapStyleKey, icon: Satellite, label: 'SATELLITE' },
           { key: 'terrain' as MapStyleKey, icon: Mountain, label: 'TERRAIN' },
-          { key: 'streets' as MapStyleKey, icon: MapIcon, label: 'STREETS' },
+          { key: 'streets' as MapStyleKey, icon: Moon, label: 'NIGHT' },
         ]).map(({ key, icon: Icon, label }) => (
           <button
             key={key}

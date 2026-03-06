@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Route, ArrowLeft, Download, BookOpen } from 'lucide-react';
+import { Route, ArrowLeft, Download, BookOpen, MapPin } from 'lucide-react';
 import { listPublicRoutes, getGpxExportUrl, getKmlExportUrl, type RouteResponse } from '@/lib/routes-api';
 import RouteCard from '@/components/RouteCard';
 
@@ -100,6 +100,13 @@ export default function LibraryPage() {
                 route={route}
                 actions={
                   <div className="flex items-center gap-3">
+                    <Link
+                      href={`/planner?route=${route.route_id}`}
+                      className="flex items-center gap-1.5 font-bebas text-[12px] tracking-[1px] text-accent-gold hover:brightness-110 transition"
+                    >
+                      <MapPin className="w-3.5 h-3.5" />
+                      VIEW ON MAP
+                    </Link>
                     <a
                       href={getGpxExportUrl(route.url_slug)}
                       download
