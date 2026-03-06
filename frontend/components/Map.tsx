@@ -21,7 +21,7 @@ import {
   EV_DEBOUNCE_MS,
   POPUP_CSS,
 } from '@/lib/map-constants';
-import { Plus, Minus, Satellite, Mountain, Map as MapIcon, Layers, Compass } from 'lucide-react';
+import { Plus, Minus, Satellite, Mountain, Moon, Layers, Compass } from 'lucide-react';
 import AddressSearchBar from './AddressSearchBar';
 import LayerMenu from './LayerMenu';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -853,7 +853,7 @@ export default function Map() {
         {([
           { key: 'satellite' as MapStyleKey, icon: Satellite, label: 'SATELLITE' },
           { key: 'terrain' as MapStyleKey, icon: Mountain, label: 'TERRAIN' },
-          { key: 'streets' as MapStyleKey, icon: MapIcon, label: 'STREETS' },
+          { key: 'streets' as MapStyleKey, icon: Moon, label: 'NIGHT' },
         ]).map(({ key, icon: Icon, label }) => (
           <button
             key={key}
