@@ -339,6 +339,7 @@ export default function Map() {
       style: MAP_STYLES.terrain,
       center: [-98.5, 39.8],
       zoom: 5,
+      customAttribution: '<a href="https://github.com/adamfranco/curvature" target="_blank">Curvature Data</a>',
     });
 
     mapRef.current = map;
