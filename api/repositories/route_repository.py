@@ -89,9 +89,7 @@ class RouteRepository(BaseRepository[SavedRoute]):
             .all()
         )
 
-    def get_by_user_and_id(
-        self, user_id: str, route_id: int
-    ) -> Optional[SavedRoute]:
+    def get_by_user_and_id(self, user_id: str, route_id: int) -> Optional[SavedRoute]:
         """Get route by ID and user_id (for authorization)"""
         return (
             self.db.query(SavedRoute)
@@ -99,9 +97,7 @@ class RouteRepository(BaseRepository[SavedRoute]):
             .first()
         )
 
-    def claim_routes_from_session(
-        self, session_id: uuid.UUID, user_id: str
-    ) -> int:
+    def claim_routes_from_session(self, session_id: uuid.UUID, user_id: str) -> int:
         """Bulk update user_id on a session's unclaimed routes. Returns count."""
         count = (
             self.db.query(SavedRoute)

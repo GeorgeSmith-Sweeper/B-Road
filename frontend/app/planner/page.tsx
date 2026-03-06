@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Map from '@/components/Map';
@@ -29,7 +29,15 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export default function Planner() {
+export default function PlannerPage() {
+  return (
+    <Suspense>
+      <Planner />
+    </Suspense>
+  );
+}
+
+function Planner() {
   const { setMapboxToken, initError, setInitError } = useAppStore();
   const { setCurvatureSources, setSourcesError } = useAppStore();
   const { setSearchResults } = useChatStore();
