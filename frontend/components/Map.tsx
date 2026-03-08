@@ -266,7 +266,14 @@ export default function Map() {
       data: { type: 'FeatureCollection', features: [] },
     });
 
-    // Energy cable route layers — black cable with gold pulse
+    // Separate source with lineMetrics for gradient-based pulse animation
+    map.addSource('waypoint-route-pulse', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+      lineMetrics: true,
+    });
+
+    // Energy cable route layers — black cable with directional gold pulse
     // Layer 1: Gold glow (soft bloom behind cable)
     map.addLayer({
       id: 'waypoint-route-glow',
@@ -285,13 +292,23 @@ export default function Map() {
       paint: { 'line-color': '#1A1A1A', 'line-width': 5, 'line-opacity': 1 },
     });
 
-    // Layer 3: Gold energy pulse (animated dash traveling along the cable)
+    // Layer 3: Gold energy pulse (line-gradient animated along the cable)
     map.addLayer({
       id: 'waypoint-route-pulse',
       type: 'line',
-      source: 'waypoint-route',
+      source: 'waypoint-route-pulse',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
-      paint: { 'line-color': '#C9A962', 'line-width': 3, 'line-opacity': 0.9, 'line-dasharray': [2, 20] },
+      paint: {
+        'line-width': 3,
+        'line-opacity': 1,
+        'line-gradient': [
+          'interpolate', ['linear'], ['line-progress'],
+          0, 'rgba(201, 169, 98, 0)',
+          0.05, '#C9A962',
+          0.1, 'rgba(201, 169, 98, 0)',
+          1, 'rgba(201, 169, 98, 0)',
+        ],
+      },
     });
 
     // Gas station layer (from Mapbox Streets vector tileset)
@@ -512,11 +529,11 @@ export default function Map() {
       // Restore waypoint route data
       const route = useWaypointRouteStore.getState().calculatedRoute;
       if (route) {
+        const routeFeature = { type: 'Feature' as const, geometry: route.geometry, properties: {} };
         const routeSource = map.getSource('waypoint-route') as mapboxgl.GeoJSONSource | undefined;
-        routeSource?.setData({
-          type: 'FeatureCollection',
-          features: [{ type: 'Feature', geometry: route.geometry, properties: {} }],
-        });
+        const pulseSource = map.getSource('waypoint-route-pulse') as mapboxgl.GeoJSONSource | undefined;
+        routeSource?.setData({ type: 'FeatureCollection', features: [routeFeature] });
+        pulseSource?.setData({ type: 'FeatureCollection', features: [routeFeature] });
       }
 
       // Restore segment highlight feature states after style swap
@@ -663,11 +680,12 @@ export default function Map() {
     const routeSource = map.getSource('waypoint-route') as mapboxgl.GeoJSONSource | undefined;
     if (!routeSource) return;
 
+    const pulseSource = map.getSource('waypoint-route-pulse') as mapboxgl.GeoJSONSource | undefined;
+
     if (waypointCalculatedRoute) {
-      routeSource.setData({
-        type: 'FeatureCollection',
-        features: [{ type: 'Feature', geometry: waypointCalculatedRoute.geometry, properties: {} }],
-      });
+      const routeFeature = { type: 'Feature' as const, geometry: waypointCalculatedRoute.geometry, properties: {} };
+      routeSource.setData({ type: 'FeatureCollection', features: [routeFeature] });
+      pulseSource?.setData({ type: 'FeatureCollection', features: [routeFeature] });
 
       // Auto-zoom to loaded route (e.g. from ?route= query param)
       if (!hasAutoFittedRouteRef.current && waypointCalculatedRoute.geometry.coordinates.length > 1) {
@@ -681,29 +699,36 @@ export default function Map() {
         }
       }
 
-      // Start energy pulse animation
+      // Start directional energy pulse animation (waypoint 1 → last)
       if (routeAnimFrameRef.current) cancelAnimationFrame(routeAnimFrameRef.current);
       const animMap = map; // capture non-null ref for closure
-      let step = 0;
-      const totalLength = 22; // dash (2) + gap (20) = one cycle
+      let progress = 0;
+      const pulseWidth = 0.06; // width of the gold band (6% of route)
+      const speed = 0.003; // how fast it travels
       function animatePulse() {
-        step = (step + 1) % (totalLength * 4); // slow it down by 4x
-        const phase = (step / 4) % totalLength;
+        progress += speed;
+        if (progress > 1 + pulseWidth) progress = -pulseWidth; // loop: travel off end, re-enter from start
+
         const pulseLayer = animMap.getLayer('waypoint-route-pulse');
         const glowLayer = animMap.getLayer('waypoint-route-glow');
         if (pulseLayer) {
-          // Shift the dash pattern to move the pulse along the cable
-          const gap1 = phase;
-          const dash = 2;
-          const gap2 = totalLength - phase;
-          // Pattern: [gap-before, dash, gap-after] creates traveling effect
-          animMap.setPaintProperty('waypoint-route-pulse', 'line-dasharray',
-            gap1 === 0 ? [dash, totalLength - dash] : [0, gap1, dash, gap2 - dash],
-          );
+          const head = Math.min(Math.max(progress + pulseWidth, 0), 1);
+          const tail = Math.min(Math.max(progress, 0), 1);
+          // Build gradient: transparent → gold pulse → transparent
+          animMap.setPaintProperty('waypoint-route-pulse', 'line-gradient', [
+            'interpolate', ['linear'], ['line-progress'],
+            0, 'rgba(201, 169, 98, 0)',
+            ...(tail > 0.001 ? [tail - 0.001, 'rgba(201, 169, 98, 0)'] : []),
+            ...(tail >= 0 && tail < 1 ? [tail, 'rgba(255, 215, 100, 0.4)'] : []),
+            ...((tail + head) / 2 > 0 && (tail + head) / 2 < 1 ? [(tail + head) / 2, '#C9A962'] : []),
+            ...(head > 0 && head <= 1 ? [head, 'rgba(255, 215, 100, 0.4)'] : []),
+            ...(head < 0.999 ? [head + 0.001, 'rgba(201, 169, 98, 0)'] : []),
+            1, 'rgba(201, 169, 98, 0)',
+          ]);
         }
-        // Glow brightens in sync with pulse position
+        // Glow brightens as pulse passes
         if (glowLayer) {
-          const glowIntensity = 0.08 + 0.12 * Math.abs(Math.sin(step * 0.04));
+          const glowIntensity = 0.05 + 0.15 * Math.max(0, Math.sin(progress * Math.PI));
           animMap.setPaintProperty('waypoint-route-glow', 'line-opacity', glowIntensity);
         }
         routeAnimFrameRef.current = requestAnimationFrame(animatePulse);
@@ -711,6 +736,7 @@ export default function Map() {
       routeAnimFrameRef.current = requestAnimationFrame(animatePulse);
     } else {
       routeSource.setData({ type: 'FeatureCollection', features: [] });
+      pulseSource?.setData({ type: 'FeatureCollection', features: [] });
       hasAutoFittedRouteRef.current = false;
       if (routeAnimFrameRef.current) {
         cancelAnimationFrame(routeAnimFrameRef.current);
