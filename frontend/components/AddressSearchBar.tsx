@@ -106,7 +106,7 @@ export default function AddressSearchBar() {
   return (
     <div
       ref={containerRef}
-      className="absolute top-16 md:top-3 left-1/2 -translate-x-1/2 z-10 w-[calc(100%-2rem)] sm:w-96"
+      className="relative w-full"
     >
       <div className="relative">
         {/* Search icon */}
@@ -136,7 +136,7 @@ export default function AddressSearchBar() {
             }
           }}
           placeholder="Search for an address..."
-          className="w-full pl-10 pr-10 py-2.5 min-h-[44px] rounded-lg bg-gray-900/90 text-white text-sm placeholder-gray-400 border border-gray-700 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 backdrop-blur-sm shadow-lg"
+          className="w-full pl-10 pr-10 py-2 h-10 rounded-lg bg-bg-muted text-white text-sm placeholder-gray-400 border border-border-subtle focus:outline-none focus:border-accent-gold focus:ring-1 focus:ring-accent-gold"
         />
 
         {/* Loading spinner or clear button */}
@@ -163,7 +163,7 @@ export default function AddressSearchBar() {
 
       {/* Dropdown suggestions */}
       {isOpen && suggestions.length > 0 && (
-        <ul className="mt-1 rounded-lg bg-gray-900/95 border border-gray-700 backdrop-blur-sm shadow-lg overflow-hidden">
+        <ul className="absolute left-0 right-0 mt-1 rounded-lg bg-gray-900/95 border border-gray-700 backdrop-blur-sm shadow-lg overflow-hidden z-50">
           {suggestions.map((s, i) => (
             <li
               key={s.id}

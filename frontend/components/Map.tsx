@@ -22,7 +22,6 @@ import {
   POPUP_CSS,
 } from '@/lib/map-constants';
 import { Plus, Minus, Satellite, Mountain, Moon, Layers, Compass } from 'lucide-react';
-import AddressSearchBar from './AddressSearchBar';
 import LayerMenu from './LayerMenu';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -166,6 +165,7 @@ export default function Map() {
   const evDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedFeaturesRef = useRef(new Set<number | string>());
   const hasAutoFittedRouteRef = useRef(false);
+  const routeAnimFrameRef = useRef<number | null>(null);
 
   const mapboxToken = useAppStore((state) => state.mapboxToken);
   const selectedSource = useAppStore((state) => state.selectedSource);
@@ -266,12 +266,48 @@ export default function Map() {
       data: { type: 'FeatureCollection', features: [] },
     });
 
+    // Separate source with lineMetrics for line-gradient pulse
+    map.addSource('waypoint-route-pulse', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+      lineMetrics: true,
+    });
+
+    // Energy cable route layers — black cable with directional gold pulse
+    // Layer 1: Gold glow (soft bloom behind cable)
+    map.addLayer({
+      id: 'waypoint-route-glow',
+      type: 'line',
+      source: 'waypoint-route',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#C9A962', 'line-width': 14, 'line-blur': 6, 'line-opacity': 0 },
+    });
+
+    // Layer 2: Black cable (the "wire")
     map.addLayer({
       id: 'waypoint-route-line',
       type: 'line',
       source: 'waypoint-route',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
-      paint: { 'line-color': '#C9A962', 'line-width': 4, 'line-opacity': 0.9 },
+      paint: { 'line-color': '#1A1A1A', 'line-width': 5, 'line-opacity': 1 },
+    });
+
+    // Layer 3: Gold energy pulse via line-gradient with fixed stop positions
+    // 100 evenly-spaced stops — only colors change, positions are constant
+    map.addLayer({
+      id: 'waypoint-route-pulse',
+      type: 'line',
+      source: 'waypoint-route-pulse',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-width': 3,
+        'line-opacity': 1,
+        'line-gradient': [
+          'interpolate', ['linear'], ['line-progress'],
+          0, 'rgba(201, 169, 98, 0)',
+          1, 'rgba(201, 169, 98, 0)',
+        ],
+      },
     });
 
     // Gas station layer (from Mapbox Streets vector tileset)
@@ -492,11 +528,11 @@ export default function Map() {
       // Restore waypoint route data
       const route = useWaypointRouteStore.getState().calculatedRoute;
       if (route) {
+        const routeFeature = { type: 'Feature' as const, geometry: route.geometry, properties: {} };
         const routeSource = map.getSource('waypoint-route') as mapboxgl.GeoJSONSource | undefined;
-        routeSource?.setData({
-          type: 'FeatureCollection',
-          features: [{ type: 'Feature', geometry: route.geometry, properties: {} }],
-        });
+        const pulseSource = map.getSource('waypoint-route-pulse') as mapboxgl.GeoJSONSource | undefined;
+        routeSource?.setData({ type: 'FeatureCollection', features: [routeFeature] });
+        pulseSource?.setData({ type: 'FeatureCollection', features: [routeFeature] });
       }
 
       // Restore segment highlight feature states after style swap
@@ -643,11 +679,12 @@ export default function Map() {
     const routeSource = map.getSource('waypoint-route') as mapboxgl.GeoJSONSource | undefined;
     if (!routeSource) return;
 
+    const pulseSource = map.getSource('waypoint-route-pulse') as mapboxgl.GeoJSONSource | undefined;
+
     if (waypointCalculatedRoute) {
-      routeSource.setData({
-        type: 'FeatureCollection',
-        features: [{ type: 'Feature', geometry: waypointCalculatedRoute.geometry, properties: {} }],
-      });
+      const routeFeature = { type: 'Feature' as const, geometry: waypointCalculatedRoute.geometry, properties: {} };
+      routeSource.setData({ type: 'FeatureCollection', features: [routeFeature] });
+      pulseSource?.setData({ type: 'FeatureCollection', features: [routeFeature] });
 
       // Auto-zoom to loaded route (e.g. from ?route= query param)
       if (!hasAutoFittedRouteRef.current && waypointCalculatedRoute.geometry.coordinates.length > 1) {
@@ -660,10 +697,69 @@ export default function Map() {
           map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 1000 });
         }
       }
+
+      // Start directional energy pulse animation (waypoint 1 → last)
+      // Uses fixed stop positions (0, 0.01, 0.02, ... 1.0) so ascending order
+      // is always guaranteed. Only the colors at each stop change per frame.
+      if (routeAnimFrameRef.current) cancelAnimationFrame(routeAnimFrameRef.current);
+      const animMap = map;
+      let progress = 0;
+      const pulseWidth = 0.08;
+      const speed = 0.004;
+      const STOPS = 100; // fixed evenly-spaced stops
+      const TRANSPARENT = 'rgba(201, 169, 98, 0)';
+      const EDGE_GLOW = 'rgba(255, 215, 100, 0.5)';
+      const CORE_GOLD = '#C9A962';
+
+      function animatePulse() {
+        progress += speed;
+        if (progress > 1 + pulseWidth) progress = -pulseWidth;
+
+        const pulseLayer = animMap.getLayer('waypoint-route-pulse');
+        const glowLayer = animMap.getLayer('waypoint-route-glow');
+        if (pulseLayer) {
+          // Build gradient with fixed stop positions — only colors vary
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const gradient: any[] = ['interpolate', ['linear'], ['line-progress']];
+          for (let i = 0; i <= STOPS; i++) {
+            const t = i / STOPS; // always 0.00, 0.01, 0.02, ... 1.00
+            gradient.push(t);
+            // How far is this stop from the pulse center?
+            const center = progress + pulseWidth / 2;
+            const dist = Math.abs(t - center);
+            if (dist > pulseWidth / 2) {
+              gradient.push(TRANSPARENT);
+            } else if (dist < pulseWidth / 4) {
+              gradient.push(CORE_GOLD);
+            } else {
+              gradient.push(EDGE_GLOW);
+            }
+          }
+          animMap.setPaintProperty('waypoint-route-pulse', 'line-gradient', gradient as [string, ...unknown[]]);
+        }
+        if (glowLayer) {
+          const glowIntensity = 0.05 + 0.15 * Math.max(0, Math.sin(progress * Math.PI));
+          animMap.setPaintProperty('waypoint-route-glow', 'line-opacity', glowIntensity);
+        }
+        routeAnimFrameRef.current = requestAnimationFrame(animatePulse);
+      }
+      routeAnimFrameRef.current = requestAnimationFrame(animatePulse);
     } else {
       routeSource.setData({ type: 'FeatureCollection', features: [] });
+      pulseSource?.setData({ type: 'FeatureCollection', features: [] });
       hasAutoFittedRouteRef.current = false;
+      if (routeAnimFrameRef.current) {
+        cancelAnimationFrame(routeAnimFrameRef.current);
+        routeAnimFrameRef.current = null;
+      }
     }
+
+    return () => {
+      if (routeAnimFrameRef.current) {
+        cancelAnimationFrame(routeAnimFrameRef.current);
+        routeAnimFrameRef.current = null;
+      }
+    };
   }, [waypointCalculatedRoute]);
 
   // Manage waypoint markers (draggable, gold-themed)
@@ -859,8 +955,6 @@ export default function Map() {
         ref={mapContainerRef}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
-
-      <AddressSearchBar />
 
       {/* Map Type Toolbar */}
       <div className="absolute top-4 left-4 z-10 flex rounded-md bg-bg-card border border-border-subtle overflow-hidden">
