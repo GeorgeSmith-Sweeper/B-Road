@@ -17,6 +17,7 @@ import { getRoute, getGpxExportUrl, getKmlExportUrl } from '@/lib/routes-api';
 import { getDirectionsUrl } from '@/lib/google-maps';
 import { ApiError } from '@/types';
 import AuthButton from '@/components/AuthButton';
+import AddressSearchBar from '@/components/AddressSearchBar';
 import { useClaimRoutes } from '@/hooks/useClaimRoutes';
 import {
   Save,
@@ -200,8 +201,13 @@ function Planner() {
   // Shared sidebar content (used in both desktop aside and mobile bottom drawer)
   const sidebarContent = (
     <>
+      {/* Address Search */}
+      <div className="px-4 pt-4 pb-3 border-b border-border-subtle">
+        <AddressSearchBar />
+      </div>
+
       {/* Sidebar Header */}
-      <div className="px-5 pt-5 pb-4 border-b border-border-subtle flex flex-col gap-4">
+      <div className="px-5 pt-4 pb-4 border-b border-border-subtle flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <span className="font-bebas text-lg tracking-[3px] text-text-primary">WAYPOINTS</span>
           <div className="flex items-center gap-2">

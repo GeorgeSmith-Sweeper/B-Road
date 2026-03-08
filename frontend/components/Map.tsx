@@ -22,7 +22,6 @@ import {
   POPUP_CSS,
 } from '@/lib/map-constants';
 import { Plus, Minus, Satellite, Mountain, Moon, Layers, Compass } from 'lucide-react';
-import AddressSearchBar from './AddressSearchBar';
 import LayerMenu from './LayerMenu';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -859,8 +858,6 @@ export default function Map() {
         ref={mapContainerRef}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
-
-      <AddressSearchBar />
 
       {/* Map Type Toolbar */}
       <div className="absolute top-4 left-4 z-10 flex rounded-md bg-bg-card border border-border-subtle overflow-hidden">
