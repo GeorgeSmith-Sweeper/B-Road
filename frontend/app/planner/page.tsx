@@ -23,7 +23,6 @@ import {
   Share2,
   Plus,
   X,
-  MousePointerClick,
   ChevronUp,
   MessageSquare,
 } from 'lucide-react';
@@ -360,16 +359,6 @@ function Planner() {
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-[#1A1A1ACC] backdrop-blur-sm rounded-full px-4 py-2">
               <div className="w-3 h-3 border-2 border-accent-gold border-t-transparent rounded-full animate-spin" />
               <span className="font-bebas text-xs tracking-[2px] text-accent-gold">CALCULATING ROUTE...</span>
-            </div>
-          )}
-
-          {/* Hint bar — sits above collapsed drawer on mobile */}
-          {waypointCount === 0 && (
-            <div className="absolute bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 bg-[#1A1A1ACC] backdrop-blur-sm rounded-full px-6 h-9">
-              <MousePointerClick className="w-3.5 h-3.5 text-accent-gold" />
-              <span className="font-cormorant text-sm italic text-text-secondary">
-                Click anywhere on the map to add a waypoint
-              </span>
             </div>
           )}
         </div>
