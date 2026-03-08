@@ -266,7 +266,7 @@ export default function Map() {
       data: { type: 'FeatureCollection', features: [] },
     });
 
-    // Separate source with lineMetrics for gradient-based pulse animation
+    // Separate source with lineMetrics for line-gradient pulse
     map.addSource('waypoint-route-pulse', {
       type: 'geojson',
       data: { type: 'FeatureCollection', features: [] },
@@ -292,7 +292,8 @@ export default function Map() {
       paint: { 'line-color': '#1A1A1A', 'line-width': 5, 'line-opacity': 1 },
     });
 
-    // Layer 3: Gold energy pulse (line-gradient animated along the cable)
+    // Layer 3: Gold energy pulse via line-gradient with fixed stop positions
+    // 100 evenly-spaced stops — only colors change, positions are constant
     map.addLayer({
       id: 'waypoint-route-pulse',
       type: 'line',
@@ -304,8 +305,6 @@ export default function Map() {
         'line-gradient': [
           'interpolate', ['linear'], ['line-progress'],
           0, 'rgba(201, 169, 98, 0)',
-          0.05, '#C9A962',
-          0.1, 'rgba(201, 169, 98, 0)',
           1, 'rgba(201, 169, 98, 0)',
         ],
       },
@@ -700,33 +699,44 @@ export default function Map() {
       }
 
       // Start directional energy pulse animation (waypoint 1 → last)
+      // Uses fixed stop positions (0, 0.01, 0.02, ... 1.0) so ascending order
+      // is always guaranteed. Only the colors at each stop change per frame.
       if (routeAnimFrameRef.current) cancelAnimationFrame(routeAnimFrameRef.current);
-      const animMap = map; // capture non-null ref for closure
+      const animMap = map;
       let progress = 0;
-      const pulseWidth = 0.06; // width of the gold band (6% of route)
-      const speed = 0.003; // how fast it travels
+      const pulseWidth = 0.08;
+      const speed = 0.004;
+      const STOPS = 100; // fixed evenly-spaced stops
+      const TRANSPARENT = 'rgba(201, 169, 98, 0)';
+      const EDGE_GLOW = 'rgba(255, 215, 100, 0.5)';
+      const CORE_GOLD = '#C9A962';
+
       function animatePulse() {
         progress += speed;
-        if (progress > 1 + pulseWidth) progress = -pulseWidth; // loop: travel off end, re-enter from start
+        if (progress > 1 + pulseWidth) progress = -pulseWidth;
 
         const pulseLayer = animMap.getLayer('waypoint-route-pulse');
         const glowLayer = animMap.getLayer('waypoint-route-glow');
         if (pulseLayer) {
-          const head = Math.min(Math.max(progress + pulseWidth, 0), 1);
-          const tail = Math.min(Math.max(progress, 0), 1);
-          // Build gradient: transparent → gold pulse → transparent
-          animMap.setPaintProperty('waypoint-route-pulse', 'line-gradient', [
-            'interpolate', ['linear'], ['line-progress'],
-            0, 'rgba(201, 169, 98, 0)',
-            ...(tail > 0.001 ? [tail - 0.001, 'rgba(201, 169, 98, 0)'] : []),
-            ...(tail >= 0 && tail < 1 ? [tail, 'rgba(255, 215, 100, 0.4)'] : []),
-            ...((tail + head) / 2 > 0 && (tail + head) / 2 < 1 ? [(tail + head) / 2, '#C9A962'] : []),
-            ...(head > 0 && head <= 1 ? [head, 'rgba(255, 215, 100, 0.4)'] : []),
-            ...(head < 0.999 ? [head + 0.001, 'rgba(201, 169, 98, 0)'] : []),
-            1, 'rgba(201, 169, 98, 0)',
-          ]);
+          // Build gradient with fixed stop positions — only colors vary
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const gradient: any[] = ['interpolate', ['linear'], ['line-progress']];
+          for (let i = 0; i <= STOPS; i++) {
+            const t = i / STOPS; // always 0.00, 0.01, 0.02, ... 1.00
+            gradient.push(t);
+            // How far is this stop from the pulse center?
+            const center = progress + pulseWidth / 2;
+            const dist = Math.abs(t - center);
+            if (dist > pulseWidth / 2) {
+              gradient.push(TRANSPARENT);
+            } else if (dist < pulseWidth / 4) {
+              gradient.push(CORE_GOLD);
+            } else {
+              gradient.push(EDGE_GLOW);
+            }
+          }
+          animMap.setPaintProperty('waypoint-route-pulse', 'line-gradient', gradient as [string, ...unknown[]]);
         }
-        // Glow brightens as pulse passes
         if (glowLayer) {
           const glowIntensity = 0.05 + 0.15 * Math.max(0, Math.sin(progress * Math.PI));
           animMap.setPaintProperty('waypoint-route-glow', 'line-opacity', glowIntensity);
