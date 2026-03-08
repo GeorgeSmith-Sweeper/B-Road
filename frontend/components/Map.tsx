@@ -165,6 +165,7 @@ export default function Map() {
   const evDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedFeaturesRef = useRef(new Set<number | string>());
   const hasAutoFittedRouteRef = useRef(false);
+  const routeAnimFrameRef = useRef<number | null>(null);
 
   const mapboxToken = useAppStore((state) => state.mapboxToken);
   const selectedSource = useAppStore((state) => state.selectedSource);
@@ -265,12 +266,32 @@ export default function Map() {
       data: { type: 'FeatureCollection', features: [] },
     });
 
+    // Energy cable route layers — black cable with gold pulse
+    // Layer 1: Gold glow (soft bloom behind cable)
+    map.addLayer({
+      id: 'waypoint-route-glow',
+      type: 'line',
+      source: 'waypoint-route',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#C9A962', 'line-width': 14, 'line-blur': 6, 'line-opacity': 0 },
+    });
+
+    // Layer 2: Black cable (the "wire")
     map.addLayer({
       id: 'waypoint-route-line',
       type: 'line',
       source: 'waypoint-route',
       layout: { 'line-join': 'round', 'line-cap': 'round' },
-      paint: { 'line-color': '#C9A962', 'line-width': 4, 'line-opacity': 0.9 },
+      paint: { 'line-color': '#1A1A1A', 'line-width': 5, 'line-opacity': 1 },
+    });
+
+    // Layer 3: Gold energy pulse (animated dash traveling along the cable)
+    map.addLayer({
+      id: 'waypoint-route-pulse',
+      type: 'line',
+      source: 'waypoint-route',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: { 'line-color': '#C9A962', 'line-width': 3, 'line-opacity': 0.9, 'line-dasharray': [2, 20] },
     });
 
     // Gas station layer (from Mapbox Streets vector tileset)
@@ -659,10 +680,50 @@ export default function Map() {
           map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 1000 });
         }
       }
+
+      // Start energy pulse animation
+      if (routeAnimFrameRef.current) cancelAnimationFrame(routeAnimFrameRef.current);
+      const animMap = map; // capture non-null ref for closure
+      let step = 0;
+      const totalLength = 22; // dash (2) + gap (20) = one cycle
+      function animatePulse() {
+        step = (step + 1) % (totalLength * 4); // slow it down by 4x
+        const phase = (step / 4) % totalLength;
+        const pulseLayer = animMap.getLayer('waypoint-route-pulse');
+        const glowLayer = animMap.getLayer('waypoint-route-glow');
+        if (pulseLayer) {
+          // Shift the dash pattern to move the pulse along the cable
+          const gap1 = phase;
+          const dash = 2;
+          const gap2 = totalLength - phase;
+          // Pattern: [gap-before, dash, gap-after] creates traveling effect
+          animMap.setPaintProperty('waypoint-route-pulse', 'line-dasharray',
+            gap1 === 0 ? [dash, totalLength - dash] : [0, gap1, dash, gap2 - dash],
+          );
+        }
+        // Glow brightens in sync with pulse position
+        if (glowLayer) {
+          const glowIntensity = 0.08 + 0.12 * Math.abs(Math.sin(step * 0.04));
+          animMap.setPaintProperty('waypoint-route-glow', 'line-opacity', glowIntensity);
+        }
+        routeAnimFrameRef.current = requestAnimationFrame(animatePulse);
+      }
+      routeAnimFrameRef.current = requestAnimationFrame(animatePulse);
     } else {
       routeSource.setData({ type: 'FeatureCollection', features: [] });
       hasAutoFittedRouteRef.current = false;
+      if (routeAnimFrameRef.current) {
+        cancelAnimationFrame(routeAnimFrameRef.current);
+        routeAnimFrameRef.current = null;
+      }
     }
+
+    return () => {
+      if (routeAnimFrameRef.current) {
+        cancelAnimationFrame(routeAnimFrameRef.current);
+        routeAnimFrameRef.current = null;
+      }
+    };
   }, [waypointCalculatedRoute]);
 
   // Manage waypoint markers (draggable, gold-themed)
