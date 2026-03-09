@@ -160,6 +160,8 @@ export default function Map() {
   const styleSheetInjectedRef = useRef(false);
 
   const [activeStyle, setActiveStyle] = useState<MapStyleKey>('terrain');
+  const activeStyleRef = useRef(activeStyle);
+  activeStyleRef.current = activeStyle;
   const [layerMenuOpen, setLayerMenuOpen] = useState(false);
   const layerButtonRef = useRef<HTMLButtonElement>(null);
   const evDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -205,11 +207,7 @@ export default function Map() {
       type: 'line',
       source: 'curvature',
       'source-layer': 'curvature',
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round',
-        visibility: activeStyle === 'streets' ? 'none' : 'visible',
-      },
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
       paint: {
         'line-color': 'rgba(255, 255, 255, 0.6)',
         'line-width': [
@@ -231,7 +229,7 @@ export default function Map() {
           'case',
           ['boolean', ['feature-state', 'selected'], false],
           1.0,
-          0.2,
+          activeStyleRef.current === 'streets' ? 0 : 0.2,
         ],
       },
       filter: ['>=', ['get', 'curvature'], useAppStore.getState().searchFilters.min_curvature],
@@ -359,7 +357,7 @@ export default function Map() {
     });
 
     sourceAddedRef.current = true;
-  }, [activeStyle]);
+  }, []);
 
   // Initialize map
   useEffect(() => {
@@ -605,13 +603,19 @@ export default function Map() {
     map.setFilter('curvature-halo', filter);
   }, [searchFilters.min_curvature]);
 
-  // Hide curvature halo in dark mode (streets) — the white outline obscures individual routes
+  // In dark mode, hide halo for unselected segments but keep it for selected ones
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !sourceAddedRef.current) return;
 
     if (map.getLayer('curvature-halo')) {
-      map.setLayoutProperty('curvature-halo', 'visibility', activeStyle === 'streets' ? 'none' : 'visible');
+      const isDark = activeStyle === 'streets';
+      map.setPaintProperty('curvature-halo', 'line-opacity', [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false],
+        1.0,
+        isDark ? 0 : 0.2,
+      ]);
     }
   }, [activeStyle]);
 
