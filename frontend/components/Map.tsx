@@ -205,7 +205,11 @@ export default function Map() {
       type: 'line',
       source: 'curvature',
       'source-layer': 'curvature',
-      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round',
+        visibility: activeStyle === 'streets' ? 'none' : 'visible',
+      },
       paint: {
         'line-color': 'rgba(255, 255, 255, 0.6)',
         'line-width': [
@@ -355,7 +359,7 @@ export default function Map() {
     });
 
     sourceAddedRef.current = true;
-  }, []);
+  }, [activeStyle]);
 
   // Initialize map
   useEffect(() => {
@@ -600,6 +604,16 @@ export default function Map() {
     map.setFilter('curvature-layer', filter);
     map.setFilter('curvature-halo', filter);
   }, [searchFilters.min_curvature]);
+
+  // Hide curvature halo in dark mode (streets) — the white outline obscures individual routes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !sourceAddedRef.current) return;
+
+    if (map.getLayer('curvature-halo')) {
+      map.setLayoutProperty('curvature-halo', 'visibility', activeStyle === 'streets' ? 'none' : 'visible');
+    }
+  }, [activeStyle]);
 
   // Handle chat search results
   useEffect(() => {
