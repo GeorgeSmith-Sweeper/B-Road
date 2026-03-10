@@ -161,7 +161,9 @@ export default function Map() {
 
   const [activeStyle, setActiveStyle] = useState<MapStyleKey>('terrain');
   const activeStyleRef = useRef(activeStyle);
-  activeStyleRef.current = activeStyle;
+  useEffect(() => {
+    activeStyleRef.current = activeStyle;
+  }, [activeStyle]);
   const [layerMenuOpen, setLayerMenuOpen] = useState(false);
   const layerButtonRef = useRef<HTMLButtonElement>(null);
   const evDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
