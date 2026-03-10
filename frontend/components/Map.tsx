@@ -160,6 +160,10 @@ export default function Map() {
   const styleSheetInjectedRef = useRef(false);
 
   const [activeStyle, setActiveStyle] = useState<MapStyleKey>('terrain');
+  const activeStyleRef = useRef(activeStyle);
+  useEffect(() => {
+    activeStyleRef.current = activeStyle;
+  }, [activeStyle]);
   const [layerMenuOpen, setLayerMenuOpen] = useState(false);
   const layerButtonRef = useRef<HTMLButtonElement>(null);
   const evDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -227,7 +231,7 @@ export default function Map() {
           'case',
           ['boolean', ['feature-state', 'selected'], false],
           1.0,
-          0.2,
+          activeStyleRef.current === 'streets' ? 0 : 0.2,
         ],
       },
       filter: ['>=', ['get', 'curvature'], useAppStore.getState().searchFilters.min_curvature],
@@ -600,6 +604,22 @@ export default function Map() {
     map.setFilter('curvature-layer', filter);
     map.setFilter('curvature-halo', filter);
   }, [searchFilters.min_curvature]);
+
+  // In dark mode, hide halo for unselected segments but keep it for selected ones
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !sourceAddedRef.current) return;
+
+    if (map.getLayer('curvature-halo')) {
+      const isDark = activeStyle === 'streets';
+      map.setPaintProperty('curvature-halo', 'line-opacity', [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false],
+        1.0,
+        isDark ? 0 : 0.2,
+      ]);
+    }
+  }, [activeStyle]);
 
   // Handle chat search results
   useEffect(() => {

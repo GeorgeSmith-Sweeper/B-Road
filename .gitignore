@@ -19,3 +19,4 @@ api/config.py
 !.env.*.example
 venv/
 api/venv/
+blog-entries/
