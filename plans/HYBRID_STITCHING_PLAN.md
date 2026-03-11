@@ -2,7 +2,7 @@
 
 **Created:** 2026-03-11
 **Branch:** `chore/updating-route-logic`
-**Status:** In progress (Steps 1-6 complete)
+**Status:** In progress (Steps 1-7 complete)
 
 ## Goal
 
@@ -376,7 +376,7 @@ Revert the hook to call `calculateRoute` unconditionally. All other steps remain
 
 ## Step 7: Distance and Duration Accounting
 
-**Status:** Not started
+**Status:** Done
 **Depends on:** Step 6
 **Parallelizable:** Yes (independent of Steps 8-10)
 

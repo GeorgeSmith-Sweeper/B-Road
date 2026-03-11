@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildStitchPlan } from '@/lib/route-stitcher';
+import { buildStitchPlan, haversineDistance, polylineDistance } from '@/lib/route-stitcher';
 import type { Waypoint, SegmentGeometry } from '@/types/routing';
 
 function makeSegmentGeometry(coords: [number, number][]): SegmentGeometry {
@@ -217,5 +217,40 @@ describe('buildStitchPlan', () => {
     expect(plan.legs).toHaveLength(2);
     expect(plan.legs[0].type).toBe('osrm_gap');
     expect(plan.legs[1].type).toBe('osrm_gap');
+  });
+});
+
+describe('haversineDistance', () => {
+  it('returns 0 for identical points', () => {
+    expect(haversineDistance([-118, 34], [-118, 34])).toBe(0);
+  });
+
+  it('computes known distance: LA to NYC (~3944 km)', () => {
+    // LAX to JFK approximate coords
+    const dist = haversineDistance([-118.4085, 33.9416], [-73.7781, 40.6413]);
+    // Should be ~3944 km ± 50 km
+    expect(dist).toBeGreaterThan(3_900_000);
+    expect(dist).toBeLessThan(4_000_000);
+  });
+
+  it('computes short distance: ~111 km for 1 degree latitude', () => {
+    const dist = haversineDistance([0, 0], [0, 1]);
+    // 1 degree of latitude ≈ 111.19 km
+    expect(dist).toBeGreaterThan(110_000);
+    expect(dist).toBeLessThan(112_000);
+  });
+});
+
+describe('polylineDistance', () => {
+  it('returns 0 for a single point', () => {
+    expect(polylineDistance([[0, 0]])).toBe(0);
+  });
+
+  it('sums segment distances along a polyline', () => {
+    const coords: [number, number][] = [[0, 0], [0, 1], [0, 2]];
+    const dist = polylineDistance(coords);
+    // Two segments of ~111 km each ≈ 222 km
+    expect(dist).toBeGreaterThan(220_000);
+    expect(dist).toBeLessThan(224_000);
   });
 });

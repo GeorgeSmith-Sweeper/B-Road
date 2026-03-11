@@ -4,7 +4,7 @@
 
 import type { CalculatedRoute, Waypoint } from '@/types/routing';
 import { API_BASE_URL, parseErrorResponse } from '@/lib/config';
-import { buildStitchPlan, type RouteLeg } from '@/lib/route-stitcher';
+import { buildStitchPlan, polylineDistance, type RouteLeg } from '@/lib/route-stitcher';
 
 export interface RoutingWaypoint {
   lng: number;
@@ -182,10 +182,20 @@ export async function calculateHybridRoute(
 
   const coordinates = stitchCoordinates(plan.legs, gapGeometries);
 
+  // Sum segment distances via haversine and estimate duration at ~48 km/h (curvy roads)
+  const CURVY_SPEED_MS = 48_000 / 3_600; // 48 km/h in m/s
+  let segmentDistance = 0;
+  for (const leg of plan.legs) {
+    if (leg.type === 'segment') {
+      segmentDistance += polylineDistance(leg.coordinates);
+    }
+  }
+  const segmentDuration = segmentDistance / CURVY_SPEED_MS;
+
   return {
     geometry: { type: 'LineString', coordinates },
-    distance: gapTotalDistance, // segment distances added in Step 7
-    duration: gapTotalDuration,
+    distance: gapTotalDistance + segmentDistance,
+    duration: gapTotalDuration + segmentDuration,
     waypoints: waypoints.map((wp) => ({ lng: wp.lng, lat: wp.lat, snapped: true })),
   };
 }

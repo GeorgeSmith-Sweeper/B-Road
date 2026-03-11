@@ -92,6 +92,36 @@ function closerEndpoint(
   return distances[0].dist <= distances[1].dist ? distances[0].point : distances[1].point;
 }
 
+const EARTH_RADIUS_M = 6_371_000;
+const DEG_TO_RAD = Math.PI / 180;
+
+/**
+ * Haversine distance in meters between two [lng, lat] points.
+ */
+export function haversineDistance(a: [number, number], b: [number, number]): number {
+  const dLat = (b[1] - a[1]) * DEG_TO_RAD;
+  const dLng = (b[0] - a[0]) * DEG_TO_RAD;
+  const lat1 = a[1] * DEG_TO_RAD;
+  const lat2 = b[1] * DEG_TO_RAD;
+
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+
+  return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h));
+}
+
+/**
+ * Sum haversine distances along a polyline of [lng, lat] coordinates.
+ */
+export function polylineDistance(coords: [number, number][]): number {
+  let total = 0;
+  for (let i = 1; i < coords.length; i++) {
+    total += haversineDistance(coords[i - 1], coords[i]);
+  }
+  return total;
+}
+
 /**
  * Build a stitch plan from an ordered list of waypoints.
  *
