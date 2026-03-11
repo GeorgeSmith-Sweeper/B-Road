@@ -2,6 +2,12 @@
  * TypeScript types for OSRM waypoint routing.
  */
 
+export interface SegmentGeometry {
+  coordinates: [number, number][];
+  startCoord: [number, number];
+  endCoord: [number, number];
+}
+
 export interface Waypoint {
   id: string;
   lng: number;
@@ -10,6 +16,7 @@ export interface Waypoint {
   segmentId?: string;
   segmentName?: string;
   curvature?: number;
+  segmentGeometry?: SegmentGeometry;
   isUserModified: boolean;
 }
 
@@ -35,7 +42,7 @@ export interface WaypointRouteState {
   sessionId: string | null;
 
   // Actions
-  addWaypoint: (lng: number, lat: number, name?: string, curvature?: number) => void;
+  addWaypoint: (lng: number, lat: number, name?: string, curvature?: number, segmentGeometry?: SegmentGeometry) => void;
   updateWaypoint: (id: string, lng: number, lat: number) => void;
   removeWaypoint: (id: string) => void;
   reorderWaypoints: (fromIndex: number, toIndex: number) => void;
