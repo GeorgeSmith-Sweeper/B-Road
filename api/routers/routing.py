@@ -11,6 +11,8 @@ from fastapi import APIRouter, HTTPException
 from api.models.routing import (
     CalculateRouteRequest,
     CalculateRouteResponse,
+    CalculateGapsRequest,
+    CalculateGapsResponse,
     RoutingHealthResponse,
 )
 from api.services.osrm_service import OSRMService, OSRMError
@@ -34,6 +36,21 @@ async def calculate_route(request: CalculateRouteRequest):
     service = get_osrm_service()
     try:
         return await service.calculate_route(request.waypoints)
+    except OSRMError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+
+
+@router.post("/calculate-gaps", response_model=CalculateGapsResponse)
+async def calculate_gaps(request: CalculateGapsRequest):
+    """
+    Calculate OSRM routes for multiple gaps between segments.
+
+    Each gap represents a connection needed between two segment endpoints.
+    Gaps are routed in parallel for performance.
+    """
+    service = get_osrm_service()
+    try:
+        return await service.calculate_gaps(request.gaps)
     except OSRMError as e:
         raise HTTPException(status_code=e.status_code, detail=e.message)
 

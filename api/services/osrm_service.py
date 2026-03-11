@@ -4,11 +4,15 @@ Service layer for OSRM routing engine communication.
 Uses async httpx to communicate with the OSRM backend service.
 """
 
+import asyncio
 import os
 import httpx
 
 from api.models.routing import (
     CalculateRouteResponse,
+    CalculateGapsResponse,
+    GapRequest,
+    GapResponse,
     RouteGeometry,
     SnappedWaypoint,
     RoutingHealthResponse,
@@ -97,6 +101,79 @@ class OSRMService:
                 )
                 for wp in osrm_waypoints
             ],
+        )
+
+    async def _route_gap(
+        self, client: httpx.AsyncClient, gap: GapRequest
+    ) -> GapResponse:
+        """Route a single gap using OSRM. Intended for use within calculate_gaps."""
+        coords = ";".join(f"{wp.lng},{wp.lat}" for wp in gap.waypoints)
+        url = f"{self.base_url}/route/v1/driving/{coords}"
+        params = {
+            "overview": "full",
+            "geometries": "geojson",
+            "steps": "false",
+        }
+
+        response = await client.get(url, params=params)
+
+        if response.status_code != 200:
+            raise OSRMError(
+                f"Routing service returned status {response.status_code} for gap {gap.gap_index}.",
+                status_code=502,
+            )
+
+        data = response.json()
+        if data.get("code") != "Ok":
+            message = data.get("message", "Unknown routing error")
+            raise OSRMError(
+                f"Routing failed for gap {gap.gap_index}: {message}",
+                status_code=422,
+            )
+
+        route = data["routes"][0]
+        return GapResponse(
+            gap_index=gap.gap_index,
+            geometry=RouteGeometry(
+                type="LineString",
+                coordinates=route["geometry"]["coordinates"],
+            ),
+            distance=route["distance"],
+            duration=route["duration"],
+        )
+
+    async def calculate_gaps(
+        self, gaps: list[GapRequest]
+    ) -> CalculateGapsResponse:
+        """
+        Calculate OSRM routes for multiple gaps in parallel.
+
+        Args:
+            gaps: List of gap requests, each with at least 2 waypoints.
+
+        Returns:
+            CalculateGapsResponse with routes for each gap plus totals.
+
+        Raises:
+            OSRMError: If OSRM is unavailable or any gap fails.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                results = await asyncio.gather(
+                    *[self._route_gap(client, gap) for gap in gaps]
+                )
+        except httpx.ConnectError:
+            raise OSRMError("Routing service is unavailable. Is OSRM running?")
+        except httpx.TimeoutException:
+            raise OSRMError("Routing service timed out.")
+
+        total_distance = sum(r.distance for r in results)
+        total_duration = sum(r.duration for r in results)
+
+        return CalculateGapsResponse(
+            gaps=list(results),
+            total_distance=total_distance,
+            total_duration=total_duration,
         )
 
     async def health_check(self) -> RoutingHealthResponse:

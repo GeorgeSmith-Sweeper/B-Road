@@ -16,6 +16,9 @@ from api.models.routing import (
     WaypointRequest,
     CalculateRouteRequest,
     CalculateRouteResponse,
+    CalculateGapsRequest,
+    CalculateGapsResponse,
+    GapRequest,
 )
 
 # ---------------------------------------------------------------------------
@@ -514,3 +517,254 @@ class TestRoutingModels:
             ]
         )
         assert len(req.waypoints) == 2
+
+    def test_gap_request_requires_two_waypoints(self):
+        with pytest.raises(Exception):
+            GapRequest(
+                gap_index=0,
+                waypoints=[WaypointRequest(lng=-80.84, lat=35.22)],
+            )
+
+    def test_gap_request_accepts_two_waypoints(self):
+        req = GapRequest(
+            gap_index=0,
+            waypoints=[
+                WaypointRequest(lng=-80.84, lat=35.22),
+                WaypointRequest(lng=-80.79, lat=35.24),
+            ],
+        )
+        assert req.gap_index == 0
+        assert len(req.waypoints) == 2
+
+    def test_calculate_gaps_request_requires_at_least_one_gap(self):
+        with pytest.raises(Exception):
+            CalculateGapsRequest(gaps=[])
+
+
+# ---------------------------------------------------------------------------
+# OSRMService.calculate_gaps unit tests
+# ---------------------------------------------------------------------------
+
+
+class TestOSRMServiceCalculateGaps:
+    """Tests for OSRMService.calculate_gaps()."""
+
+    @pytest.fixture
+    def mock_gap_osrm_response(self):
+        """Mock successful OSRM response for a single gap."""
+        response = MagicMock()
+        response.status_code = 200
+        response.json.return_value = {
+            "code": "Ok",
+            "routes": [
+                {
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": [
+                            [-80.84, 35.22],
+                            [-80.82, 35.23],
+                            [-80.79, 35.24],
+                        ],
+                    },
+                    "distance": 5000.0,
+                    "duration": 400.0,
+                }
+            ],
+            "waypoints": [
+                {"location": [-80.84, 35.22]},
+                {"location": [-80.79, 35.24]},
+            ],
+        }
+        return response
+
+    @pytest.mark.asyncio
+    async def test_routes_single_gap(self, osrm_service, mock_gap_osrm_response):
+        """Single gap returns one GapResponse with correct totals."""
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.get = AsyncMock(return_value=mock_gap_osrm_response)
+
+        gaps = [
+            GapRequest(
+                gap_index=0,
+                waypoints=[
+                    WaypointRequest(lng=-80.84, lat=35.22),
+                    WaypointRequest(lng=-80.79, lat=35.24),
+                ],
+            )
+        ]
+
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
+            result = await osrm_service.calculate_gaps(gaps)
+
+        assert isinstance(result, CalculateGapsResponse)
+        assert len(result.gaps) == 1
+        assert result.gaps[0].gap_index == 0
+        assert result.gaps[0].distance == 5000.0
+        assert result.gaps[0].duration == 400.0
+        assert result.gaps[0].geometry.type == "LineString"
+        assert result.total_distance == 5000.0
+        assert result.total_duration == 400.0
+
+    @pytest.mark.asyncio
+    async def test_routes_multiple_gaps_in_parallel(
+        self, osrm_service, mock_gap_osrm_response
+    ):
+        """Multiple gaps are all routed and totals are summed."""
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.get = AsyncMock(return_value=mock_gap_osrm_response)
+
+        gaps = [
+            GapRequest(
+                gap_index=0,
+                waypoints=[
+                    WaypointRequest(lng=-80.84, lat=35.22),
+                    WaypointRequest(lng=-80.79, lat=35.24),
+                ],
+            ),
+            GapRequest(
+                gap_index=1,
+                waypoints=[
+                    WaypointRequest(lng=-80.70, lat=35.30),
+                    WaypointRequest(lng=-80.65, lat=35.35),
+                ],
+            ),
+        ]
+
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
+            result = await osrm_service.calculate_gaps(gaps)
+
+        assert len(result.gaps) == 2
+        assert result.gaps[0].gap_index == 0
+        assert result.gaps[1].gap_index == 1
+        assert result.total_distance == 10000.0  # 5000 * 2
+        assert result.total_duration == 800.0  # 400 * 2
+        # Two OSRM calls should have been made
+        assert mock_client.get.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_raises_on_connection_error(self, osrm_service):
+        """Connection error raises OSRMError."""
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.get = AsyncMock(
+            side_effect=httpx.ConnectError("Connection refused")
+        )
+
+        gaps = [
+            GapRequest(
+                gap_index=0,
+                waypoints=[
+                    WaypointRequest(lng=-80.84, lat=35.22),
+                    WaypointRequest(lng=-80.79, lat=35.24),
+                ],
+            )
+        ]
+
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
+            with pytest.raises(OSRMError, match="unavailable"):
+                await osrm_service.calculate_gaps(gaps)
+
+
+# ---------------------------------------------------------------------------
+# Endpoint tests for POST /routing/calculate-gaps
+# ---------------------------------------------------------------------------
+
+
+class TestCalculateGapsEndpoint:
+    """Tests for POST /routing/calculate-gaps endpoint."""
+
+    def test_returns_gap_routes(self, client, mock_osrm_response):
+        """Valid gaps request returns 200 with gap routes."""
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.get = AsyncMock(return_value=mock_osrm_response)
+
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
+            response = client.post(
+                "/routing/calculate-gaps",
+                json={
+                    "gaps": [
+                        {
+                            "gap_index": 0,
+                            "waypoints": [
+                                {"lng": -80.8431, "lat": 35.2271},
+                                {"lng": -80.7933, "lat": 35.2387},
+                            ],
+                        }
+                    ]
+                },
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["gaps"]) == 1
+        assert data["gaps"][0]["gap_index"] == 0
+        assert data["gaps"][0]["geometry"]["type"] == "LineString"
+        assert "total_distance" in data
+        assert "total_duration" in data
+
+    def test_rejects_empty_gaps(self, client):
+        """Empty gaps list returns 422."""
+        response = client.post(
+            "/routing/calculate-gaps",
+            json={"gaps": []},
+        )
+        assert response.status_code == 422
+
+    def test_rejects_gap_with_single_waypoint(self, client):
+        """Gap with only one waypoint returns 422."""
+        response = client.post(
+            "/routing/calculate-gaps",
+            json={
+                "gaps": [
+                    {
+                        "gap_index": 0,
+                        "waypoints": [{"lng": -80.84, "lat": 35.22}],
+                    }
+                ]
+            },
+        )
+        assert response.status_code == 422
+
+    def test_returns_503_when_osrm_unavailable(self, client):
+        """OSRM unavailable returns 503."""
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client.get = AsyncMock(
+            side_effect=httpx.ConnectError("Connection refused")
+        )
+
+        with patch(
+            "api.services.osrm_service.httpx.AsyncClient", return_value=mock_client
+        ):
+            response = client.post(
+                "/routing/calculate-gaps",
+                json={
+                    "gaps": [
+                        {
+                            "gap_index": 0,
+                            "waypoints": [
+                                {"lng": -80.8431, "lat": 35.2271},
+                                {"lng": -80.7933, "lat": 35.2387},
+                            ],
+                        }
+                    ]
+                },
+            )
+
+        assert response.status_code == 503

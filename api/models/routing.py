@@ -44,6 +44,36 @@ class CalculateRouteResponse(BaseModel):
     waypoints: List[SnappedWaypoint]
 
 
+class GapRequest(BaseModel):
+    """A single gap between segments that needs OSRM routing."""
+
+    gap_index: int
+    waypoints: List[WaypointRequest] = Field(..., min_length=2)
+
+
+class CalculateGapsRequest(BaseModel):
+    """Request body for multi-gap route calculation."""
+
+    gaps: List[GapRequest] = Field(..., min_length=1)
+
+
+class GapResponse(BaseModel):
+    """OSRM route result for a single gap."""
+
+    gap_index: int
+    geometry: RouteGeometry
+    distance: float  # meters
+    duration: float  # seconds
+
+
+class CalculateGapsResponse(BaseModel):
+    """Response from multi-gap route calculation."""
+
+    gaps: List[GapResponse]
+    total_distance: float  # meters
+    total_duration: float  # seconds
+
+
 class RoutingHealthResponse(BaseModel):
     """Response from routing health check."""
 
