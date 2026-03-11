@@ -2,7 +2,7 @@
 
 **Created:** 2026-03-11
 **Branch:** `chore/updating-route-logic`
-**Status:** In progress (Steps 1-4 complete)
+**Status:** In progress (Steps 1-5 complete)
 
 ## Goal
 
@@ -276,7 +276,7 @@ Remove the new endpoint, models, and service method. Existing `/routing/calculat
 
 ## Step 5: Frontend `calculateHybridRoute` Function
 
-**Status:** Not started
+**Status:** Done
 **Depends on:** Steps 3 and 4
 **Parallelizable:** No (needs both stitch plan logic and backend endpoint)
 
