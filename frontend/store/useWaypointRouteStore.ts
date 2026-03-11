@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { nanoid } from 'nanoid';
-import type { WaypointRouteState, Waypoint, CalculatedRoute } from '@/types/routing';
+import type { WaypointRouteState, Waypoint, CalculatedRoute, SegmentGeometry } from '@/types/routing';
 
 export const useWaypointRouteStore = create<WaypointRouteState>((set, get) => ({
   waypoints: [],
@@ -9,7 +9,7 @@ export const useWaypointRouteStore = create<WaypointRouteState>((set, get) => ({
   error: null,
   sessionId: typeof window !== 'undefined' ? localStorage.getItem('b-road-session-id') : null,
 
-  addWaypoint: (lng, lat, name?, curvature?) => {
+  addWaypoint: (lng, lat, name?, curvature?, segmentGeometry?) => {
     set((state) => {
       const newWaypoint: Waypoint = {
         id: nanoid(),
@@ -18,6 +18,7 @@ export const useWaypointRouteStore = create<WaypointRouteState>((set, get) => ({
         order: state.waypoints.length,
         segmentName: name,
         curvature,
+        segmentGeometry,
         isUserModified: false,
       };
       return {
@@ -30,7 +31,7 @@ export const useWaypointRouteStore = create<WaypointRouteState>((set, get) => ({
   updateWaypoint: (id, lng, lat) => {
     set((state) => ({
       waypoints: state.waypoints.map((wp) =>
-        wp.id === id ? { ...wp, lng, lat, isUserModified: true } : wp
+        wp.id === id ? { ...wp, lng, lat, isUserModified: true, segmentGeometry: undefined } : wp
       ),
     }));
   },

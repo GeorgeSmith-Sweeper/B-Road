@@ -12,6 +12,7 @@ import { useRouting } from '@/hooks/useRouting';
 import { getGoogleMapsUrl, getStreetViewUrl, getMidpoint } from '@/lib/google-maps';
 import { fetchEVStations } from '@/lib/nrel-api';
 import { EVStationProps } from '@/types';
+import { SegmentGeometry } from '@/types/routing';
 import { API_BASE_URL } from '@/lib/config';
 import {
   MAP_STYLES,
@@ -404,6 +405,7 @@ export default function Map() {
         const { addWaypoint } = useWaypointRouteStore.getState();
         let snapLng = e.lngLat.lng;
         let snapLat = e.lngLat.lat;
+        let segGeometry: SegmentGeometry | undefined;
         if (feature.geometry.type === 'LineString') {
           const coords = (feature.geometry as GeoJSON.LineString).coordinates as [number, number][];
           if (coords.length > 0) {
@@ -414,9 +416,14 @@ export default function Map() {
             const distToFirst = (clickLng - first[0]) ** 2 + (clickLat - first[1]) ** 2;
             const distToLast = (clickLng - last[0]) ** 2 + (clickLat - last[1]) ** 2;
             [snapLng, snapLat] = distToFirst <= distToLast ? first : last;
+            segGeometry = {
+              coordinates: coords,
+              startCoord: first,
+              endCoord: last,
+            };
           }
         }
-        addWaypoint(snapLng, snapLat, props.name || undefined, props.curvature);
+        addWaypoint(snapLng, snapLat, props.name || undefined, props.curvature, segGeometry);
 
         // Highlight the selected segment
         const featureId = feature.id;
