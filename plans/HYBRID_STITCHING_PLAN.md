@@ -2,7 +2,7 @@
 
 **Created:** 2026-03-11
 **Branch:** `chore/updating-route-logic`
-**Status:** Not started
+**Status:** In progress (Steps 1-4 complete)
 
 ## Goal
 
@@ -39,7 +39,7 @@ Steps 7, 8, 9, 10 (after 6, independent of each other)
 
 ## Step 1: Extend Frontend Types to Hold Segment Geometry
 
-**Status:** Not started
+**Status:** Done (commit 0123947)
 **Depends on:** Nothing
 **Parallelizable:** Yes (no conflicts with Step 4)
 
@@ -82,7 +82,7 @@ Remove the new type and the optional field. No runtime impact.
 
 ## Step 2: Capture Full Segment Geometry on Click
 
-**Status:** Not started
+**Status:** Done (commit 528a67c)
 **Depends on:** Step 1
 **Parallelizable:** Yes (no conflicts with Step 4)
 
@@ -123,7 +123,7 @@ Remove geometry extraction from click handler, remove the parameter from `addWay
 
 ## Step 3: Build the Stitch Plan Logic (Pure Functions)
 
-**Status:** Not started
+**Status:** Done (commit 9d93435) — also set up vitest as frontend test runner
 **Depends on:** Step 1 (types only)
 **Parallelizable:** Yes (no conflicts with Steps 2 or 4)
 
@@ -195,7 +195,7 @@ Delete `route-stitcher.ts` and its test file. No other code depends on it yet.
 
 ## Step 4: New Backend Endpoint for Gap Routing
 
-**Status:** Not started
+**Status:** Done (commit f04e251) — includes parallel asyncio.gather and 10 new tests
 **Depends on:** Nothing
 **Parallelizable:** Yes (fully independent of Steps 1-3)
 
