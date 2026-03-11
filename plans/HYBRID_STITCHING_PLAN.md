@@ -2,7 +2,7 @@
 
 **Created:** 2026-03-11
 **Branch:** `chore/updating-route-logic`
-**Status:** In progress (Steps 1-8 complete)
+**Status:** Complete (all steps done)
 
 ## Goal
 
@@ -444,7 +444,7 @@ Stop saving/loading the extra field. Old routes unaffected, new routes fall back
 
 ## Step 9: Parallelize OSRM Gap Calls
 
-**Status:** Not started
+**Status:** Done (completed in Step 4 with asyncio.gather)
 **Depends on:** Step 4
 **Parallelizable:** Yes (independent of Steps 7, 8, 10)
 
@@ -478,7 +478,7 @@ Revert to sequential processing. Functional but slower.
 
 ## Step 10: "Close Enough" Threshold to Skip Tiny Gaps
 
-**Status:** Not started
+**Status:** Done
 **Depends on:** Step 3
 **Parallelizable:** Yes (can be added anytime after Step 3)
 

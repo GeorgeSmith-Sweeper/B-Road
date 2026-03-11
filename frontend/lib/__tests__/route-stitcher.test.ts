@@ -63,23 +63,17 @@ describe('buildStitchPlan', () => {
     expect(plan.legs[2].type).toBe('segment');
   });
 
-  it('produces two segment legs + gap for connected segments', () => {
+  it('skips gap for connected segments sharing an endpoint', () => {
     // segA ends at (-118.02, 34.02) and segC starts at (-118.02, 34.02)
     const plan = buildStitchPlan([
       makeWaypoint({ lng: -118.0, lat: 34.0, order: 0, segmentGeometry: segA }),
       makeWaypoint({ lng: -118.02, lat: 34.02, order: 1, segmentGeometry: segC }),
     ]);
 
-    expect(plan.legs).toHaveLength(3);
+    // Gap is under 50m threshold, so it's skipped — only segment legs remain
+    expect(plan.legs).toHaveLength(2);
     expect(plan.legs[0].type).toBe('segment');
-    expect(plan.legs[1].type).toBe('osrm_gap');
-    expect(plan.legs[2].type).toBe('segment');
-
-    // The gap should be between the same point (zero-distance gap)
-    const gap = plan.legs[1];
-    if (gap.type === 'osrm_gap') {
-      expect(gap.from).toEqual(gap.to);
-    }
+    expect(plan.legs[1].type).toBe('segment');
   });
 
   it('produces a single osrm_gap for all non-segment waypoints', () => {
@@ -124,14 +118,15 @@ describe('buildStitchPlan', () => {
 
   it('reverses segment coordinates when closer to endCoord', () => {
     // segB starts at (-117.0, 33.0) and ends at (-117.02, 33.02)
-    // If we approach from (-117.02, 33.02), it should reverse to enter from end
+    // Approach from (-117.02, 33.02) — exactly at segB's end, so gap is skipped (0m)
     const plan = buildStitchPlan([
       makeWaypoint({ lng: -117.02, lat: 33.02, order: 0 }), // close to segB's end
       makeWaypoint({ lng: -117.0, lat: 33.0, order: 1, segmentGeometry: segB }),
     ]);
 
-    expect(plan.legs).toHaveLength(2);
-    const segLeg = plan.legs[1];
+    // Gap skipped (under threshold), only the segment remains
+    expect(plan.legs).toHaveLength(1);
+    const segLeg = plan.legs[0];
     if (segLeg.type === 'segment') {
       // Coordinates should be reversed — first coord should be endCoord
       expect(segLeg.coordinates[0]).toEqual([-117.02, 33.02]);
@@ -186,10 +181,10 @@ describe('buildStitchPlan', () => {
       makeWaypoint({ lng: -118.04, lat: 34.04, order: 2, segmentGeometry: segD }),
     ]);
 
-    // segment + gap + segment + gap + segment
-    expect(plan.legs).toHaveLength(5);
+    // All segments share endpoints — gaps skipped (under threshold)
+    expect(plan.legs).toHaveLength(3);
     expect(plan.legs.map(l => l.type)).toEqual([
-      'segment', 'osrm_gap', 'segment', 'osrm_gap', 'segment',
+      'segment', 'segment', 'segment',
     ]);
   });
 
@@ -252,5 +247,80 @@ describe('polylineDistance', () => {
     // Two segments of ~111 km each ≈ 222 km
     expect(dist).toBeGreaterThan(220_000);
     expect(dist).toBeLessThan(224_000);
+  });
+});
+
+describe('gap threshold (Step 10)', () => {
+  // Two segments sharing an exact endpoint — gap should be skipped
+  const segA: SegmentGeometry = makeSegmentGeometry([
+    [-118.0, 34.0],
+    [-118.01, 34.01],
+    [-118.02, 34.02],
+  ]);
+
+  const segConnected: SegmentGeometry = makeSegmentGeometry([
+    [-118.02, 34.02], // same as segA's end
+    [-118.03, 34.03],
+    [-118.04, 34.04],
+  ]);
+
+  // ~30m offset from segA's end (well under 50m threshold)
+  const segNearby: SegmentGeometry = makeSegmentGeometry([
+    [-118.02003, 34.02003],
+    [-118.03, 34.03],
+    [-118.04, 34.04],
+  ]);
+
+  // Far segment (~150 km away)
+  const segFar: SegmentGeometry = makeSegmentGeometry([
+    [-117.0, 33.0],
+    [-117.01, 33.01],
+    [-117.02, 33.02],
+  ]);
+
+  it('skips gap when two segments share an exact endpoint', () => {
+    const plan = buildStitchPlan([
+      makeWaypoint({ lng: -118.0, lat: 34.0, order: 0, segmentGeometry: segA }),
+      makeWaypoint({ lng: -118.02, lat: 34.02, order: 1, segmentGeometry: segConnected }),
+    ]);
+
+    const gapLegs = plan.legs.filter((l) => l.type === 'osrm_gap');
+    expect(gapLegs).toHaveLength(0);
+    expect(plan.legs.filter((l) => l.type === 'segment')).toHaveLength(2);
+  });
+
+  it('skips gap when two segments are ~30m apart (under 50m threshold)', () => {
+    const plan = buildStitchPlan([
+      makeWaypoint({ lng: -118.0, lat: 34.0, order: 0, segmentGeometry: segA }),
+      makeWaypoint({ lng: -118.02003, lat: 34.02003, order: 1, segmentGeometry: segNearby }),
+    ]);
+
+    const gapLegs = plan.legs.filter((l) => l.type === 'osrm_gap');
+    expect(gapLegs).toHaveLength(0);
+  });
+
+  it('creates gap when two segments are far apart', () => {
+    const plan = buildStitchPlan([
+      makeWaypoint({ lng: -118.0, lat: 34.0, order: 0, segmentGeometry: segA }),
+      makeWaypoint({ lng: -117.0, lat: 33.0, order: 1, segmentGeometry: segFar }),
+    ]);
+
+    const gapLegs = plan.legs.filter((l) => l.type === 'osrm_gap');
+    expect(gapLegs.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('respects custom threshold', () => {
+    // With threshold=0, even exact matches produce a gap (if distance > 0)
+    // segA and segConnected share exact point, distance = 0, still skipped
+    const plan = buildStitchPlan(
+      [
+        makeWaypoint({ lng: -118.0, lat: 34.0, order: 0, segmentGeometry: segA }),
+        makeWaypoint({ lng: -118.02003, lat: 34.02003, order: 1, segmentGeometry: segNearby }),
+      ],
+      0, // threshold = 0m, any nonzero distance produces a gap
+    );
+
+    const gapLegs = plan.legs.filter((l) => l.type === 'osrm_gap');
+    expect(gapLegs.length).toBeGreaterThanOrEqual(1);
   });
 });

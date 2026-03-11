@@ -122,13 +122,20 @@ export function polylineDistance(coords: [number, number][]): number {
   return total;
 }
 
+/** Default threshold in meters below which an OSRM gap is skipped. */
+export const DEFAULT_GAP_THRESHOLD_M = 50;
+
 /**
  * Build a stitch plan from an ordered list of waypoints.
  *
  * Waypoints with `segmentGeometry` produce `segment` legs (use geometry directly).
  * Gaps between segments (and non-segment waypoints) produce `osrm_gap` legs.
+ * Gaps shorter than `gapThresholdM` meters are omitted (endpoints connected directly).
  */
-export function buildStitchPlan(waypoints: Waypoint[]): StitchPlan {
+export function buildStitchPlan(
+  waypoints: Waypoint[],
+  gapThresholdM: number = DEFAULT_GAP_THRESHOLD_M,
+): StitchPlan {
   if (waypoints.length < 2) {
     return { legs: [] };
   }
@@ -161,7 +168,7 @@ export function buildStitchPlan(waypoints: Waypoint[]): StitchPlan {
       }
 
       // Insert gap between previous exit and this segment's entry if needed
-      if (currentExit !== null) {
+      if (currentExit !== null && haversineDistance(currentExit, oriented.entry) >= gapThresholdM) {
         legs.push({
           type: 'osrm_gap',
           from: currentExit,
@@ -180,7 +187,7 @@ export function buildStitchPlan(waypoints: Waypoint[]): StitchPlan {
       // Non-segment waypoint — creates an OSRM gap
       const wpCoord: [number, number] = [wp.lng, wp.lat];
 
-      if (currentExit !== null) {
+      if (currentExit !== null && haversineDistance(currentExit, wpCoord) >= gapThresholdM) {
         legs.push({
           type: 'osrm_gap',
           from: currentExit,
