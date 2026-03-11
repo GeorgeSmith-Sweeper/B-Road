@@ -133,6 +133,7 @@ function Planner() {
           order: i,
           segmentId: wp.segment_id ?? undefined,
           isUserModified: wp.is_user_modified,
+          segmentGeometry: wp.segment_geometry ?? undefined,
         }));
 
         const geometry = detail.connecting_geometry ?? detail.geojson?.geometry;

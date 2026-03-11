@@ -2,7 +2,7 @@
 
 **Created:** 2026-03-11
 **Branch:** `chore/updating-route-logic`
-**Status:** In progress (Steps 1-7 complete)
+**Status:** In progress (Steps 1-8 complete)
 
 ## Goal
 
@@ -412,7 +412,7 @@ Remove Haversine utility and revert distance calculation. Distances fall back to
 
 ## Step 8: Save/Load Route Persistence
 
-**Status:** Not started
+**Status:** Done
 **Depends on:** Step 6
 **Parallelizable:** Yes (independent of Steps 7, 9, 10)
 

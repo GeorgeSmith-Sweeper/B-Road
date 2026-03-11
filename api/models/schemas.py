@@ -23,6 +23,14 @@ class SegmentData(BaseModel):
     surface: Optional[str] = None
 
 
+class SegmentGeometryData(BaseModel):
+    """Segment geometry for hybrid stitching persistence"""
+
+    coordinates: List[List[float]]
+    startCoord: List[float]
+    endCoord: List[float]
+
+
 class WaypointData(BaseModel):
     """Waypoint data for saving waypoint-based routes"""
 
@@ -31,6 +39,7 @@ class WaypointData(BaseModel):
     order: int = Field(..., ge=0)
     segment_id: Optional[str] = None
     is_user_modified: bool = False
+    segment_geometry: Optional[SegmentGeometryData] = None
 
 
 class SaveRouteRequest(BaseModel):
@@ -78,6 +87,7 @@ class WaypointResponse(BaseModel):
     order: int
     segment_id: Optional[str] = None
     is_user_modified: bool = False
+    segment_geometry: Optional[SegmentGeometryData] = None
 
 
 class RouteResponse(BaseModel):

@@ -212,6 +212,7 @@ class RouteService:
                 lat=wp.lat,
                 segment_id=wp.segment_id,
                 is_user_modified=wp.is_user_modified,
+                segment_geometry=wp.segment_geometry.model_dump() if wp.segment_geometry else None,
             )
             self.db.add(waypoint)
         self.db.flush()
@@ -279,6 +280,7 @@ class RouteService:
                 order=wp.waypoint_order,
                 segment_id=wp.segment_id,
                 is_user_modified=wp.is_user_modified,
+                segment_geometry=wp.segment_geometry,
             )
             for wp in sorted(route.waypoints, key=lambda w: w.waypoint_order)
         ]

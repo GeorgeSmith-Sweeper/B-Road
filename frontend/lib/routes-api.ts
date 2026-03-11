@@ -3,6 +3,7 @@
  */
 
 import { RouteSegment } from '@/types';
+import type { SegmentGeometry } from '@/types/routing';
 import { API_BASE_URL, parseErrorResponse } from '@/lib/config';
 
 export interface SaveRouteRequest {
@@ -26,6 +27,7 @@ export interface SaveRouteRequest {
     order: number;
     segment_id?: string | null;
     is_user_modified?: boolean;
+    segment_geometry?: SegmentGeometry;
   }>;
   connecting_geometry?: {
     type: string;
@@ -65,6 +67,7 @@ export interface WaypointResponse {
   order: number;
   segment_id?: string | null;
   is_user_modified: boolean;
+  segment_geometry?: SegmentGeometry | null;
 }
 
 export interface RouteDetailResponse extends RouteResponse {

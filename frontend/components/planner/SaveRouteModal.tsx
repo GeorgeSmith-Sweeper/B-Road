@@ -46,6 +46,7 @@ export default function SaveRouteModal({ open, onClose, onSaved }: SaveRouteModa
           order: wp.order,
           segment_id: wp.segmentId || null,
           is_user_modified: wp.isUserModified,
+          segment_geometry: wp.segmentGeometry ?? undefined,
         })),
         connecting_geometry: calculatedRoute.geometry,
         is_public: isPublic,

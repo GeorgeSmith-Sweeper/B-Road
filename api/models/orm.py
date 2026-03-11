@@ -194,6 +194,7 @@ class RouteWaypoint(Base):
     lat = Column(Float, nullable=False)
     segment_id = Column(String(255), nullable=True)
     is_user_modified = Column(Boolean, default=False)
+    segment_geometry = Column(JSONB, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
