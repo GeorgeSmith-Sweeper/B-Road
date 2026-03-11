@@ -2,7 +2,7 @@
 
 **Created:** 2026-03-11
 **Branch:** `chore/updating-route-logic`
-**Status:** In progress (Steps 1-5 complete)
+**Status:** In progress (Steps 1-6 complete)
 
 ## Goal
 
@@ -333,7 +333,7 @@ Remove the new functions from `routing-api.ts`. Nothing calls them yet.
 
 ## Step 6: Wire into `useRouting` Hook (The Switchover)
 
-**Status:** Not started
+**Status:** Done
 **Depends on:** Steps 2 and 5
 **Parallelizable:** No (this is the integration point)
 

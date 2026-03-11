@@ -4,7 +4,7 @@
 
 import { useCallback, useRef } from 'react';
 import { useWaypointRouteStore } from '@/store/useWaypointRouteStore';
-import { calculateRoute } from '@/lib/routing-api';
+import { calculateRoute, calculateHybridRoute } from '@/lib/routing-api';
 import type { Waypoint } from '@/types/routing';
 
 const DEBOUNCE_MS = 150;
@@ -27,13 +27,16 @@ export function useRouting() {
       setError(null);
 
       try {
-        const route = await calculateRoute(
-          waypoints.map((wp) => ({
-            lng: wp.lng,
-            lat: wp.lat,
-            segment_id: wp.segmentId,
-          }))
-        );
+        const hasSegmentGeometry = waypoints.some((wp) => wp.segmentGeometry);
+        const route = hasSegmentGeometry
+          ? await calculateHybridRoute(waypoints)
+          : await calculateRoute(
+              waypoints.map((wp) => ({
+                lng: wp.lng,
+                lat: wp.lat,
+                segment_id: wp.segmentId,
+              }))
+            );
         setCalculatedRoute(route);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Route calculation failed';
