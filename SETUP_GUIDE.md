@@ -32,7 +32,15 @@ MAPBOX_ACCESS_TOKEN=pk.eyJ...your_token_here
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-### 2. Start Services
+### 2. Create the Database Volume
+
+The PostgreSQL volume is external (protected from accidental deletion). Create it once:
+
+```bash
+docker volume create b-road-postgres-data
+```
+
+### 3. Start Services
 
 ```bash
 make up
@@ -43,7 +51,7 @@ This starts three containers:
 - **api** - FastAPI backend on port 8000
 - **frontend** - Next.js app on port 3000
 
-### 3. Verify Health
+### 4. Verify Health
 
 ```bash
 make health
@@ -56,7 +64,7 @@ curl http://localhost:8000/health    # API health check
 curl http://localhost:8000/config    # Should return Mapbox token
 ```
 
-### 4. Load Data
+### 5. Load Data
 
 Process OpenStreetMap data and load it into PostGIS:
 
@@ -72,7 +80,7 @@ Verify data loaded:
 curl http://localhost:8000/curvature/sources
 ```
 
-### 5. Open the App
+### 6. Open the App
 
 Navigate to http://localhost:3000. The map should display with curvature data visible when you zoom into areas with loaded data.
 
@@ -181,6 +189,62 @@ Zoom in to see more roads with lower curvature scores.
 
 ---
 
+## Database Backup & Restore
+
+The curvature pipeline takes ~5 hours to process all 50 US states. To avoid re-running it after accidental data loss, the project includes backup and restore tooling.
+
+### How the database is protected
+
+The PostgreSQL Docker volume (`b-road-postgres-data`) is marked as **external** in `docker-compose.yml`. This means:
+
+- `docker compose down -v` **will not** remove it (Docker skips external volumes)
+- `make clean` and `make clean-volumes` **will not** remove it
+- Only `make nuke-all` (which requires typing "DELETE") or `docker volume rm b-road-postgres-data` will destroy it
+
+### Creating a backup
+
+```bash
+make backup
+```
+
+This runs `scripts/db-backup.sh`, which:
+- Dumps the full database with `pg_dump` (compressed with gzip)
+- Saves to `data/backups/curvature_YYYY-MM-DD_HHMMSS.sql.gz`
+- Keeps the 5 most recent backups, prunes older ones
+- Reports the row count and file size
+
+You can adjust retention with `./scripts/db-backup.sh --keep 10`.
+
+**When to back up:**
+- After completing a full US reprocess (~5 hours of work)
+- Before any risky database or Docker operations
+- Periodically, to capture fresh OSM data updates
+
+### Restoring from a backup
+
+```bash
+# List available backups
+make restore
+
+# Restore a specific backup
+make restore FILE=data/backups/curvature_2026-03-11_213409.sql.gz
+```
+
+This runs `scripts/db-restore.sh`, which:
+- Shows the current row count and backup file size
+- Asks for confirmation before proceeding
+- Drops and recreates the database
+- Restores from the compressed backup
+- Reports the restored row count
+
+A restore takes minutes instead of the ~5 hours needed to reprocess from scratch.
+
+### Backup storage
+
+Backups are stored in `data/backups/` (gitignored). A typical full US backup is 200-500 MB compressed. With the default retention of 5, expect ~1-2.5 GB of backup storage.
+
+---
+
 ## Running Tests
 
 ### With Docker
@@ -260,7 +324,7 @@ The CI pipeline enforces 60% minimum code coverage.
 **Solutions:**
 1. Check logs: `make logs`
 2. Rebuild images: `make rebuild`
-3. Reset everything: `make clean` then `make up`
+3. Reset everything: `make clean` then `make up` (database is preserved; use `make nuke-all` only if you truly need to wipe the DB)
 4. Verify `.env` file exists and has required variables
 
 ### Build Errors (Frontend)
@@ -312,7 +376,11 @@ The CI pipeline enforces 60% minimum code coverage.
 | `make shell-db` | psql shell into database |
 | `make shell-frontend` | Shell into frontend container |
 | `make health` | Check all service health |
-| `make clean` | Remove containers, volumes, images |
+| `make backup` | Backup PostGIS database |
+| `make restore FILE=path` | Restore from a backup |
+| `make clean` | Remove containers and caches (DB preserved) |
+| `make clean-volumes` | Remove cache volumes only (DB preserved) |
+| `make nuke-all` | Remove everything including DB (requires confirmation) |
 
 ---
 

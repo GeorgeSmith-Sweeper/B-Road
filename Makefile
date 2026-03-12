@@ -4,7 +4,7 @@
 # Common commands for Docker-based development
 # =============================================================================
 
-.PHONY: help up down build rebuild test lint coverage logs shell-api shell-db shell-frontend health prod-up prod-down prod-build clean
+.PHONY: help up down build rebuild test lint coverage logs shell-api shell-db shell-frontend health prod-up prod-down prod-build clean clean-volumes backup restore nuke-all
 
 # Default target
 help:
@@ -37,9 +37,14 @@ help:
 	@echo "  make prod-up         Start production environment"
 	@echo "  make prod-down       Stop production environment"
 	@echo ""
+	@echo "Database:"
+	@echo "  make backup          Backup the PostGIS database"
+	@echo "  make restore         Restore from a backup (prompts for file)"
+	@echo ""
 	@echo "Maintenance:"
-	@echo "  make clean           Remove containers, volumes, and images"
-	@echo "  make clean-volumes   Remove only Docker volumes"
+	@echo "  make clean           Remove containers, caches, and images (DB volume preserved)"
+	@echo "  make clean-volumes   Remove cache volumes only (DB volume preserved)"
+	@echo "  make nuke-all        Remove EVERYTHING including database (requires confirmation)"
 
 # -----------------------------------------------------------------------------
 # Development
@@ -143,13 +148,44 @@ prod-down:
 	docker compose -f docker compose.yml -f docker compose.prod.yml down
 
 # -----------------------------------------------------------------------------
+# Database
+# -----------------------------------------------------------------------------
+
+backup:
+	./scripts/db-backup.sh
+
+restore:
+	./scripts/db-restore.sh $(FILE)
+
+# -----------------------------------------------------------------------------
 # Maintenance
+# NOTE: postgres_data is an external volume and is preserved by 'down -v'.
 # -----------------------------------------------------------------------------
 
 clean:
+	@echo ""
+	@echo "This will remove containers, images, and cache volumes."
+	@echo "The postgres_data volume is external and will NOT be removed."
+	@echo ""
+	@read -p "Continue? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 0
 	docker compose down -v --rmi local --remove-orphans
 	docker compose -f docker compose.test.yml down -v --rmi local --remove-orphans 2>/dev/null || true
 
 clean-volumes:
+	@echo ""
+	@echo "This will remove cache volumes (node_modules, .next, api cache)."
+	@echo "The postgres_data volume is external and will NOT be removed."
+	@echo ""
+	@read -p "Continue? [y/N] " confirm && [ "$$confirm" = "y" ] || exit 0
 	docker compose down -v
 	docker compose -f docker compose.test.yml down -v 2>/dev/null || true
+
+nuke-all:
+	@echo ""
+	@echo "!!! DANGER: This will remove ALL volumes including the database !!!"
+	@echo "!!! The curvature_segments table has ~2.1M rows (~5hrs to regenerate) !!!"
+	@echo ""
+	@read -p "Type 'DELETE' to confirm: " confirm && [ "$$confirm" = "DELETE" ] || exit 0
+	docker compose down --rmi local --remove-orphans
+	docker volume rm b-road-postgres-data 2>/dev/null || true
+	docker compose -f docker compose.test.yml down -v --rmi local --remove-orphans 2>/dev/null || true

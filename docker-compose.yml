@@ -125,6 +125,7 @@ services:
 volumes:
   postgres_data:
     name: b-road-postgres-data
+    external: true
   api_cache:
     name: b-road-api-cache
   frontend_node_modules:

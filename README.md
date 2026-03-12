@@ -113,6 +113,7 @@ Next.js + Mapbox GL JS (interactive map, route planner, AI search)
 
 ## Documentation
 
+- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** — Setup, data loading, database backup & restore, and troubleshooting
 - **[API_README.md](API_README.md)** — Full API reference, endpoint docs, database schema, and detailed setup
 - **[CURVATURE_ORIGINAL_README.md](CURVATURE_ORIGINAL_README.md)** — Original curvature algorithm documentation
 
