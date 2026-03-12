@@ -386,6 +386,34 @@ export default function Map() {
 
     mapRef.current = map;
 
+    // Re-add custom sources/layers after any style rebuild.
+    // Mapbox GL JS v3 may rebuild styles from scratch when it can't diff
+    // (e.g. "Unimplemented: setSprite"), dropping all custom sources.
+    map.on('style.load', () => {
+      if (!map.getSource('curvature')) {
+        sourceAddedRef.current = false;
+        addCustomLayers(map);
+
+        // Restore waypoint route data
+        const route = useWaypointRouteStore.getState().calculatedRoute;
+        if (route) {
+          const routeFeature = { type: 'Feature' as const, geometry: route.geometry, properties: {} };
+          const routeSource = map.getSource('waypoint-route') as mapboxgl.GeoJSONSource | undefined;
+          const pulseSource = map.getSource('waypoint-route-pulse') as mapboxgl.GeoJSONSource | undefined;
+          routeSource?.setData({ type: 'FeatureCollection', features: [routeFeature] });
+          pulseSource?.setData({ type: 'FeatureCollection', features: [routeFeature] });
+        }
+
+        // Restore segment highlight feature states
+        selectedFeaturesRef.current.forEach((id) => {
+          map.setFeatureState(
+            { source: 'curvature', sourceLayer: 'curvature', id },
+            { selected: true },
+          );
+        });
+      }
+    });
+
     map.on('load', () => {
       addCustomLayers(map);
 
@@ -529,30 +557,14 @@ export default function Map() {
     sourceAddedRef.current = false;
     map.setStyle(MAP_STYLES[style]);
 
+    // The persistent style.load handler (registered on init) will re-add
+    // custom sources/layers and restore route + feature state automatically.
+    // Here we only handle style-switch-specific concerns.
     map.once('style.load', () => {
       map.setCenter(center);
       map.setZoom(zoom);
       map.setBearing(bearing);
       map.setPitch(pitch);
-      addCustomLayers(map);
-
-      // Restore waypoint route data
-      const route = useWaypointRouteStore.getState().calculatedRoute;
-      if (route) {
-        const routeFeature = { type: 'Feature' as const, geometry: route.geometry, properties: {} };
-        const routeSource = map.getSource('waypoint-route') as mapboxgl.GeoJSONSource | undefined;
-        const pulseSource = map.getSource('waypoint-route-pulse') as mapboxgl.GeoJSONSource | undefined;
-        routeSource?.setData({ type: 'FeatureCollection', features: [routeFeature] });
-        pulseSource?.setData({ type: 'FeatureCollection', features: [routeFeature] });
-      }
-
-      // Restore segment highlight feature states after style swap
-      selectedFeaturesRef.current.forEach((id) => {
-        map.setFeatureState(
-          { source: 'curvature', sourceLayer: 'curvature', id },
-          { selected: true },
-        );
-      });
 
       // Restore POI layer visibility after style swap
       const { gasStationsVisible: gasVis, evChargingVisible: evVis } = useLayerStore.getState();
@@ -577,7 +589,7 @@ export default function Map() {
 
       // Re-add markers
       const waypoints = useWaypointRouteStore.getState().waypoints;
-      waypoints.forEach((waypoint, index) => {
+      waypoints.forEach((waypoint) => {
         const existing = waypointMarkersRef.current.get(waypoint.id);
         if (existing) {
           existing.setLngLat([waypoint.lng, waypoint.lat]).addTo(map);
