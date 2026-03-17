@@ -810,10 +810,14 @@ export default function Map() {
       if (!marker) {
         const el = document.createElement('div');
         el.style.cssText =
-          'width:32px;height:32px;border-radius:50%;background:#C9A962;color:#0D0D0D;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;font-family:"Bebas Neue",sans-serif;box-shadow:0 2px 12px rgba(201,169,98,0.4);cursor:grab;';
-        el.textContent = String(index + 1);
+          'width:28px;height:36px;cursor:grab;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));';
+        el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 36" width="28" height="36">
+          <path d="M14 0C6.27 0 0 6.27 0 14c0 9.8 14 22 14 22s14-12.2 14-22C28 6.27 21.73 0 14 0z" fill="#C9A962" stroke="#0D0D0D" stroke-width="1.5"/>
+          <circle cx="14" cy="13" r="8.5" fill="none" stroke="#0D0D0D" stroke-width="1.5"/>
+          <text x="14" y="17.5" text-anchor="middle" font-size="12" font-weight="bold" font-family="Bebas Neue,sans-serif" fill="#0D0D0D">${index + 1}</text>
+        </svg>`;
 
-        marker = new mapboxgl.Marker({ element: el, draggable: true })
+        marker = new mapboxgl.Marker({ element: el, anchor: 'bottom', draggable: true })
           .setLngLat([waypoint.lng, waypoint.lat])
           .addTo(map);
 
@@ -837,7 +841,8 @@ export default function Map() {
       } else {
         marker.setLngLat([waypoint.lng, waypoint.lat]);
         const el = marker.getElement();
-        el.textContent = String(index + 1);
+        const textEl = el.querySelector('text');
+        if (textEl) textEl.textContent = String(index + 1);
       }
     });
   }, [waypointRouteWaypoints, previewRoute, cancelPreview]);
