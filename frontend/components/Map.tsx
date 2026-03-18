@@ -33,36 +33,6 @@ function buildTileUrl(source: string | null): string {
   return base;
 }
 
-function buildSegmentPopupHTML(
-  name: string,
-  curv: number,
-  lengthMi: string,
-  surface: string,
-  mapsUrl: string,
-  streetViewUrl: string,
-) {
-  return `
-    <div style="padding: 10px 14px; font-family: 'Cormorant Garamond', serif;">
-      <div style="font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 1px; color: #F5F4F2; margin-bottom: 2px;">
-        ${name}
-      </div>
-      <div style="font-size: 12px; font-style: italic; color: #8A8A8A; margin-bottom: 8px;">
-        ${lengthMi} mi  &middot;  ${surface}  &middot;  Curvature ${curv.toLocaleString()}
-      </div>
-      <div style="display: flex; gap: 8px;">
-        <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer"
-           style="display: inline-flex; align-items: center; gap: 4px; font-family: 'Bebas Neue', sans-serif; font-size: 10px; letter-spacing: 1px; color: #0D0D0D; background: #C9A962; padding: 4px 8px; border-radius: 3px; text-decoration: none;">
-          MAPS
-        </a>
-        <a href="${streetViewUrl}" target="_blank" rel="noopener noreferrer"
-           style="display: inline-flex; align-items: center; gap: 4px; font-family: 'Bebas Neue', sans-serif; font-size: 10px; letter-spacing: 1px; color: #8A8A8A; padding: 4px 8px; border-radius: 3px; text-decoration: none; border: 1px solid #2A2A2A;">
-          STREET VIEW
-        </a>
-      </div>
-    </div>
-  `;
-}
-
 function buildChatResultPopupHTML(
   name: string,
   curvature: string,
@@ -429,29 +399,7 @@ export default function Map() {
         }
         toast.success(`Added waypoint for "${props.name || 'Unnamed Road'}"`, { icon: '\uD83D\uDCCD' });
 
-        const lengthMi = props.length ? (props.length / 1609).toFixed(1) : '?';
-        const surface = props.paved ? 'Paved' : 'Unpaved';
-
-        let popupLat = e.lngLat.lat;
-        let popupLon = e.lngLat.lng;
-        if (feature.geometry.type === 'LineString') {
-          const coords = (feature.geometry as GeoJSON.LineString).coordinates as [number, number][];
-          if (coords.length > 0) {
-            [popupLat, popupLon] = getMidpoint(coords);
-          }
-        }
-
-        new mapboxgl.Popup({ offset: 12, closeButton: true, maxWidth: '300px' })
-          .setLngLat(e.lngLat)
-          .setHTML(buildSegmentPopupHTML(
-            (props.name || 'Unnamed Road').toUpperCase(),
-            props.curvature || 0,
-            lengthMi,
-            surface,
-            getGoogleMapsUrl(popupLat, popupLon),
-            getStreetViewUrl(popupLat, popupLon),
-          ))
-          .addTo(map);
+        // Segment info is shown on waypoint marker hover instead of a popup
       });
 
       map.on('mouseenter', 'curvature-layer', () => {
@@ -810,16 +758,44 @@ export default function Map() {
       if (!marker) {
         const el = document.createElement('div');
         el.style.cssText =
-          'width:32px;height:32px;border-radius:50%;background:#C9A962;color:#0D0D0D;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;font-family:"Bebas Neue",sans-serif;box-shadow:0 2px 12px rgba(201,169,98,0.4);cursor:grab;';
-        el.textContent = String(index + 1);
+          'width:28px;height:36px;cursor:grab;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));';
+        el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 36" width="28" height="36">
+          <path d="M14 0C6.27 0 0 6.27 0 14c0 9.8 14 22 14 22s14-12.2 14-22C28 6.27 21.73 0 14 0z" fill="#C9A962" stroke="#0D0D0D" stroke-width="1.5"/>
+          <circle cx="14" cy="13" r="8.5" fill="none" stroke="#0D0D0D" stroke-width="1.5"/>
+          <text x="14" y="17.5" text-anchor="middle" font-size="12" font-weight="bold" font-family="Bebas Neue,sans-serif" fill="#0D0D0D">${index + 1}</text>
+        </svg>`;
 
-        marker = new mapboxgl.Marker({ element: el, draggable: true })
+        marker = new mapboxgl.Marker({ element: el, anchor: 'bottom', draggable: true })
           .setLngLat([waypoint.lng, waypoint.lat])
           .addTo(map);
 
         const wpId = waypoint.id;
 
+        // Hover tooltip showing segment info
+        let hoverPopup: mapboxgl.Popup | null = null;
+        el.addEventListener('mouseenter', () => {
+          const wp = useWaypointRouteStore.getState().waypoints.find((w) => w.id === wpId);
+          if (!wp) return;
+          const name = (wp.segmentName || 'Unnamed Road').toUpperCase();
+          const curv = wp.curvature != null ? `Curvature ${wp.curvature.toLocaleString()}` : '';
+          const coords = `${wp.lat.toFixed(4)}, ${wp.lng.toFixed(4)}`;
+          hoverPopup = new mapboxgl.Popup({ offset: 16, closeButton: false, closeOnClick: false, maxWidth: '220px' })
+            .setLngLat([wp.lng, wp.lat])
+            .setHTML(`<div style="padding:6px 10px;font-family:'Cormorant Garamond',serif;">
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:1px;color:#F5F4F2;">${name}</div>
+              ${curv ? `<div style="font-size:11px;font-style:italic;color:#8A8A8A;">${curv}</div>` : ''}
+              <div style="font-size:10px;color:#5A5A5A;">${coords}</div>
+            </div>`)
+            .addTo(map);
+        });
+        el.addEventListener('mouseleave', () => {
+          hoverPopup?.remove();
+          hoverPopup = null;
+        });
+
         marker.on('drag', () => {
+          hoverPopup?.remove();
+          hoverPopup = null;
           const lngLat = marker!.getLngLat();
           const previewWps = useWaypointRouteStore.getState().waypoints.map((wp) =>
             wp.id === wpId ? { ...wp, lng: lngLat.lng, lat: lngLat.lat } : wp
@@ -837,7 +813,8 @@ export default function Map() {
       } else {
         marker.setLngLat([waypoint.lng, waypoint.lat]);
         const el = marker.getElement();
-        el.textContent = String(index + 1);
+        const textEl = el.querySelector('text');
+        if (textEl) textEl.textContent = String(index + 1);
       }
     });
   }, [waypointRouteWaypoints, previewRoute, cancelPreview]);
