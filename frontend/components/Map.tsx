@@ -197,12 +197,14 @@ export default function Map() {
             ['interpolate', ['linear'], ['get', 'curvature'], 300, 3.5, 2000, 5, 5000, 6.5],
           ],
         ],
-        'line-opacity': [
-          'case',
-          ['boolean', ['feature-state', 'selected'], false],
-          1.0,
-          activeStyleRef.current === 'streets' ? 0 : 0.2,
-        ],
+        'line-opacity': activeStyleRef.current === 'streets'
+          ? ['case', ['boolean', ['feature-state', 'selected'], false], 1.0, 0]
+          : [
+            'interpolate', ['linear'], ['zoom'],
+            4, ['case', ['boolean', ['feature-state', 'selected'], false], 1.0, 0],
+            7, ['case', ['boolean', ['feature-state', 'selected'], false], 1.0, 0],
+            9, ['case', ['boolean', ['feature-state', 'selected'], false], 1.0, 0.2],
+          ],
       },
       filter: ['>=', ['get', 'curvature'], useAppStore.getState().searchFilters.min_curvature],
     });
@@ -594,12 +596,16 @@ export default function Map() {
 
     if (map.getLayer('curvature-halo')) {
       const isDark = activeStyle === 'streets';
-      map.setPaintProperty('curvature-halo', 'line-opacity', [
-        'case',
-        ['boolean', ['feature-state', 'selected'], false],
-        1.0,
-        isDark ? 0 : 0.2,
-      ]);
+      map.setPaintProperty('curvature-halo', 'line-opacity',
+        isDark
+          ? ['case', ['boolean', ['feature-state', 'selected'], false], 1.0, 0]
+          : [
+            'interpolate', ['linear'], ['zoom'],
+            4, ['case', ['boolean', ['feature-state', 'selected'], false], 1.0, 0],
+            7, ['case', ['boolean', ['feature-state', 'selected'], false], 1.0, 0],
+            9, ['case', ['boolean', ['feature-state', 'selected'], false], 1.0, 0.2],
+          ],
+      );
     }
   }, [activeStyle]);
 
