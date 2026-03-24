@@ -137,7 +137,7 @@ export default function Map() {
   const [layerMenuOpen, setLayerMenuOpen] = useState(false);
   const layerButtonRef = useRef<HTMLButtonElement>(null);
   const evDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const selectedFeaturesRef = useRef(new Set<number | string>());
+  const selectedFeaturesRef = useRef<Record<string, number | string>>({});
   const hasAutoFittedRouteRef = useRef(false);
   const routeAnimFrameRef = useRef<number | null>(null);
 
@@ -388,14 +388,17 @@ export default function Map() {
         }
         addWaypoint(snapLng, snapLat, props.name || undefined, props.curvature);
 
-        // Highlight the selected segment
+        // Highlight the selected segment, keyed by the newly added waypoint
         const featureId = feature.id;
         if (featureId != null) {
-          map.setFeatureState(
-            { source: 'curvature', sourceLayer: 'curvature', id: featureId },
-            { selected: true },
-          );
-          selectedFeaturesRef.current.add(featureId);
+          const newWp = useWaypointRouteStore.getState().waypoints.at(-1);
+          if (newWp) {
+            map.setFeatureState(
+              { source: 'curvature', sourceLayer: 'curvature', id: featureId },
+              { selected: true },
+            );
+            selectedFeaturesRef.current[newWp.id] = featureId;
+          }
         }
         toast.success(`Added waypoint for "${props.name || 'Unnamed Road'}"`, { icon: '\uD83D\uDCCD' });
 
@@ -488,12 +491,12 @@ export default function Map() {
       }
 
       // Restore segment highlight feature states after style swap
-      selectedFeaturesRef.current.forEach((id) => {
+      for (const featureId of Object.values(selectedFeaturesRef.current)) {
         map.setFeatureState(
-          { source: 'curvature', sourceLayer: 'curvature', id },
+          { source: 'curvature', sourceLayer: 'curvature', id: featureId },
           { selected: true },
         );
-      });
+      }
 
       // Restore POI layer visibility after style swap
       const { gasStationsVisible: gasVis, evChargingVisible: evVis } = useLayerStore.getState();
@@ -735,15 +738,15 @@ export default function Map() {
     const map = mapRef.current;
     if (!map || !sourceAddedRef.current) return;
 
-    // Clear all segment highlights when waypoints are fully cleared
-    if (waypointRouteWaypoints.length === 0 && selectedFeaturesRef.current.size > 0) {
-      selectedFeaturesRef.current.forEach((id) => {
-        map.removeFeatureState({ source: 'curvature', sourceLayer: 'curvature', id });
-      });
-      selectedFeaturesRef.current.clear();
-    }
-
+    // Clear segment highlights for removed waypoints
     const existingIds = new Set(waypointRouteWaypoints.map((wp) => wp.id));
+
+    for (const [wpId, featureId] of Object.entries(selectedFeaturesRef.current)) {
+      if (!existingIds.has(wpId)) {
+        map.removeFeatureState({ source: 'curvature', sourceLayer: 'curvature', id: featureId });
+        delete selectedFeaturesRef.current[wpId];
+      }
+    }
 
     waypointMarkersRef.current.forEach((marker, id) => {
       if (!existingIds.has(id)) {
