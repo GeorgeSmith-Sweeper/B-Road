@@ -371,19 +371,50 @@ export default function Map() {
         const props = feature.properties;
         if (!props) return;
 
-        const { addWaypoint } = useWaypointRouteStore.getState();
+        const { addWaypoint, waypoints } = useWaypointRouteStore.getState();
         let snapLng = e.lngLat.lng;
         let snapLat = e.lngLat.lat;
         if (feature.geometry.type === 'LineString') {
           const coords = (feature.geometry as GeoJSON.LineString).coordinates as [number, number][];
           if (coords.length > 0) {
-            const first = coords[0];
-            const last = coords[coords.length - 1];
-            const clickLng = e.lngLat.lng;
-            const clickLat = e.lngLat.lat;
-            const distToFirst = (clickLng - first[0]) ** 2 + (clickLat - first[1]) ** 2;
-            const distToLast = (clickLng - last[0]) ** 2 + (clickLat - last[1]) ** 2;
-            [snapLng, snapLat] = distToFirst <= distToLast ? first : last;
+            // Check if this segment already has a waypoint on it
+            const segmentHasWaypoint = waypoints.some((wp) =>
+              coords.some((c) => c[0] === wp.lng && c[1] === wp.lat),
+            );
+
+            if (segmentHasWaypoint) {
+              // Subsequent click: snap to the nearest point along the line
+              const clickLng = e.lngLat.lng;
+              const clickLat = e.lngLat.lat;
+              let bestDist = Infinity;
+              for (let i = 0; i < coords.length - 1; i++) {
+                const [segStartLng, segStartLat] = coords[i];
+                const [segEndLng, segEndLat] = coords[i + 1];
+                const deltaLng = segEndLng - segStartLng;
+                const deltaLat = segEndLat - segStartLat;
+                const segLengthSq = deltaLng * deltaLng + deltaLat * deltaLat;
+                const projection = segLengthSq === 0
+                  ? 0
+                  : Math.max(0, Math.min(1, ((clickLng - segStartLng) * deltaLng + (clickLat - segStartLat) * deltaLat) / segLengthSq));
+                const closestLng = segStartLng + projection * deltaLng;
+                const closestLat = segStartLat + projection * deltaLat;
+                const dist = (clickLng - closestLng) ** 2 + (clickLat - closestLat) ** 2;
+                if (dist < bestDist) {
+                  bestDist = dist;
+                  snapLng = closestLng;
+                  snapLat = closestLat;
+                }
+              }
+            } else {
+              // First click: snap to the nearest endpoint
+              const first = coords[0];
+              const last = coords[coords.length - 1];
+              const clickLng = e.lngLat.lng;
+              const clickLat = e.lngLat.lat;
+              const distToFirst = (clickLng - first[0]) ** 2 + (clickLat - first[1]) ** 2;
+              const distToLast = (clickLng - last[0]) ** 2 + (clickLat - last[1]) ** 2;
+              [snapLng, snapLat] = distToFirst <= distToLast ? first : last;
+            }
           }
         }
         addWaypoint(snapLng, snapLat, props.name || undefined, props.curvature);
