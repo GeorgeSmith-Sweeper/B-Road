@@ -3,7 +3,7 @@ Service for GeoJSON conversions.
 """
 
 import logging
-from typing import List, Dict
+from typing import List
 from curvature.output import OutputTools
 
 logger = logging.getLogger(__name__)

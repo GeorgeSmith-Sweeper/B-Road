@@ -10,11 +10,6 @@ from sqlalchemy.orm import sessionmaker
 
 from api.repositories.curvature_repository import CurvatureRepository
 from api.services.curvature_service import CurvatureService
-from tests.fixtures.curvature_fixtures import (
-    VERMONT_SEGMENTS,
-    RHODE_ISLAND_SEGMENTS,
-    ALL_SEGMENTS,
-)
 
 pytestmark = pytest.mark.usefixtures("seed_curvature_data")
 

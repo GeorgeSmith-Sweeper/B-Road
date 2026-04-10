@@ -10,10 +10,8 @@ Tests the database.py module including:
 
 import pytest
 from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
 
-from database import check_db_connection, test_postgis, get_db
-from models import Base, RouteSession, SavedRoute
+from models import RouteSession, SavedRoute
 
 
 @pytest.mark.unit

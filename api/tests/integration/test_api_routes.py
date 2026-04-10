@@ -10,7 +10,6 @@ Tests all API routes including:
 
 import pytest
 import uuid
-from fastapi.testclient import TestClient
 
 from tests.fixtures.sample_segments import (
     CONNECTED_SEGMENTS,

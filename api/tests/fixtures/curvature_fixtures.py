@@ -5,8 +5,6 @@ Provides realistic test data based on Vermont mountain roads for testing
 the curvature API endpoints.
 """
 
-import json
-
 # Sample source data (states)
 SAMPLE_SOURCES = [
     {"id": 1, "source": "vermont"},

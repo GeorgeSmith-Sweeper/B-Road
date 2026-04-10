@@ -13,10 +13,9 @@ import pytest
 from sqlalchemy import text
 from shapely.geometry import LineString, Point
 from geoalchemy2.shape import from_shape, to_shape
-from geoalchemy2 import functions as func
 
-from models import SavedRoute, RouteSegment
-from tests.fixtures.sample_segments import CONNECTED_SEGMENTS, SINGLE_SEGMENT
+from models import SavedRoute
+from tests.fixtures.sample_segments import CONNECTED_SEGMENTS
 from tests.conftest import create_test_linestring
 
 

@@ -11,7 +11,6 @@ import json
 import os
 import pytest
 import uuid
-from datetime import datetime
 from typing import Generator
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
@@ -28,13 +27,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from server import app
 from models import Base, RouteSession, SavedRoute, RouteSegment, RouteWaypoint
-from database import get_db
 
 # Import test data fixtures
 from tests.fixtures.sample_segments import (
     CONNECTED_SEGMENTS,
-    DISCONNECTED_SEGMENTS,
-    SINGLE_SEGMENT,
     SAMPLE_ROUTE_METADATA,
     CONNECTED_SEGMENTS_STATS,
 )

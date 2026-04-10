@@ -5,12 +5,9 @@ Tests /chat/* endpoints with mocked ClaudeService (no real API calls)
 and real database for the search endpoint.
 """
 
-import json
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 from fastapi.testclient import TestClient
-
-from tests.fixtures.curvature_fixtures import VERMONT_SEGMENTS
 
 pytestmark = pytest.mark.usefixtures("seed_curvature_data")
 

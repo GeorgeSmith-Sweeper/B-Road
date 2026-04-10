@@ -16,7 +16,6 @@ from geoalchemy2.shape import from_shape, to_shape
 from sqlalchemy.exc import IntegrityError
 
 from models import RouteSession, SavedRoute, RouteSegment
-from tests.fixtures.sample_segments import CONNECTED_SEGMENTS, SAMPLE_ROUTE_METADATA
 
 
 @pytest.mark.unit

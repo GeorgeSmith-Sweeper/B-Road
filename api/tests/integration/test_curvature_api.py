@@ -9,11 +9,6 @@ from fastapi.testclient import TestClient
 
 from tests.fixtures.curvature_fixtures import (
     VERMONT_BBOX,
-    RHODE_ISLAND_BBOX,
-    EMPTY_BBOX,
-    SAMPLE_SOURCES,
-    VERMONT_SEGMENTS,
-    EXPECTED_SOURCE_COUNTS,
 )
 
 pytestmark = pytest.mark.usefixtures("seed_curvature_data")

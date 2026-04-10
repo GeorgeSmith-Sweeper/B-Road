@@ -5,7 +5,6 @@ Tests ZXY slippy map tile to WGS84 bounding box conversion.
 """
 
 import pytest
-import math
 
 from api.utils.tile_math import tile_to_bbox
 
