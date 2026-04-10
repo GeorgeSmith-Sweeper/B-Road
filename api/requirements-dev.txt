@@ -19,3 +19,4 @@ responses==0.24.1
 # Code quality
 ruff==0.9.10  # Fast Python linter
 black==26.1.0  # Code formatter
+pre-commit==4.3.0  # Git pre-commit hooks

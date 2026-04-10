@@ -92,6 +92,21 @@ cd frontend && npm run lint
 - **New npm package**: Run `npm install <pkg>` locally in `frontend/`, then `docker compose up -d`
 - **`docker compose restart` does NOT pick up `.env` or compose changes** — always use `up -d`
 
+## Pre-commit hooks
+
+Pre-commit hooks run ruff, black, eslint, and tsc automatically on every commit. Setup:
+
+```bash
+api/venv/bin/pip install pre-commit
+api/venv/bin/pre-commit install
+```
+
+To run manually against all files:
+
+```bash
+api/venv/bin/pre-commit run --all-files
+```
+
 ## Workflow preferences
 
 - Always commit after each completed step before moving on to the next
